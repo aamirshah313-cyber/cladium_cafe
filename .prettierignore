@@ -1,0 +1,21 @@
+# Build output and dependencies
+node_modules
+.next
+out
+dist
+coverage
+playwright-report
+test-results
+package-lock.json
+
+# Next.js-managed — regenerated on every dev/build run; its own header says
+# "This file should not be edited."
+next-env.d.ts
+
+# Authoritative research/content and governance files — formatting these
+# is out of scope for the app's tooling and risks altering approved content.
+cladium-research/
+.continuum/
+CLAUDE.md
+BUILD_START_HERE.md
+.env.example

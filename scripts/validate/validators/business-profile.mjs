@@ -26,7 +26,7 @@ export function validateBusinessProfile(profile) {
   const hoursDisplay = business.hours?.display;
   if (hoursDisplay !== EXPECTED_HOURS_DISPLAY) {
     errors.push(
-      `business.hours.display is ${JSON.stringify(hoursDisplay)}, expected ${JSON.stringify(EXPECTED_HOURS_DISPLAY)} (non-negotiable open hours).`
+      `business.hours.display is ${JSON.stringify(hoursDisplay)}, expected ${JSON.stringify(EXPECTED_HOURS_DISPLAY)} (non-negotiable open hours).`,
     );
   } else {
     facts.hours = hoursDisplay;
@@ -35,12 +35,12 @@ export function validateBusinessProfile(profile) {
   const fulfilment = business.operations?.fulfilment;
   if (fulfilment?.home_delivery !== false) {
     errors.push(
-      `business.operations.fulfilment.home_delivery must be exactly false, got ${JSON.stringify(fulfilment?.home_delivery)} (delivery is never offered).`
+      `business.operations.fulfilment.home_delivery must be exactly false, got ${JSON.stringify(fulfilment?.home_delivery)} (delivery is never offered).`,
     );
   }
   if (fulfilment?.takeaway !== true) {
     errors.push(
-      `business.operations.fulfilment.takeaway must be exactly true, got ${JSON.stringify(fulfilment?.takeaway)}.`
+      `business.operations.fulfilment.takeaway must be exactly true, got ${JSON.stringify(fulfilment?.takeaway)}.`,
     );
   }
   facts.fulfilment = fulfilment;
@@ -57,14 +57,18 @@ export function validateBusinessProfile(profile) {
   const decor = business.operations?.birthday_and_event_policy;
   if (decor?.decor_starting_price_pkr !== EXPECTED_DECOR_STARTING_PRICE_PKR) {
     errors.push(
-      `decor_starting_price_pkr is ${JSON.stringify(decor?.decor_starting_price_pkr)}, expected ${EXPECTED_DECOR_STARTING_PRICE_PKR} (non-negotiable décor floor price).`
+      `decor_starting_price_pkr is ${JSON.stringify(decor?.decor_starting_price_pkr)}, expected ${EXPECTED_DECOR_STARTING_PRICE_PKR} (non-negotiable décor floor price).`,
     );
   }
   if (decor?.cakes_provided !== false) {
-    errors.push(`cakes_provided must be exactly false, got ${JSON.stringify(decor?.cakes_provided)} (the café does not provide cakes).`);
+    errors.push(
+      `cakes_provided must be exactly false, got ${JSON.stringify(decor?.cakes_provided)} (the café does not provide cakes).`,
+    );
   }
   if (decor?.outside_food_allowed !== false) {
-    errors.push(`outside_food_allowed must be exactly false, got ${JSON.stringify(decor?.outside_food_allowed)} (outside food is not allowed).`);
+    errors.push(
+      `outside_food_allowed must be exactly false, got ${JSON.stringify(decor?.outside_food_allowed)} (outside food is not allowed).`,
+    );
   }
   facts.birthdayAndEventPolicy = decor;
 
@@ -72,7 +76,9 @@ export function validateBusinessProfile(profile) {
   if (!whatsapp) {
     errors.push('business.contact.whatsapp is missing.');
   } else if (!WHATSAPP_PATTERN.test(whatsapp)) {
-    warnings.push(`business.contact.whatsapp ${JSON.stringify(whatsapp)} does not match the expected "+92 XXX XXXXXXX" format — verify manually, do not auto-correct.`);
+    warnings.push(
+      `business.contact.whatsapp ${JSON.stringify(whatsapp)} does not match the expected "+92 XXX XXXXXXX" format — verify manually, do not auto-correct.`,
+    );
   }
   facts.whatsapp = whatsapp;
 
@@ -83,7 +89,9 @@ export function validateBusinessProfile(profile) {
   facts.googleMapsUrl = mapsUrl;
 
   if (!Array.isArray(profile.unverified_or_missing)) {
-    warnings.push('Top-level "unverified_or_missing" list is absent — cannot confirm known-gap disclosure is intact.');
+    warnings.push(
+      'Top-level "unverified_or_missing" list is absent — cannot confirm known-gap disclosure is intact.',
+    );
   } else {
     facts.disclosedGaps = profile.unverified_or_missing;
   }

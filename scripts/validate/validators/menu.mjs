@@ -52,7 +52,9 @@ export function compareToVerifiedBaseline(summary, baseline = VERIFIED_MENU_BASE
     singlePrice: summary.singlePrice,
     variantPrice: summary.variantPrice,
     missingPrice: summary.missingPrice,
-    emptyCategoryCount: Array.isArray(summary.emptyCategories) ? summary.emptyCategories.length : null,
+    emptyCategoryCount: Array.isArray(summary.emptyCategories)
+      ? summary.emptyCategories.length
+      : null,
     sourceAssetCount: summary.sourceAssetCount,
   };
   for (const key of Object.keys(baseline)) {
@@ -60,7 +62,7 @@ export function compareToVerifiedBaseline(summary, baseline = VERIFIED_MENU_BASE
     if (value === null || value === undefined) continue; // already reported by a structural error elsewhere
     if (value !== baseline[key]) {
       errors.push(
-        `Menu total drifted from the Step 3 verified baseline: ${key} is ${value}, expected ${baseline[key]}. If this is a deliberate, owner-confirmed source-data change, update VERIFIED_MENU_BASELINE in validators/menu.mjs by hand after re-verifying, and record it in .continuum/DECISIONS.md — do not silently widen the baseline to match.`
+        `Menu total drifted from the Step 3 verified baseline: ${key} is ${value}, expected ${baseline[key]}. If this is a deliberate, owner-confirmed source-data change, update VERIFIED_MENU_BASELINE in validators/menu.mjs by hand after re-verifying, and record it in .continuum/DECISIONS.md — do not silently widen the baseline to match.`,
       );
     }
   }
@@ -82,7 +84,9 @@ export function validateMenu(menu) {
   }
 
   if (menu.currency !== EXPECTED_CURRENCY) {
-    errors.push(`currency is ${JSON.stringify(menu.currency)}, expected ${JSON.stringify(EXPECTED_CURRENCY)}.`);
+    errors.push(
+      `currency is ${JSON.stringify(menu.currency)}, expected ${JSON.stringify(EXPECTED_CURRENCY)}.`,
+    );
   }
 
   let sourceAssetCount = null;
@@ -131,10 +135,14 @@ export function validateMenu(menu) {
       const hasVariant = item?.prices_pkr !== undefined;
 
       if (hasSingle && hasVariant) {
-        errors.push(`Item "${itemName}" in "${location}" has both price_pkr and prices_pkr — exactly one is allowed.`);
+        errors.push(
+          `Item "${itemName}" in "${location}" has both price_pkr and prices_pkr — exactly one is allowed.`,
+        );
       } else if (hasSingle) {
         if (!isPositiveInteger(item.price_pkr)) {
-          errors.push(`Item "${itemName}" in "${location}" has a non-integer/non-positive price_pkr: ${JSON.stringify(item.price_pkr)}.`);
+          errors.push(
+            `Item "${itemName}" in "${location}" has a non-integer/non-positive price_pkr: ${JSON.stringify(item.price_pkr)}.`,
+          );
         } else {
           singlePrice++;
         }
@@ -148,7 +156,7 @@ export function validateMenu(menu) {
           for (const variantKey of keys) {
             if (!isPositiveInteger(variants[variantKey])) {
               errors.push(
-                `Item "${itemName}" in "${location}" variant "${variantKey}" has a non-integer/non-positive price: ${JSON.stringify(variants[variantKey])}.`
+                `Item "${itemName}" in "${location}" variant "${variantKey}" has a non-integer/non-positive price: ${JSON.stringify(variants[variantKey])}.`,
               );
             }
           }
@@ -159,26 +167,36 @@ export function validateMenu(menu) {
       }
     }
 
-    categorySummaries.push({ name: categoryName, itemCount: entries.length, groups: (category?.groups ?? []).map((g) => g?.name).filter(Boolean) });
+    categorySummaries.push({
+      name: categoryName,
+      itemCount: entries.length,
+      groups: (category?.groups ?? []).map((g) => g?.name).filter(Boolean),
+    });
   }
 
   for (const [name, locations] of globalNameLocations) {
     const uniqueLocations = [...new Set(locations)];
     if (uniqueLocations.length > 1) {
-      warnings.push(`Item name "${name}" appears in multiple categories: ${uniqueLocations.join(', ')} — confirm this is intentional, not a transcription split.`);
+      warnings.push(
+        `Item name "${name}" appears in multiple categories: ${uniqueLocations.join(', ')} — confirm this is intentional, not a transcription split.`,
+      );
     }
   }
 
   const sortedEmpty = [...emptyCategories].sort();
   if (sortedEmpty.length > 0) {
     warnings.push(
-      `${sortedEmpty.length} categor${sortedEmpty.length === 1 ? 'y has' : 'ies have'} zero items (checked both the flat "items" and nested "groups[].items" shapes): ${sortedEmpty.join(', ')} — treat as a Gate 2 source-image/owner reconciliation issue, do not fill in items.`
+      `${sortedEmpty.length} categor${sortedEmpty.length === 1 ? 'y has' : 'ies have'} zero items (checked both the flat "items" and nested "groups[].items" shapes): ${sortedEmpty.join(', ')} — treat as a Gate 2 source-image/owner reconciliation issue, do not fill in items.`,
     );
   } else {
-    info.push('No empty categories found (checked both the flat "items" and nested "groups[].items" shapes).');
+    info.push(
+      'No empty categories found (checked both the flat "items" and nested "groups[].items" shapes).',
+    );
   }
 
-  info.push('Source items carry no stable "id" field yet — this is expected; stable IDs are assigned at import per data-model-v2.md, not before.');
+  info.push(
+    'Source items carry no stable "id" field yet — this is expected; stable IDs are assigned at import per data-model-v2.md, not before.',
+  );
 
   return {
     errors,

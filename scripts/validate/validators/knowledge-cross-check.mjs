@@ -4,7 +4,10 @@ const REQUIRED_PHRASES = [
   { label: 'Décor starting price PKR 8,000', pattern: /8,?000/ },
   { label: 'No cakes provided', pattern: /does not provide cakes/i },
   { label: 'Outside food is not allowed', pattern: /outside food is not allowed/i },
-  { label: 'Treehouse capacity limited/staff-confirmed', pattern: /treehouse capacity is limited/i },
+  {
+    label: 'Treehouse capacity limited/staff-confirmed',
+    pattern: /treehouse capacity is limited/i,
+  },
 ];
 
 /**

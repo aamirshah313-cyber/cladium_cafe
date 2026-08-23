@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+# No repository secrets are consumed by CI. The build runs without real
+# credentials on purpose: nothing in the scaffold may require a secret to
+# compile, and a missing secret must never be filled in with a placeholder.
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      # `npm ci` (not `npm install`) fails if package.json and the lockfile
+      # disagree — that is the install-integrity check.
+      - name: Install dependencies (lockfile integrity)
+        run: npm ci
+
+      - name: Verify dependency tree
+        run: npm ls
+
+      - name: Format check
+        run: npm run format
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Source data validators
+        run: npm run validate:sources
+
+      - name: Validator tooling tests
+        run: npm run test:scripts
+
+      # Connection-routing/pooling invariants. Deliberately Docker-free and
+      # offline: CI never starts a database or touches a hosted project.
+      - name: Database configuration check
+        run: npm run check:db-config
+
+      - name: Secret scan
+        run: npm run scan:secrets
+
+      - name: Production build
+        run: npm run build
+
+      # Belt-and-braces: the built output must not contain a server-only
+      # value. Client bundles are inspected for the server env var names
+      # that must never be inlined into browser JavaScript.
+      - name: Assert no server secrets in build output
+        run: npm run scan:build-output

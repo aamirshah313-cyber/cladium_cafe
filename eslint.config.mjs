@@ -1,0 +1,24 @@
+import nextConfig from 'eslint-config-next';
+import prettierConfig from 'eslint-config-prettier';
+
+// package.json pins eslint to ^9, not the current ^10 major: as of
+// eslint-config-next@16.3.2 (itself the true npm "latest", matching our
+// Next.js version), its bundled eslint-plugin-import/react/jsx-a11y all
+// declare a peer range capped at eslint ^9 — `npm install -D eslint@^10`
+// produces ELSPROBLEMS/invalid peer errors. Re-check this the next time
+// eslint-config-next is bumped; revisit by re-running that install and
+// `npm ls` rather than assuming it's fixed.
+
+const eslintConfig = [
+  ...nextConfig,
+  prettierConfig,
+  {
+    // The research pack (cladium-research/) is authoritative content, not
+    // app code, and scripts/validate/ is a separately governed,
+    // zero-dependency tool with its own test suite — neither is part of
+    // the Next.js app's lint boundary.
+    ignores: ['node_modules/**', '.next/**', 'cladium-research/**', 'scripts/**'],
+  },
+];
+
+export default eslintConfig;

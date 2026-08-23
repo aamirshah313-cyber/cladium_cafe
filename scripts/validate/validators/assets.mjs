@@ -50,14 +50,25 @@ export function validateAssetReferences(sourceAssets, researchRoot) {
     nonMenuPhotoCount += readdirSync(officialProfileDir).length;
   }
 
-  info.push(`Logo files found: ${logoCount} (vector/transparent among them: ${vectorLogoCount}). Non-menu photos found: ${nonMenuPhotoCount}.`);
+  info.push(
+    `Logo files found: ${logoCount} (vector/transparent among them: ${vectorLogoCount}). Non-menu photos found: ${nonMenuPhotoCount}.`,
+  );
   if (vectorLogoCount === 0) {
-    info.push('No vector/transparent logo file found on disk — matches the known Gate 0 media blocker; not a new finding.');
+    info.push(
+      'No vector/transparent logo file found on disk — matches the known Gate 0 media blocker; not a new finding.',
+    );
   }
 
   return {
     errors,
     info,
-    summary: { referenced: sourceAssets?.length ?? 0, present: present.length, missing, logoCount, vectorLogoCount, nonMenuPhotoCount },
+    summary: {
+      referenced: sourceAssets?.length ?? 0,
+      present: present.length,
+      missing,
+      logoCount,
+      vectorLogoCount,
+      nonMenuPhotoCount,
+    },
   };
 }

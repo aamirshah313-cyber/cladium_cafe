@@ -10,7 +10,12 @@ import { fileURLToPath } from 'node:url';
 
 import { readJsonFile } from './lib/read-json.mjs';
 import { validateBusinessProfile } from './validators/business-profile.mjs';
-import { validateMenu, collectCategoryItems, compareToVerifiedBaseline, VERIFIED_MENU_BASELINE } from './validators/menu.mjs';
+import {
+  validateMenu,
+  collectCategoryItems,
+  compareToVerifiedBaseline,
+  VERIFIED_MENU_BASELINE,
+} from './validators/menu.mjs';
 import { validateAssetReferences } from './validators/assets.mjs';
 import { crossCheckApprovedKnowledge } from './validators/knowledge-cross-check.mjs';
 
@@ -70,8 +75,14 @@ test('collectCategoryItems walks both the flat items array and nested groups[].i
   };
   const entries = collectCategoryItems(category);
   assert.equal(entries.length, 3);
-  assert.deepEqual(entries.map((e) => e.group), [null, 'Group A', 'Group B']);
-  assert.deepEqual(entries.map((e) => e.item.name), ['Flat Item', 'Grouped Item 1', 'Grouped Item 2']);
+  assert.deepEqual(
+    entries.map((e) => e.group),
+    [null, 'Group A', 'Group B'],
+  );
+  assert.deepEqual(
+    entries.map((e) => e.item.name),
+    ['Flat Item', 'Grouped Item 1', 'Grouped Item 2'],
+  );
 });
 
 test('validateMenu treats a category that only has groups (no flat items) as non-empty', () => {

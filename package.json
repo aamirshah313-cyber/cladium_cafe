@@ -1,0 +1,47 @@
+{
+  "name": "cladium-cafe-resort",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "format": "prettier --check .",
+    "format:write": "prettier --write .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:scripts": "node --test \"scripts/**/*.test.mjs\"",
+    "validate:sources": "node scripts/validate/run-all.mjs",
+    "scan:secrets": "node scripts/security/scan-secrets.mjs",
+    "scan:build-output": "node scripts/security/scan-build-output.mjs",
+    "check:db-config": "node scripts/db/check-db-config.mjs",
+    "db:start": "npx supabase start",
+    "db:stop": "npx supabase stop",
+    "db:status": "npx supabase status",
+    "db:reset": "npx supabase db reset",
+    "db:diff": "npx supabase db diff",
+    "db:migration:new": "npx supabase migration new",
+    "db:migration:list": "npx supabase migration list",
+    "db:types": "npx supabase gen types typescript --local > src/lib/db/database.types.ts",
+    "verify": "npm run format && npm run lint && npm run typecheck && npm test && npm run validate:sources && npm run test:scripts && npm run check:db-config && npm run scan:secrets && npm run build && npm run scan:build-output"
+  },
+  "dependencies": {
+    "next": "^16.3.2",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^16.3.2",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.9.6",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.11"
+  }
+}

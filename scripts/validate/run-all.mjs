@@ -9,7 +9,11 @@ import { fileURLToPath } from 'node:url';
 
 import { readJsonFile } from './lib/read-json.mjs';
 import { validateBusinessProfile } from './validators/business-profile.mjs';
-import { validateMenu, compareToVerifiedBaseline, VERIFIED_MENU_BASELINE } from './validators/menu.mjs';
+import {
+  validateMenu,
+  compareToVerifiedBaseline,
+  VERIFIED_MENU_BASELINE,
+} from './validators/menu.mjs';
 import { validateAssetReferences } from './validators/assets.mjs';
 import { crossCheckApprovedKnowledge } from './validators/knowledge-cross-check.mjs';
 
@@ -53,13 +57,17 @@ if (!profileResult.ok) {
   const { errors, warnings, facts } = validateBusinessProfile(profileResult.data);
   profileFacts = facts;
   logResults(errors, warnings);
-  console.log(errors.length === 0 ? 'PASS: all required confirmed facts present and correct.' : `FAIL: ${errors.length} error(s).`);
+  console.log(
+    errors.length === 0
+      ? 'PASS: all required confirmed facts present and correct.'
+      : `FAIL: ${errors.length} error(s).`,
+  );
   if (errors.length > 0) hardFailure = true;
   reportSections.push(
     `## business-profile.json\n\n` +
       `**Errors (${errors.length}):**\n${mdList(errors)}\n\n` +
       `**Warnings (${warnings.length}):**\n${mdList(warnings)}\n\n` +
-      `**Confirmed facts read:** hours "${facts.hours ?? 'MISSING'}", takeaway=${facts.fulfilment?.takeaway}, home_delivery=${facts.fulfilment?.home_delivery}, décor floor PKR ${facts.birthdayAndEventPolicy?.decor_starting_price_pkr}, cakes_provided=${facts.birthdayAndEventPolicy?.cakes_provided}, outside_food_allowed=${facts.birthdayAndEventPolicy?.outside_food_allowed}, whatsapp=${facts.whatsapp}.\n`
+      `**Confirmed facts read:** hours "${facts.hours ?? 'MISSING'}", takeaway=${facts.fulfilment?.takeaway}, home_delivery=${facts.fulfilment?.home_delivery}, décor floor PKR ${facts.birthdayAndEventPolicy?.decor_starting_price_pkr}, cakes_provided=${facts.birthdayAndEventPolicy?.cakes_provided}, outside_food_allowed=${facts.birthdayAndEventPolicy?.outside_food_allowed}, whatsapp=${facts.whatsapp}.\n`,
   );
 }
 
@@ -80,19 +88,29 @@ if (!menuResult.ok) {
   logResults(driftErrors);
   console.log(
     driftErrors.length === 0
-      ? `PASS: matches the Step 3 verified baseline exactly (${Object.entries(VERIFIED_MENU_BASELINE).map(([k, v]) => `${k}=${v}`).join(', ')}).`
-      : `FAIL: ${driftErrors.length} field(s) drifted from the verified baseline.`
+      ? `PASS: matches the Step 3 verified baseline exactly (${Object.entries(
+          VERIFIED_MENU_BASELINE,
+        )
+          .map(([k, v]) => `${k}=${v}`)
+          .join(', ')}).`
+      : `FAIL: ${driftErrors.length} field(s) drifted from the verified baseline.`,
   );
 
   const errors = [...structuralErrors, ...driftErrors];
   logResults(structuralErrors, warnings, info);
   console.log(
-    `Summary: ${summary.totalItems} items / ${summary.categoryCount} categories / ${summary.singlePrice} single-price / ${summary.variantPrice} variant-price / ${summary.missingPrice} missing price.`
+    `Summary: ${summary.totalItems} items / ${summary.categoryCount} categories / ${summary.singlePrice} single-price / ${summary.variantPrice} variant-price / ${summary.missingPrice} missing price.`,
   );
-  console.log(errors.length === 0 ? 'PASS: menu structure, price shapes, and duplicate-name checks passed.' : `FAIL: ${errors.length} error(s).`);
+  console.log(
+    errors.length === 0
+      ? 'PASS: menu structure, price shapes, and duplicate-name checks passed.'
+      : `FAIL: ${errors.length} error(s).`,
+  );
   if (errors.length > 0) hardFailure = true;
 
-  const categoryTable = summary.categorySummaries.map((c) => `| ${c.name} | ${c.itemCount} |`).join('\n');
+  const categoryTable = summary.categorySummaries
+    .map((c) => `| ${c.name} | ${c.itemCount} |`)
+    .join('\n');
   reportSections.push(
     `## menu.json\n\n` +
       `**Totals:** ${summary.totalItems} items, ${summary.categoryCount} categories, ${summary.singlePrice} single-price, ${summary.variantPrice} variant-price, ${summary.missingPrice} missing price, empty categories: ${summary.emptyCategories.join(', ') || 'none'}.\n\n` +
@@ -100,19 +118,23 @@ if (!menuResult.ok) {
       `**Baseline drift check (against \`VERIFIED_MENU_BASELINE\`):** ${driftErrors.length === 0 ? 'PASS — no drift.' : `FAIL — ${driftErrors.length} field(s) drifted:`}\n${driftErrors.length ? mdList(driftErrors) : ''}\n\n` +
       `**Errors (${errors.length}):**\n${mdList(errors)}\n\n` +
       `**Warnings (${warnings.length}):**\n${mdList(warnings)}\n\n` +
-      `**Notes:**\n${mdList(info)}\n`
+      `**Notes:**\n${mdList(info)}\n`,
   );
 
   // ---- source asset references ----------------------------------------------
   section('menu source-asset references');
   const assetResult = validateAssetReferences(menuResult.data.source_assets, researchRoot);
   logResults(assetResult.errors, [], assetResult.info);
-  console.log(assetResult.errors.length === 0 ? 'PASS: all referenced source images exist on disk.' : `FAIL: ${assetResult.errors.length} error(s).`);
+  console.log(
+    assetResult.errors.length === 0
+      ? 'PASS: all referenced source images exist on disk.'
+      : `FAIL: ${assetResult.errors.length} error(s).`,
+  );
   if (assetResult.errors.length > 0) hardFailure = true;
   reportSections.push(
     `## Menu source-asset references\n\n` +
       `**Errors (${assetResult.errors.length}):**\n${mdList(assetResult.errors)}\n\n` +
-      `**Notes:**\n${mdList(assetResult.info)}\n`
+      `**Notes:**\n${mdList(assetResult.info)}\n`,
   );
 }
 
@@ -127,12 +149,16 @@ if (!existsSync(knowledgePath)) {
   const text = readFileSync(knowledgePath, 'utf8');
   const { errors, info } = crossCheckApprovedKnowledge(text);
   logResults(errors, [], info);
-  console.log(errors.length === 0 ? 'PASS: all required policy phrases present.' : `FAIL: ${errors.length} error(s).`);
+  console.log(
+    errors.length === 0
+      ? 'PASS: all required policy phrases present.'
+      : `FAIL: ${errors.length} error(s).`,
+  );
   if (errors.length > 0) hardFailure = true;
   reportSections.push(
     `## approved-operations-knowledge.md cross-check\n\n` +
       `**Errors (${errors.length}):**\n${mdList(errors)}\n\n` +
-      `**Notes:**\n${mdList(info)}\n`
+      `**Notes:**\n${mdList(info)}\n`,
   );
 }
 

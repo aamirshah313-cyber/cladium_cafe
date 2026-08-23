@@ -24,6 +24,7 @@ supabase/.temp/
 npm-debug.log*
 .eslintcache
 .turbo/
+*.tsbuildinfo
 
 # Editors and operating systems
 .vscode/

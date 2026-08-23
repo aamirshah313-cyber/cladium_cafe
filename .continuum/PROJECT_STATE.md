@@ -1,9 +1,18 @@
 # Cladium compact project state
 
-Updated: 2026-08-23  
+Updated: 2026-08-24
 Architecture: Version 2  
-Phase: pre-build, Runbook Phase 0 (Steps 1–3 done)  
-Application code: not started
+Phase: Runbook Phases 0 and 1 complete (Steps 1–6); Step 7 configuration foundation implemented, local-stack smoke pending
+Application code: scaffolded (Next.js App Router, TypeScript strict) with CI gates and shared platform primitives — no business features built yet
+Baseline commit: `8732db0` "chore: establish Cladium pre-build baseline" (local only, not pushed)
+
+## Progress (step-completion metrics, not effort estimates)
+
+- Overall: 6/47 runbook steps = 12.8%
+- Phase 0 (governance/evidence, steps 1–3): 3/3 = 100%
+- Phase 1 (repo/app foundation, steps 4–6): 3/3 = 100%
+- Phase 2 (data/auth/security, steps 7–12): 0/6 = 0%
+- Every step counts equally regardless of size/duration. See `CLAUDE.md` Workflow rules for the reporting rule.
 
 ## Goal
 
@@ -29,12 +38,17 @@ Build a luxury, mobile-first Cladium Café & Resort web application on Next.js/V
 - Runbook Step 1 baseline audit complete: confirmed business facts, source-of-truth precedence, media inventory, gate risk register recorded.
 - Runbook Step 2 ADRs recorded at `cladium-research/architecture/adr/0001`–`0008` (stack, request-only scope, bilingual routing, Day/Night tokens, server-side Anthropic tools, Vapi JWT/HMAC, transactional outbox, provider adapters).
 - Runbook Step 3 deterministic, dependency-free validation tooling added at `scripts/validate/` (`node --test "scripts/validate/**/*.test.mjs"` and `node scripts/validate/run-all.mjs`); current run is a full PASS with zero errors/warnings, and it corrected the Step 1 menu-count bug (see above and D-015). Generates `cladium-research/data/validation/owner-signoff-report.md`.
+- Local baseline committed (`8732db0`): the full pre-build research pack, governance files, ADRs, and validator tooling — 66 files, no real secrets, `.env.example` placeholders only. Not pushed to any remote.
+- Runbook Step 4 scaffold: Next.js 16.3.2 App Router, React 19.2.8, TypeScript 6.0.3 strict, npm (not pnpm — pnpm unavailable in this environment, deviating from ADR-0001's proposal; npm used instead, package-lock.json committed-ready), ESLint 9 (flat config, `eslint-config-next` + `eslint-config-prettier`), Prettier, Vitest, Zod-based client/server/feature-flag env schema at `src/lib/env.ts`, and `src/modules/*` boundary directories (business/menu/takeaway/bookings/events/concierge/voice/staff/integrations/consent) per `production-architecture-v2.md` §4. No business features, no locale routing, no API routes yet — those are later steps. Clean install, format check, lint, typecheck, unit tests (8/8), source validators, and `next build` all pass.
+
+- Runbook Step 5 CI and repository hygiene: `.github/workflows/ci.yml` (Node 24) runs install integrity (`npm ci`), `npm ls`, format, lint, typecheck, unit tests, source validators, scripts tests, secret scan, production build, and a client-bundle leak check — the same chain as `npm run verify`, runnable locally. Added dependency-free `scripts/security/` scanner (12 patterns, never prints matched values) plus `CONTRIBUTING.md` (commands, branch-protection recommendations, dependency-update policy incl. the ESLint 9 pin rationale). `.gitignore` and placeholder-only `.env.example` reviewed and already safe — unchanged. CI consumes no repository secrets and builds without credentials by design.
+- Runbook Step 6 shared platform primitives: strict shared request schemas and boundary parsing, typed `Result`/application errors, correlation IDs, redacted structured logging, safe JSON responses, and synthetic test fixtures. Client-safe environment handling is isolated in `src/lib/env.ts`; privileged environment handling is isolated in `src/lib/env.server.ts` and rejects browser imports at module load. Full 11-gate verification passes (102 unit tests), including validation, redaction, response-safety, and environment-boundary tests.
+- Runbook Step 7 configuration foundation: local `supabase/config.toml`, empty migration workflow, generated-types workflow, isolated environment guidance, transaction-pooler/direct-connection invariants, and CI check added. Full `npm run verify` passes (102 unit tests, 35 script tests). The local Supabase reset smoke remains pending because Docker is installed but the Supabase CLI is not available in this environment; no hosted project was connected.
 
 ## Next
 
 1. Review this state and `.continuum/TASKS.md`.
-2. Before app scaffolding (Step 4), commit/back up the currently untracked research pack.
-3. Runbook Step 4: scaffold the Next.js App Router application.
+2. Complete the Runbook Step 7 local `db:start`/`db:reset` smoke once the Supabase CLI is available; no hosted project should be connected.
 
 ## Production blockers
 

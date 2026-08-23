@@ -2,6 +2,18 @@
 
 Newest decisions go first. Each entry stays short and points to authoritative evidence.
 
+## D-017 — Database configuration is testable offline; local-stack smoke remains separate
+
+- Decision: commit the Supabase configuration and deterministic routing checks without linking to a hosted project or adding credentials. Keep the local `db:start`/`db:reset` smoke explicitly pending until the developer Supabase CLI is available.
+- Why: Docker is present, but the CLI is absent and the sandboxed ephemeral CLI download could not access the npm registry/cache. Offline invariants and the complete application verification chain pass; claiming a reset smoke without the CLI would be false evidence.
+- Evidence: `supabase/config.toml`, `scripts/db/check-db-config.mjs`, `docs/database-environments.md`, `npm run verify`.
+
+## D-016 — Client and privileged environment modules stay physically separate
+
+- Decision: `src/lib/env.ts` may contain only `NEXT_PUBLIC_*` schema symbols; privileged variables and feature flags live in `src/lib/env.server.ts`, which asserts server-only status at module load.
+- Why: a runtime guard on individual functions still permits a client-importable module to include privileged environment schema names. Physical separation reduces accidental client bundling and makes the contract testable.
+- Evidence: `tests/unit/server-boundary.test.ts`, `npm run verify` (full client-bundle leak scan passes).
+
 ## D-015 — D-014 was itself wrong; restored 118-item count with tooling behind it
 
 - Decision: supersede D-014. The verified figure is 118 items / 12 categories / 100 single-price / 18 variant-price / 0 missing prices / 8 source pages / 0 empty categories — matching the original pre-audit claim, not the "52 items / 4 empty categories" figure D-014 recorded.
