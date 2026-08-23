@@ -43,12 +43,12 @@ Build a luxury, mobile-first Cladium Café & Resort web application on Next.js/V
 
 - Runbook Step 5 CI and repository hygiene: `.github/workflows/ci.yml` (Node 24) runs install integrity (`npm ci`), `npm ls`, format, lint, typecheck, unit tests, source validators, scripts tests, secret scan, production build, and a client-bundle leak check — the same chain as `npm run verify`, runnable locally. Added dependency-free `scripts/security/` scanner (12 patterns, never prints matched values) plus `CONTRIBUTING.md` (commands, branch-protection recommendations, dependency-update policy incl. the ESLint 9 pin rationale). `.gitignore` and placeholder-only `.env.example` reviewed and already safe — unchanged. CI consumes no repository secrets and builds without credentials by design.
 - Runbook Step 6 shared platform primitives: strict shared request schemas and boundary parsing, typed `Result`/application errors, correlation IDs, redacted structured logging, safe JSON responses, and synthetic test fixtures. Client-safe environment handling is isolated in `src/lib/env.ts`; privileged environment handling is isolated in `src/lib/env.server.ts` and rejects browser imports at module load. Full 11-gate verification passes (102 unit tests), including validation, redaction, response-safety, and environment-boundary tests.
-- Runbook Step 7 configuration foundation: local `supabase/config.toml`, empty migration workflow, generated-types workflow, isolated environment guidance, transaction-pooler/direct-connection invariants, and CI check added. Full `npm run verify` passes (102 unit tests, 35 script tests). The local Supabase reset smoke remains pending: the CLI is now available and Docker is running, but the initial local-stack image pull stalled after caching 7 images, before any container started. No hosted project was connected.
+- Runbook Step 7 configuration foundation: local `supabase/config.toml`, empty migration workflow, generated-types workflow, isolated environment guidance, transaction-pooler/direct-connection invariants, and CI check added. Full `npm run verify` passes (102 unit tests, 35 script tests). The local Supabase reset smoke remains pending: the CLI and all 11 images are available, but Docker is allocated 4 GB while the full stack requires at least 7 GB; Realtime/Storage/Pooler health checks time out. No hosted project was connected.
 
 ## Next
 
 1. Review this state and `.continuum/TASKS.md`.
-2. Complete the Runbook Step 7 local `db:start`/`db:reset` smoke after the remaining Supabase Docker images can be pulled; no hosted project should be connected.
+2. Raise Docker Desktop memory to at least 7 GB, then complete the Runbook Step 7 local `db:start`/`db:reset` smoke; no hosted project should be connected.
 
 ## Production blockers
 

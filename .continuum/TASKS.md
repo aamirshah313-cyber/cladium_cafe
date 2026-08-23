@@ -2,7 +2,7 @@
 
 ## Active
 
-- [ ] P1 — Step 7: run local `db:start`/`db:reset` smoke after the remaining Supabase Docker images can be pulled. The CLI is available and Docker is running, but the initial pull stalled after seven images; no hosted project is linked.
+- [ ] P1 — Step 7: raise Docker Desktop memory to at least 7 GB, then run local `db:start`/`db:reset` smoke. The CLI and all 11 images are available, but the current 4 GB allocation causes Realtime/Storage/Pooler health timeouts; no hosted project is linked.
 
 ## Next
 

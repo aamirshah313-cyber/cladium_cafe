@@ -34,7 +34,7 @@ Notes:
 
 ## Local development workflow
 
-Requires Docker Desktop and the Supabase CLI (`npx supabase` — intentionally not added as a project dependency; it is a developer tool, not a runtime one).
+Requires Docker Desktop and the Supabase CLI (`npx supabase` — intentionally not added as a project dependency; it is a developer tool, not a runtime one). The full local stack needs at least 7 GB of Docker memory; do not treat a health-check timeout on a lower allocation as a migration failure.
 
 ```sh
 npm run db:start      # start the local stack (Postgres, Auth, Storage, Studio)
