@@ -1,0 +1,256 @@
+{
+  "currency": "PKR",
+  "status": "Transcribed from the eight menu images supplied by the user on 2026-08-21. Prices and availability must be confirmed by Cladium Café before publication or checkout.",
+  "pricing_notice": "Government taxes and service charges are applicable.",
+  "source_assets": [
+    "assets/provided/Menu/766913541_28391003543824575_4156668204560373849_n.jpg",
+    "assets/provided/Menu/767793618_1364109615934297_811842741665936434_n.jpg",
+    "assets/provided/Menu/768452214_1079272057865290_2095275168416361871_n.jpg",
+    "assets/provided/Menu/768713115_2537714016669597_1915835109574653721_n.jpg",
+    "assets/provided/Menu/768303424_1027833663193761_6719890299649940348_n.jpg",
+    "assets/provided/Menu/768859565_2985403455160973_8340045853762387780_n.jpg",
+    "assets/provided/Menu/770309891_1434202912100718_7409069099593472735_n.jpg",
+    "assets/provided/Menu/771808154_1078817988045286_7615683536764993270_n.jpg"
+  ],
+  "categories": [
+    {
+      "name": "Sandwiches",
+      "items": [
+        { "name": "Cladium Special Sandwich", "price_pkr": 1399, "signature": true },
+        { "name": "Chicken Cheese Sandwich", "price_pkr": 1299 },
+        { "name": "Grilled Chicken Sandwich", "price_pkr": 1299 }
+      ]
+    },
+    {
+      "name": "Steaks",
+      "groups": [
+        {
+          "name": "Chicken",
+          "items": [
+            { "name": "Tarragon Chicken Steak", "price_pkr": 1695 },
+            { "name": "Mexican Chicken Steak", "price_pkr": 1695 },
+            { "name": "Mushroom Chicken Steak", "price_pkr": 1695 },
+            { "name": "Moroccan Chicken Steak", "price_pkr": 1695 },
+            { "name": "Black Pepper Chicken Steak", "price_pkr": 1695 },
+            { "name": "Mighty Corn Chicken Steak", "price_pkr": 1795 },
+            { "name": "French Onion Chicken Steak", "price_pkr": 1795 },
+            { "name": "Italian Chicken Steak", "price_pkr": 1795 }
+          ]
+        },
+        {
+          "name": "Beef",
+          "items": [
+            { "name": "Tarragon Beef Steak", "price_pkr": 2695 },
+            { "name": "Mexican Beef Steak", "price_pkr": 2695 },
+            { "name": "Mushroom Beef Steak", "price_pkr": 2695 },
+            { "name": "Moroccan Beef Steak", "price_pkr": 2695 },
+            { "name": "Black Pepper Beef Steak", "price_pkr": 2695 },
+            { "name": "Mighty Corn Beef Steak", "price_pkr": 2795 },
+            { "name": "French Onion Beef Steak", "price_pkr": 2795 }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Desi Cuisine",
+      "items": [
+        { "name": "Chicken Peshawari Karahi", "prices_pkr": { "half": 1399, "full": 2599 } },
+        { "name": "Chicken Shinwari", "prices_pkr": { "half": 1399, "full": 2599 } },
+        { "name": "Chicken White Karahi", "prices_pkr": { "half": 1499, "full": 2699 } },
+        { "name": "Chicken Handi", "prices_pkr": { "half": 1499, "full": 2399 } },
+        { "name": "Madrasi Handi", "prices_pkr": { "half": 1499, "full": 2399 } },
+        { "name": "Beef Seekh Kabab Karahi", "prices_pkr": { "half": 1199, "full": 1899 } },
+        { "name": "Chicken Seekh Kabab Karahi", "prices_pkr": { "half": 1099, "full": 1799 } },
+        { "name": "BBQ Grilled Chicken Karahi", "prices_pkr": { "half": 1299, "full": 2299 } },
+        { "name": "Mutton Karahi", "prices_pkr": { "half": 2399, "full": 3999 } },
+        { "name": "Chicken Biryani", "price_pkr": 999, "serves": 2 }
+      ]
+    },
+    {
+      "name": "Exclusive Beef Entree",
+      "items": [
+        { "name": "Tenderloin Salt Bae Style Steak", "price_pkr": 4999 },
+        { "name": "Tomahawk Steak", "price_pkr": 3999 },
+        { "name": "Ribeye Steak", "price_pkr": 4599 },
+        { "name": "T-Bone Steak", "price_pkr": 4699 },
+        { "name": "Garlic Butter Bites - Turkish Special", "price_pkr": 3499, "served_with": "naan" },
+        { "name": "Tawa Beef", "price_pkr": 3499, "served_with": "naan" },
+        { "name": "Cladium Special Beef Steak", "price_pkr": 4999, "signature": true }
+      ]
+    },
+    {
+      "name": "Italian",
+      "items": [
+        { "name": "Alfredo Pasta", "price_pkr": 1099 },
+        { "name": "Penne Arrabbiata Pasta", "price_pkr": 1199 },
+        { "name": "Jalapeno Pasta", "price_pkr": 1099 },
+        { "name": "Rattlesnake Pasta", "price_pkr": 1299 },
+        { "name": "Country Chicken Panizzon Pasta", "price_pkr": 1599 },
+        { "name": "Cladium Special Pasta", "price_pkr": 1399, "signature": true }
+      ]
+    },
+    {
+      "name": "Chinese",
+      "serving": "single",
+      "items": [
+        { "name": "Chicken Shashlik with Rice", "price_pkr": 999 },
+        { "name": "Chicken Manchurian with Rice", "price_pkr": 999 },
+        { "name": "Chicken Chilli Dry with Rice", "price_pkr": 999 },
+        { "name": "Beef Chilli Dry with Rice", "price_pkr": 1399 },
+        { "name": "Kungpao Chicken with Rice", "price_pkr": 1199 },
+        { "name": "Egg Fried Rice", "price_pkr": 599 },
+        { "name": "Chicken Fried Rice", "price_pkr": 799 },
+        { "name": "Vegetable Fried Rice", "price_pkr": 499 },
+        { "name": "Masala Rice", "price_pkr": 899 }
+      ]
+    },
+    {
+      "name": "Extra Side",
+      "items": [
+        { "name": "Raita", "price_pkr": 120 },
+        { "name": "Fresh Salad", "price_pkr": 150 },
+        { "name": "Mint Sauce", "price_pkr": 100 },
+        { "name": "Plain Naan", "price_pkr": 40 },
+        { "name": "Roghni Naan", "price_pkr": 85 },
+        { "name": "Garlic Naan", "price_pkr": 100 }
+      ]
+    },
+    {
+      "name": "Starters",
+      "items": [
+        { "name": "Chicken Finger", "price_pkr": 999, "quantity": "6 pcs" },
+        { "name": "Chicken Cheese Ball", "price_pkr": 799, "quantity": "6 pcs" },
+        { "name": "Chicken Nachos", "price_pkr": 999 },
+        { "name": "BBQ Wings", "price_pkr": 899, "quantity": "6 pcs" },
+        { "name": "Dynamite Wings", "price_pkr": 899, "quantity": "6 pcs" },
+        { "name": "Loaded Chilli Fries", "price_pkr": 699 },
+        { "name": "Plain Fries", "price_pkr": 395 }
+      ]
+    },
+    {
+      "name": "Soup",
+      "items": [
+        { "name": "Cladium Special Soup", "prices_pkr": { "single": 350, "family": 999 }, "signature": true },
+        { "name": "Chicken Corn Soup", "prices_pkr": { "single": 350, "family": 999 } },
+        { "name": "Hot & Sour Soup", "prices_pkr": { "single": 350, "family": 999 } },
+        { "name": "Vegetable Soup", "prices_pkr": { "single": 250, "family": 599 } }
+      ]
+    },
+    {
+      "name": "Burgers",
+      "groups": [
+        {
+          "name": "Chicken",
+          "items": [
+            { "name": "Chicken Special Grilled Burger", "price_pkr": 1199 },
+            { "name": "Mushroom Chicken Burger", "price_pkr": 1099 },
+            { "name": "Jalapeno Chicken Burger", "price_pkr": 1099 },
+            { "name": "Chicken Smash Burger", "price_pkr": 1099 },
+            { "name": "Chicken Patty Burger", "price_pkr": 999 }
+          ]
+        },
+        {
+          "name": "Beef",
+          "items": [
+            { "name": "Cladium Special Beef Burger", "price_pkr": 1399, "signature": true },
+            { "name": "Beef Bone Marrow Burger", "price_pkr": 1299 },
+            { "name": "Smash Beef Burger", "price_pkr": 1299 },
+            { "name": "South Western Style Beef Burger", "price_pkr": 1299 },
+            { "name": "Thick Patty Beef Burger", "price_pkr": 1299 },
+            { "name": "Jalapeno Beef Burger", "price_pkr": 1299 }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Bar Menu",
+      "groups": [
+        {
+          "name": "Cladium Fruit Chillers",
+          "items": [
+            { "name": "Blueberry Chiller", "price_pkr": 449 },
+            { "name": "Strawberry Chiller", "price_pkr": 449 },
+            { "name": "Peach Chiller", "price_pkr": 449 },
+            { "name": "Cookie & Cream Chiller", "price_pkr": 449 },
+            { "name": "Mint Margarita", "price_pkr": 449 },
+            { "name": "Fresh Lime", "price_pkr": 449 },
+            { "name": "Halal Beer", "price_pkr": 799, "signature": true }
+          ]
+        },
+        {
+          "name": "Cladium Special Shakes",
+          "items": [
+            { "name": "Peach Blast Shake", "price_pkr": 499 },
+            { "name": "Strawberry Shake", "price_pkr": 499 },
+            { "name": "Berry Bucket Shake", "price_pkr": 499 },
+            { "name": "Cookie Crumble Shake", "price_pkr": 499 }
+          ]
+        },
+        {
+          "name": "Cladium Special Smoothies",
+          "items": [
+            { "name": "Berry Passion Smoothie", "price_pkr": 699 },
+            { "name": "Strawberry Smoothie", "price_pkr": 699 },
+            { "name": "Fresh Peach Smoothie", "price_pkr": 699 }
+          ]
+        },
+        {
+          "name": "Special Cold Beverages",
+          "items": [
+            { "name": "Iced Mocha Latte", "price_pkr": 599 },
+            { "name": "Iced Latte Over Ice", "price_pkr": 599 },
+            { "name": "Frozen Hot Chocolate", "price_pkr": 449 },
+            { "name": "Cladium Peach Iced Tea", "price_pkr": 449 }
+          ]
+        },
+        {
+          "name": "Special Hot Beverages",
+          "items": [
+            { "name": "Cappuccino", "price_pkr": 599 },
+            { "name": "Café Latte", "price_pkr": 599 },
+            { "name": "Espresso Double Short", "price_pkr": 599 },
+            { "name": "Karak Chai", "price_pkr": 250 },
+            { "name": "Green Tea (Jasmine)", "price_pkr": 150 },
+            { "name": "Ice Cream Double Scoop", "price_pkr": 299 }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "BBQ",
+      "groups": [
+        {
+          "name": "Beef",
+          "items": [
+            { "name": "Afghani Tikka Boti", "prices_pkr": { "half": 2199, "full": 4199 } },
+            { "name": "Beef Behari Boti", "prices_pkr": { "half": 2499, "full": 4799 } },
+            { "name": "Beef Seekh Kabab", "price_pkr": 1599, "quantity": "6 pcs" },
+            { "name": "Beef Reshmi Kabab", "price_pkr": 1999, "quantity": "6 pcs" }
+          ]
+        },
+        {
+          "name": "Chicken",
+          "items": [
+            { "name": "Chicken Tikka Boti", "price_pkr": 999, "quantity": "6 pcs" },
+            { "name": "Chicken Malai Boti", "price_pkr": 1299, "quantity": "6 pcs" },
+            { "name": "Chicken Creamy Wings", "price_pkr": 1199, "quantity": "6 pcs" },
+            { "name": "Chicken Seekh Kabab", "price_pkr": 1399, "quantity": "6 pcs" },
+            { "name": "Mughlai Kabab", "price_pkr": 1899, "quantity": "6 pcs" },
+            { "name": "Chicken Green Boti", "price_pkr": 1199, "quantity": "6 pcs" },
+            { "name": "Chicken Rajistani Boti", "price_pkr": 1499, "quantity": "6 pcs" },
+            { "name": "Kasuri Boti", "price_pkr": 1399, "quantity": "6 pcs" },
+            { "name": "Chicken Reshmi Kabab", "price_pkr": 1999, "quantity": "6 pcs", "signature": true }
+          ]
+        },
+        {
+          "name": "Turkish",
+          "items": [
+            { "name": "Adana Kabab", "prices_pkr": { "half": 1999, "full": 3899 } },
+            { "name": "Barr Kabab", "prices_pkr": { "half": 1999, "full": 3899 } },
+            { "name": "Gola Kabab", "prices_pkr": { "half": 1999, "full": 3899 } }
+          ]
+        }
+      ]
+    }
+  ]
+}

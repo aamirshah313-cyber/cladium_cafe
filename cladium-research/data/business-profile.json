@@ -1,0 +1,86 @@
+{
+  "business": {
+    "name": "Cladium Café & Resort",
+    "city": "Abbottabad, Pakistan",
+    "category": ["cafe", "resort", "premium dining"],
+    "positioning": "An elevated mountain escape with high-key and peak vibes.",
+    "experience_pillars": [
+      "serenity",
+      "panoramic mountain views",
+      "aesthetic ambience",
+      "premium family dining",
+      "relax, refresh, reconnect"
+    ],
+    "hours": {
+      "display": "12 pm–12 am",
+      "status": "confirmed by Cladium representative via Instagram message, as supplied by the user on 2026-08-21"
+    },
+    "location": {
+      "display_name": "Cladium Cafe & Resort",
+      "address": "Opposite Old McDonald's Site, Tarhana Bala, Mansehra Road, Abbottabad, 22010, Pakistan",
+      "coordinates": {
+        "latitude": 34.2406216,
+        "longitude": 73.2544366
+      },
+      "google_maps_url": "https://maps.app.goo.gl/rHvGG5a82LGkTLLY6?g_st=ic",
+      "google_place_id": "ChIJQxSfM1Q73jgRAHq5EuWJ2ys",
+      "source_note": "Official Linktree map card and supplied menu asset. Verify public-facing address style before launch."
+    },
+    "contact": {
+      "whatsapp": "+92 312 3978889",
+      "whatsapp_url": "https://wa.me/923123978889",
+      "phone_numbers_from_menu": [
+        "+92 300 5669359",
+        "+92 334 9660628"
+      ],
+      "source_note": "WhatsApp from official Linktree; call numbers from supplied menu cover. Confirm the primary order/booking number with the owner."
+    },
+    "operations": {
+      "fulfilment": {
+        "home_delivery": false,
+        "takeaway": true,
+        "note": "The café is not planning home delivery currently. Do not accept or promise delivery orders."
+      },
+      "seating": {
+        "general_capacity": "ample",
+        "treehouse_capacity": "limited",
+        "note": "Exact capacities and reservable areas still need owner configuration."
+      },
+      "birthday_and_event_policy": {
+        "decor_available": true,
+        "decor_starting_price_pkr": 8000,
+        "cakes_provided": false,
+        "outside_food_allowed": false,
+        "note": "Decor is charged separately and starts at PKR 8,000; final pricing and availability require staff confirmation."
+      },
+      "source_note": "Confirmed by a Cladium representative in an Instagram message supplied by the user on 2026-08-21."
+    }
+  },
+  "official_channels": {
+    "instagram": {
+      "handle": "cladium.cafe",
+      "url": "https://www.instagram.com/cladium.cafe/",
+      "followers": 1792,
+      "post_count": 258,
+      "source_note": "Public profile metadata captured 2026-08-21. Counts will change."
+    },
+    "facebook": {
+      "name": "Cladium.Cafe&Resort | Abbottabad",
+      "url": "https://www.facebook.com/people/CladiumCafeResort/61590768862564/",
+      "likes": 691,
+      "people_talking_about": 1722,
+      "source_note": "Public profile metadata captured 2026-08-21. Counts will change."
+    },
+    "linktree": {
+      "url": "https://linktr.ee/cladiumcafe",
+      "tiktok_url": "https://www.tiktok.com/@cladium_cafe",
+      "source_note": "Official Linktree captured 2026-08-21."
+    }
+  },
+  "unverified_or_missing": [
+    "dietary information, allergens, customization rules, and real-time stock status",
+    "delivery zones, fees, minimum order, payment methods, and refund policy",
+    "booking rules, venue capacity, available areas, deposits, and cancellation policy",
+    "Meta Business Manager, Page, Instagram, WhatsApp Business Account, ad account, and pixel ownership"
+  ]
+}

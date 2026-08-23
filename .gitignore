@@ -1,0 +1,33 @@
+# Dependencies and build output
+node_modules/
+.next/
+out/
+dist/
+coverage/
+playwright-report/
+test-results/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Local platform state
+.vercel/
+supabase/.temp/
+.claude/settings.local.json
+
+# Logs and caches
+*.log
+npm-debug.log*
+.eslintcache
+.turbo/
+
+# Editors and operating systems
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
