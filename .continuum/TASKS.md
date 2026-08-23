@@ -2,7 +2,7 @@
 
 ## Active
 
-- [ ] P1 — Step 7: run local `db:start`/`db:reset` smoke after the Supabase CLI becomes available. Configuration, documentation, and offline invariants are complete; no hosted project is linked.
+- [ ] P1 — Step 7: run local `db:start`/`db:reset` smoke after the remaining Supabase Docker images can be pulled. The CLI is available and Docker is running, but the initial pull stalled after seven images; no hosted project is linked.
 
 ## Next
 

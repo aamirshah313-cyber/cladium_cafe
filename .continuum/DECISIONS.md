@@ -5,7 +5,7 @@ Newest decisions go first. Each entry stays short and points to authoritative ev
 ## D-017 — Database configuration is testable offline; local-stack smoke remains separate
 
 - Decision: commit the Supabase configuration and deterministic routing checks without linking to a hosted project or adding credentials. Keep the local `db:start`/`db:reset` smoke explicitly pending until the developer Supabase CLI is available.
-- Why: Docker is present, but the CLI is absent and the sandboxed ephemeral CLI download could not access the npm registry/cache. Offline invariants and the complete application verification chain pass; claiming a reset smoke without the CLI would be false evidence.
+- Why: The CLI is now available after an elevated local download and Docker is running, but the initial image pull stalled after seven images, before any container started. Offline invariants and the complete application verification chain pass; claiming a reset smoke without a running stack would be false evidence.
 - Evidence: `supabase/config.toml`, `scripts/db/check-db-config.mjs`, `docs/database-environments.md`, `npm run verify`.
 
 ## D-016 — Client and privileged environment modules stay physically separate
