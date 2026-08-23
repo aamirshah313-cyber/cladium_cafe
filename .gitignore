@@ -17,6 +17,7 @@ test-results/
 # Local platform state
 .vercel/
 supabase/.temp/
+supabase/.branches/
 .claude/settings.local.json
 
 # Logs and caches
