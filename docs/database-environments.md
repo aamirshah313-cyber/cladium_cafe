@@ -45,6 +45,19 @@ npm run db:stop       # stop the local stack
 
 `db:reset` is the check that matters: it proves the full migration history applies cleanly to an empty database. Run it before opening any PR that touches `supabase/migrations/`.
 
+### Low-memory machines
+
+The full stack is 11 services and needs roughly 6–8 GB available to Docker. With less, containers are OOM-killed (`exit 137`) and `start`/`reset` fail with `LegacyHealthCheckTimeoutError` or `LegacyDbSetupError` — failures that look like config errors but are not. Verified on a 4 GB / 4 CPU Docker VM: the full stack flapped and was killed, while the reduced stack below was stable.
+
+The migration workflow only needs Postgres, so exclude the heavy optional services:
+
+```sh
+npx supabase start -x studio,edge-runtime,realtime,storage,imgproxy,supavisor,mailpit,vector,logflare
+npx supabase db reset
+```
+
+Raise Docker's memory limit instead when you need Studio, Storage, Realtime, or Edge Functions. Do **not** disable these in `config.toml` to work around a local memory limit — the committed config describes the intended stack, and the exclusion belongs on the command line.
+
 ### Creating a migration
 
 ```sh

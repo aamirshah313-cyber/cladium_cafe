@@ -1,7 +1,15 @@
-# Migrations
+# Migration rules
 
-Empty on purpose. Runbook Step 7 establishes the migration _workflow_; the
-schema itself arrives in later steps:
+`supabase/migrations/` is empty on purpose. Runbook Step 7 establishes the
+migration _workflow_; the schema itself arrives in later steps.
+
+(This guidance lives in `docs/` rather than inside `supabase/migrations/` to
+keep that directory to migrations only. Note the CLI logs an informational
+`Skipping migration .gitkeep…` line on every run, because it reports any file
+there that is not a `<timestamp>_name.sql` migration. That notice is harmless;
+the placeholder exists so git tracks the otherwise-empty directory.)
+
+Upcoming schema steps:
 
 - Step 8 — core content schema (business settings/hours, feature flags, menu
   versions/categories/items/variants/translations/media, pricing rules,

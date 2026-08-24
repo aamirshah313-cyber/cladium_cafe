@@ -2,7 +2,7 @@
 // Run with: node --test "scripts/**/*.test.mjs"
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -125,11 +125,46 @@ test('the committed supabase/config.toml satisfies every structural invariant', 
   assert.deepEqual(checkSupabaseConfig(text), []);
 });
 
-test('no migration SQL exists yet — schema belongs to Step 8+', async () => {
+test('the committed migrations satisfy every offline invariant', async () => {
   const { readdirSync } = await import('node:fs');
-  const files = readdirSync(path.join(repoRoot, 'supabase', 'migrations'));
-  assert.deepEqual(
-    files.filter((f) => f.endsWith('.sql')),
-    [],
-  );
+  const {
+    checkFilenames,
+    checkRowLevelSecurity,
+    checkNoUnacknowledgedDestructiveDdl,
+    checkMoneyColumns,
+    checkTimestampColumns,
+  } = await import('./migration-invariants.mjs');
+
+  const dir = path.join(repoRoot, 'supabase', 'migrations');
+  const { errors: nameErrors, migrations } = checkFilenames(readdirSync(dir).sort());
+  assert.deepEqual(nameErrors, []);
+  assert.ok(migrations.length > 0, 'Step 8 onward expects at least one migration');
+
+  const files = migrations.map((name) => ({
+    name,
+    sql: readFileSync(path.join(dir, name), 'utf8'),
+  }));
+  const combined = files.map((f) => f.sql).join('\n');
+
+  const { errors: rlsErrors, created } = checkRowLevelSecurity(combined);
+  assert.deepEqual(rlsErrors, [], 'every created table must enable RLS');
+  assert.ok(created.length >= 12, `expected the core content tables, found ${created.length}`);
+  assert.deepEqual(checkNoUnacknowledgedDestructiveDdl(files), []);
+  assert.deepEqual(checkMoneyColumns(combined), []);
+  assert.deepEqual(checkTimestampColumns(combined), []);
+});
+
+test('generated database types are committed alongside the migrations', () => {
+  const typesPath = path.join(repoRoot, 'src', 'lib', 'db', 'database.types.ts');
+  assert.equal(existsSync(typesPath), true, 'run `npm run db:types` and commit the result');
+  const types = readFileSync(typesPath, 'utf8');
+  for (const table of [
+    'menu_items',
+    'menu_variants',
+    'pricing_rules',
+    'promotions',
+    'translations',
+  ]) {
+    assert.ok(types.includes(table), `generated types should describe ${table}`);
+  }
 });

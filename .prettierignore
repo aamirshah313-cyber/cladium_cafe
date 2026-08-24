@@ -12,6 +12,10 @@ package-lock.json
 # "This file should not be edited."
 next-env.d.ts
 
+# Generated from the database schema by `npm run db:types`. Formatting it here
+# would be reverted on the next regeneration and flap CI.
+src/lib/db/database.types.ts
+
 # Authoritative research/content and governance files — formatting these
 # is out of scope for the app's tooling and risks altering approved content.
 cladium-research/
