@@ -1,5 +1,56 @@
+/*
+ * Day/Night semantic tokens — Runbook Step 14 (theme-mode.md).
+ *
+ * Day is the unconditional `:root` default. A system dark preference is
+ * only the *first-visit* default (theme-mode.md), so it is applied purely
+ * in CSS, guarded by `:not([data-theme="day"])` so it never overrides an
+ * explicit Day choice. An explicit `data-theme` (set server-side in
+ * `app/[locale]/layout.tsx` from the theme cookie, and client-side by
+ * `theme-toggle.tsx`) always wins over both the Day default and the system
+ * preference, because it is declared last with a more specific selector.
+ * Values are working tokens from theme-mode.md — confirm final contrast
+ * against the finished typography/components before release.
+ */
+
 :root {
   color-scheme: light;
+  --surface-canvas: #f7f3ea;
+  --surface-raised: #fefcf7;
+  --surface-atmosphere: #e3e9e0;
+  --text-primary: #183228;
+  --text-muted: #557064;
+  --action-primary: #23463a;
+  --action-on-primary: #f7f3ea;
+  --accent-gold: #b38d4d;
+  --border-subtle: #c9d4c8;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='day']) {
+    color-scheme: dark;
+    --surface-canvas: #0b1a15;
+    --surface-raised: #183228;
+    --surface-atmosphere: #23463a;
+    --text-primary: #f7f3ea;
+    --text-muted: #c8d6cb;
+    --action-primary: #c7a96b;
+    --action-on-primary: #0b1a15;
+    --accent-gold: #e7d5ab;
+    --border-subtle: #365246;
+  }
+}
+
+:root[data-theme='night'] {
+  color-scheme: dark;
+  --surface-canvas: #0b1a15;
+  --surface-raised: #183228;
+  --surface-atmosphere: #23463a;
+  --text-primary: #f7f3ea;
+  --text-muted: #c8d6cb;
+  --action-primary: #c7a96b;
+  --action-on-primary: #0b1a15;
+  --accent-gold: #e7d5ab;
+  --border-subtle: #365246;
 }
 
 * {
@@ -8,8 +59,44 @@
 
 body {
   margin: 0;
+  background: var(--surface-canvas);
+  color: var(--text-primary);
   font-family:
     system-ui,
     -apple-system,
     sans-serif;
+}
+
+/* Colour-only, 150-200ms (theme-mode.md); no motion/transform, and skipped entirely for reduced motion. */
+@media (prefers-reduced-motion: no-preference) {
+  body,
+  a,
+  button {
+    transition:
+      background-color 180ms ease,
+      color 180ms ease,
+      border-color 180ms ease;
+  }
+}
+
+a {
+  color: var(--action-primary);
+}
+
+button {
+  font: inherit;
+  color: var(--text-primary);
+  background: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+}
+
+button[aria-pressed='true'] {
+  background: var(--action-primary);
+  color: var(--action-on-primary);
+  border-color: var(--action-primary);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent-gold);
+  outline-offset: 2px;
 }

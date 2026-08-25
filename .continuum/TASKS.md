@@ -2,7 +2,7 @@
 
 ## Active
 
-- [ ] P1 — Step 14: Day/Night design system.
+- [ ] P1 — Step 15: public shell and navigation.
 
 ## Next
 
@@ -41,6 +41,7 @@
 - [x] Step 11 — menu normalization and unpublished import planning: source adapter retained; pure draft import, source-checksum idempotency, human-reviewed Urdu translation candidates, stable-ID diff report, and approval-gated publish intent added. No database write or publishing occurs. 18 focused tests and the full `npm run verify` gate pass.
 - [x] Step 12 — security foundation: signed opaque session cookies, CSRF/origin guards, safe redirects, request limits, CSP/security headers, provider-neutral rate/replay interfaces, HMAC webhook verification, safe 413/415 errors, and expanded redaction coverage. 36 focused security tests and full `npm run verify` pass.
 - [x] Step 13 — locale routing: server-rendered `/en`/`/ur` under `app/[locale]/`, `proxy.ts` negotiation (cookie → Accept-Language → default, never an open redirect), signed preference cookie via `/api/locale-preference`, `lang`/`dir`/hreflang/`x-default`, and a `(root-fallback)` route group fix for a real `lang="en"`-on-Urdu-routes bug found via live browser check (D-018). 209 tests total; full `npm run verify` and manual browser check pass.
+- [x] Step 14 — Day/Night design system: theme-mode.md tokens in `globals.css` (Day default; Night via `prefers-color-scheme` first-visit default and an explicit `data-theme` override); labelled, keyboard-accessible toggle (`theme-toggle.tsx`) that switches instantly client-side and persists via a deliberately unsigned, isomorphic cookie (D-019); server-aligned initial render (no flash) via `cookies()` in `[locale]/layout.tsx`; 180ms colour-only transition guarded by `prefers-reduced-motion`. 222 tests total; full `npm run verify` and manual browser check (both themes, both locales, instant switch, persistence) pass.
 
 ## Update rule
 

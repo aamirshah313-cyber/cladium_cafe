@@ -2,6 +2,12 @@
 
 Newest decisions go first. Each entry stays short and points to authoritative evidence.
 
+## D-019 — Theme preference is a separate, unsigned, isomorphic cookie; `/[locale]` is now dynamic
+
+- Decision: the Day/Night preference (`lib/theme/`) is its own cookie (`cladium_theme`), deliberately unsigned and readable/writable by client JS — unlike the locale preference cookie (`lib/i18n/preference-cookie.ts`), which is signed and `HttpOnly`. `app/[locale]/layout.tsx` now calls `cookies()` to render the correct `data-theme` on first paint, which makes `/en` and `/ur` dynamically rendered (`ƒ`) instead of statically prerendered (`●`).
+- Why: theme-mode.md states the theme is "separate from language" with no security/routing consequence, unlike locale (open-redirect risk). Signing would buy nothing and would block the instant, no-reload client-side toggle the spec requires (an `HttpOnly` cookie can't be read/written from `document.cookie`). Reading the cookie server-side for a flash-free initial render is unavoidably a per-request operation, so static prerendering of the locale routes is no longer possible — an accepted, necessary trade-off, not a regression to fix later.
+- Evidence: `tests/unit/theme.test.ts`, `tests/unit/theme-preference-cookie.test.ts`, `tests/unit/theme-tokens.test.ts`; live browser check of `/en` and `/ur` in both themes, including instant client-side switching (verified with the CSS transition temporarily disabled, since the test harness's hidden preview pane doesn't produce compositor frames to drive a live transition — a tooling artifact, confirmed not to affect a normally-visible browser).
+
 ## D-018 — Route group per root layout, not a shared one above `[locale]`
 
 - Decision: the un-localized `/` fallback (`app/(root-fallback)/{layout,page}.tsx`) lives in its own route group with its own `<html>`/`<body>`, instead of a single `app/layout.tsx` shared with `app/[locale]/layout.tsx`.

@@ -25,6 +25,9 @@ export const chrome = {
   languageSwitcherLabel: { en: 'Language', ur: 'زبان' },
   englishLanguageName: { en: 'English', ur: 'انگریزی' },
   urduLanguageName: { en: 'Urdu', ur: 'اردو' },
+  themeSwitcherLabel: { en: 'Theme', ur: 'تھیم' },
+  dayThemeName: { en: 'Day', ur: 'دن' },
+  nightThemeName: { en: 'Night', ur: 'رات' },
   homeIntro: {
     en: 'A luxury café and resort experience.',
     ur: 'ایک شاندار کیفے اور ریزورٹ کا تجربہ۔',
