@@ -2,17 +2,17 @@
 
 Updated: 2026-08-25
 Architecture: Version 2  
-Phase: Runbook Phases 0–2 complete (Steps 1–12); Phase 3 underway (Steps 13–15 complete)
-Application code: scaffolded (Next.js App Router, TypeScript strict) with CI gates, shared platform primitives, locale routing, Day/Night theming, and a public site shell — no menu/request/concierge features built yet
-Baseline commit: `8732db0` "chore: establish Cladium pre-build baseline" (local only, not pushed). Steps 8–10 committed at `150db60` (local only, not pushed). Steps 11–13 committed at `ec45245` (local only, not pushed). Step 14 committed at `84e37db` "feat: Day/Night theme system (Step 14)" (local only, not pushed). Step 15 complete in the working tree.
+Phase: Runbook Phases 0–2 complete (Steps 1–12); Phase 3 underway (Steps 13–16 complete)
+Application code: scaffolded (Next.js App Router, TypeScript strict) with CI gates, shared platform primitives, locale routing, Day/Night theming, a public site shell, and a Visit page — no menu/request/concierge features built yet
+Baseline commit: `8732db0` "chore: establish Cladium pre-build baseline" (local only, not pushed). Steps 8–10 committed at `150db60` (local only, not pushed). Steps 11–13 committed at `ec45245` (local only, not pushed). Step 14 committed at `84e37db` (local only, not pushed). Step 15 committed at `443cd0e` "feat: public site shell and navigation (Step 15)" (local only, not pushed). Step 16 complete in the working tree.
 
 ## Progress (step-completion metrics, not effort estimates)
 
-- Overall: 15/47 runbook steps = 31.9%
+- Overall: 16/47 runbook steps = 34.0%
 - Phase 0 (governance/evidence, steps 1–3): 3/3 = 100%
 - Phase 1 (repo/app foundation, steps 4–6): 3/3 = 100%
 - Phase 2 (data/auth/security, steps 7–12): 6/6 = 100%
-- Phase 3 (bilingual/dual-theme public experience, steps 13–18): 3/6 = 50%
+- Phase 3 (bilingual/dual-theme public experience, steps 13–18): 4/6 = 66.7%
 - Deployment is step 46.
 - Every step counts equally regardless of size/duration. See `CLAUDE.md` Workflow rules for the reporting rule.
 
@@ -58,10 +58,12 @@ Build a luxury, mobile-first Cladium Café & Resort web application on Next.js/V
 - Runbook Step 14 Day/Night design system: semantic tokens from theme-mode.md in `globals.css` (Day unconditional on `:root`; Night applied both as a `prefers-color-scheme` first-visit default, guarded against an explicit Day choice, and as an explicit `data-theme="night"` override that always wins). A labelled, keyboard-accessible `Day | Night` button group (`app/[locale]/theme-toggle.tsx`, never icon-only) switches instantly client-side (no navigation — route, locale, and any request/cart state untouched) and persists via a deliberately unsigned, isomorphic cookie (`lib/theme/`, D-019 — theme has no security/routing consequence, unlike locale, and the cookie must be client-JS-readable for an instant switch). `app/[locale]/layout.tsx` reads that cookie server-side to set the initial `data-theme` before first paint (no flash); this makes `/en`/`/ur` dynamically rendered rather than statically prerendered (D-019). Colour transitions are 180ms and guarded by `prefers-reduced-motion`; focus is visible via `:focus-visible`. Evidence: 13 new focused tests, including a dependency-free scan of `globals.css` confirming every Day/Night token is present with the exact theme-mode.md hex values in all three CSS blocks; full `npm run verify` passes; live browser check confirmed correct `data-theme`/colours on fresh loads of `/en` and `/ur` in both themes, correct cookie persistence, and correct instant switching (verified with the CSS transition temporarily disabled, because the test harness's hidden preview pane doesn't produce compositor frames to drive a live transition — a tooling artifact, not an app bug).
 - Runbook Step 15 public shell and navigation: `SiteHeader` (skip link, brand link, primary `nav` — currently just Home, since Menu/Visit/Concierge don't exist yet and "hide unavailable routes" is this step's own instruction — plus the language/theme utility controls) and `SiteFooter` (brand name, hours "12 pm – 12 am" preserved un-translated per the numerals/configured-values rule, and a live "Open now"/"Closed now" status computed timezone-aware in `Asia/Karachi` via `lib/business/hours.ts`, no invented exceptions). Address/map/WhatsApp contact deliberately deferred to Step 16. Loading (`[locale]/loading.tsx`), route-level not-found (`[locale]/not-found.tsx`), and a client error boundary (`[locale]/error.tsx`, locale derived from `usePathname()` since `error.js` gets no route params, `error.message` never rendered) all render inside the correctly localized shell. A root `app/not-found.tsx` and `app/global-error.tsx` are self-sufficient (own `<html>`/`<body>`, bilingual) fallbacks for failures above the locale layout. A catch-all `app/[locale]/[...rest]/page.tsx` was added after a live browser check found `/en/nonexistent` — a path with no matching route at all — skipped the nested not-found entirely and fell through to the bare root fallback, losing `lang`/`dir`/theme/header/footer (D-020). Evidence: 21 new focused tests (business-hours timezone correctness, `localeFromPathname`); full `npm run verify` passes; live browser check of header/nav/footer/hours-status in both locales and themes, both 404 paths (invalid locale vs. valid-locale-unmatched-path), the error boundary (verified via a temporary throwing test page, then removed), and no horizontal overflow at 360px in both LTR and RTL.
 
+- Runbook Step 16 home, location, and contact: `modules/business/facts.ts` expanded with address, Google Maps URL, WhatsApp number/URL, and policy prose (directions, seating, delivery, birthday/décor, cakes, outside food) — every value transcribed from `business-profile.json`/`approved-operations-knowledge.md`, policy prose wrapped as `LocalizedText` via `canonicalLocalizedText` (renders English in both locales until an owner approves Urdu — none is yet). New `/visit` route (one page, matching site-map.md's single "Visit" node: directions/map, hours+live status, WhatsApp contact, a "Good to know" policy list) and a light truthful Home update (retained tagline, a "Plan your visit" link, a WhatsApp CTA) — no photography (none approved yet) and no menu teaser (Step 17, not built yet). Map/WhatsApp links are `target="_blank" rel="noopener noreferrer"`. `SiteHeader`'s primary nav gained a real active-state indicator (`primary-nav.tsx`, a small client island using `usePathname()`, now that Visit is a second real destination — Step 15's single-item placeholder wasn't worth that investment yet). Evidence: 25 new focused tests (exact-value transcription checks, no-invented-Urdu checks, a source-scan confirming every external link carries `rel="noopener noreferrer"`); full `npm run verify` passes; live browser check of the Visit page and updated Home in both locales/themes, correct nav active-state, correct external-link attributes, and no horizontal overflow at 360px.
+
 ## Next
 
 1. Review this state and `.continuum/TASKS.md`.
-2. Runbook Step 16 (home, location, and contact).
+2. Runbook Step 17 (accessible menu browsing).
 3. Note for later: full-stack local work (Studio/Storage/Realtime/Edge Functions) needs Docker raised to ~7 GB; the migration workflow itself does not.
 
 ## Production blockers
