@@ -2,6 +2,12 @@
 
 Newest decisions go first. Each entry stays short and points to authoritative evidence.
 
+## D-018 — Route group per root layout, not a shared one above `[locale]`
+
+- Decision: the un-localized `/` fallback (`app/(root-fallback)/{layout,page}.tsx`) lives in its own route group with its own `<html>`/`<body>`, instead of a single `app/layout.tsx` shared with `app/[locale]/layout.tsx`.
+- Why: Next.js only merges a nested duplicate `<html>` tag's *missing* attributes onto the outer one — it never overwrites an attribute the outer tag already set. The prior shared `app/layout.tsx` set `<html lang="en">` unconditionally and sat above `app/[locale]/layout.tsx` in the tree, so every `/ur` route rendered `lang="en" dir="rtl"` in the browser: `dir` (unset outer) merged through, `lang` (set outer) silently won. Found by loading `/ur` in a real browser and reading `document.documentElement`, not by the unit/build gates, which don't render a DOM.
+- Evidence: `npm run verify` passes with the route group in place; manual browser check of `/en` and `/ur` shows correct `lang`/`dir` on both.
+
 ## D-017 — Database configuration is testable offline; local-stack smoke remains separate
 
 - Decision: commit the Supabase configuration and deterministic routing checks without linking to a hosted project or adding credentials. Keep the local `db:start`/`db:reset` smoke explicitly pending until the developer Supabase CLI is available.

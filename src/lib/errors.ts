@@ -19,6 +19,8 @@ export const ERROR_CODES = [
   'IDEMPOTENCY_CONFLICT',
   'RATE_LIMITED',
   'FEATURE_DISABLED',
+  'UNSUPPORTED_MEDIA_TYPE',
+  'PAYLOAD_TOO_LARGE',
   'INTERNAL',
 ] as const;
 
@@ -34,6 +36,8 @@ const STATUS_BY_CODE: Record<ErrorCode, number> = {
   IDEMPOTENCY_CONFLICT: 409,
   RATE_LIMITED: 429,
   FEATURE_DISABLED: 404,
+  UNSUPPORTED_MEDIA_TYPE: 415,
+  PAYLOAD_TOO_LARGE: 413,
   INTERNAL: 500,
 };
 
@@ -121,6 +125,12 @@ export const rateLimited = (correlationId?: string): AppError =>
 /** A disabled feature must not confirm it exists — hence 404, not 403. */
 export const featureDisabled = (correlationId?: string): AppError =>
   appError('FEATURE_DISABLED', 'That is not available.', { correlationId });
+
+export const unsupportedMediaType = (correlationId?: string): AppError =>
+  appError('UNSUPPORTED_MEDIA_TYPE', 'Unsupported content type.', { correlationId });
+
+export const payloadTooLarge = (correlationId?: string): AppError =>
+  appError('PAYLOAD_TOO_LARGE', 'The request body is too large.', { correlationId });
 
 export const internalError = (internalMessage?: string, correlationId?: string): AppError =>
   appError('INTERNAL', 'Something went wrong on our side. Please try again.', {

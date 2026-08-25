@@ -2,12 +2,10 @@
 
 ## Active
 
-- [ ] P1 — Commit Steps 8–10 (migrations, generated types, db test scripts, config/doc updates) — currently uncommitted; ask before committing.
-- [ ] P1 — Step 11: menu normalization and import into an unpublished version.
+- [ ] P1 — Step 14: Day/Night design system.
 
 ## Next
 
-- [ ] P1 — Step 12: security foundation (cookies, CSRF/origin, headers, rate limits, webhook verification, redaction).
 - [ ] P2 — Optional: raise Docker to ~7 GB for full-stack local work (Studio/Storage/Realtime/Edge Functions). Not needed for migrations — see `docs/database-environments.md`.
 
 ## Blocked for production, not safe scaffolding
@@ -39,6 +37,10 @@
 - [x] Step 8 — core content schema: 4 migrations, 12 tables, integer-PKR + timestamptz + version triggers, tri-state availability, approval-gated publishing, RLS enabled (default-deny) everywhere. Generated types committed. `db reset` clean, `db:test:schema` passes, offline migration lint in `verify`.
 - [x] Step 9 — workflow schema: 4 migrations, 16 tables (28 total). Three state machines enforced by trigger, append-only history, immutable snapshot lines, single-use confirmation tokens, idempotency and webhook dedupe uniqueness, deferred staff FKs. `conversation_summaries` intentionally not created. `db reset` clean, schema tests pass.
 - [x] Step 10 — RLS/grants/MFA policy: 3 migrations (helpers, policies, grants) covering all 28 tables; five staff roles plus anon/guest; `staff_requiring_mfa` and `public_business_settings` views; allow/deny matrix (`scripts/db/rls-tests.sql`) and offline migration lint (`scripts/db/migration-invariants.mjs`) added. `db reset` clean, `npm run db:test` (schema + RLS) and full `npm run verify` pass.
+
+- [x] Step 11 — menu normalization and unpublished import planning: source adapter retained; pure draft import, source-checksum idempotency, human-reviewed Urdu translation candidates, stable-ID diff report, and approval-gated publish intent added. No database write or publishing occurs. 18 focused tests and the full `npm run verify` gate pass.
+- [x] Step 12 — security foundation: signed opaque session cookies, CSRF/origin guards, safe redirects, request limits, CSP/security headers, provider-neutral rate/replay interfaces, HMAC webhook verification, safe 413/415 errors, and expanded redaction coverage. 36 focused security tests and full `npm run verify` pass.
+- [x] Step 13 — locale routing: server-rendered `/en`/`/ur` under `app/[locale]/`, `proxy.ts` negotiation (cookie → Accept-Language → default, never an open redirect), signed preference cookie via `/api/locale-preference`, `lang`/`dir`/hreflang/`x-default`, and a `(root-fallback)` route group fix for a real `lang="en"`-on-Urdu-routes bug found via live browser check (D-018). 209 tests total; full `npm run verify` and manual browser check pass.
 
 ## Update rule
 

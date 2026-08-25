@@ -73,6 +73,17 @@ export function parseFeatureFlags(source: EnvSource = process.env): FeatureFlagE
   return featureFlagSchema.parse(source);
 }
 
+const sessionSecretSchema = serverEnvSchema.pick({ SESSION_SECRET: true });
+
+/**
+ * Narrow accessor for just `SESSION_SECRET`, for callers (locale negotiation,
+ * cookie signing) that need HMAC signing but must not require every other
+ * unrelated secret (Vapi, WhatsApp, Anthropic) to be configured first.
+ */
+export function parseSessionSecret(source: EnvSource = process.env): string {
+  return sessionSecretSchema.parse(source).SESSION_SECRET;
+}
+
 /** Narrow boolean view of a flag, for readable call sites. */
 export function isFeatureEnabled(
   flag: keyof FeatureFlagEnv,
