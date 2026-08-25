@@ -141,3 +141,20 @@ export function swapLocaleInPath(pathname: string, targetLocale: Locale): string
   const candidate = `/${targetLocale}${rest}`;
   return isSafeSameSitePath(candidate) ? candidate : `/${targetLocale}`;
 }
+
+/**
+ * Reads the locale straight off a pathname's leading segment. For
+ * `app/[locale]/error.tsx`, which the App Router gives no route params (only
+ * `{ error, reset }`) — `usePathname()` is the only way it can know which
+ * locale it is rendering inside. Falls back to `DEFAULT_LOCALE` for a path
+ * with no recognized prefix; the error boundary can only ever be reached
+ * from within an already-validated `[locale]` segment, so that fallback is
+ * defensive, not an expected case.
+ */
+export function localeFromPathname(pathname: string): Locale {
+  for (const locale of LOCALES) {
+    const prefix = `/${locale}`;
+    if (pathname === prefix || pathname.startsWith(`${prefix}/`)) return locale;
+  }
+  return DEFAULT_LOCALE;
+}

@@ -3,6 +3,7 @@ import {
   DEFAULT_LOCALE,
   isSafeSameSitePath,
   isSupportedLocale,
+  localeFromPathname,
   negotiateLocale,
   parseAcceptLanguage,
   swapLocaleInPath,
@@ -119,5 +120,22 @@ describe('swapLocaleInPath', () => {
 
   it('preserves a query string and hash at the locale root when swapping locales', () => {
     expect(swapLocaleInPath('/en?ref=share#top', 'ur')).toBe('/ur?ref=share#top');
+  });
+});
+
+describe('localeFromPathname', () => {
+  it('reads the locale off the leading segment', () => {
+    expect(localeFromPathname('/ur')).toBe('ur');
+    expect(localeFromPathname('/ur/menu')).toBe('ur');
+    expect(localeFromPathname('/en/menu')).toBe('en');
+  });
+
+  it('falls back to DEFAULT_LOCALE for a path with no recognized prefix', () => {
+    expect(localeFromPathname('/menu')).toBe(DEFAULT_LOCALE);
+    expect(localeFromPathname('/')).toBe(DEFAULT_LOCALE);
+  });
+
+  it('does not match a locale as a substring of a different segment', () => {
+    expect(localeFromPathname('/english-menu')).toBe(DEFAULT_LOCALE);
   });
 });

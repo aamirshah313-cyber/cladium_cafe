@@ -2,6 +2,12 @@
 
 Newest decisions go first. Each entry stays short and points to authoritative evidence.
 
+## D-020 — A catch-all route, not just `not-found.tsx`, is required for locale-correct 404s
+
+- Decision: `app/[locale]/[...rest]/page.tsx` calls `notFound()` unconditionally for any path under a valid locale that doesn't match a real route.
+- Why: `app/[locale]/not-found.tsx` alone only fires when a component *inside* an already-matched route explicitly calls `notFound()`. A request to a path with no matching route at all (e.g. `/en/nonexistent`, before any deeper pages exist) is never routed into `[locale]/layout.tsx` in the first place, so Next.js falls straight through to the self-sufficient root `app/not-found.tsx` — losing correct `lang`/`dir`/`data-theme` and the site header/footer. Found via a live browser check (`document.documentElement`'s `dir` attribute was silently missing), not by the build or any automated test — same category of bug as D-018.
+- Evidence: manual browser check of `/en/nonexistent` (now correctly `lang="en" dir="ltr"`, full header/footer, inside `[locale]/not-found.tsx`) versus `/xyz` (still correctly the bare root fallback, since the locale segment itself is invalid).
+
 ## D-019 — Theme preference is a separate, unsigned, isomorphic cookie; `/[locale]` is now dynamic
 
 - Decision: the Day/Night preference (`lib/theme/`) is its own cookie (`cladium_theme`), deliberately unsigned and readable/writable by client JS — unlike the locale preference cookie (`lib/i18n/preference-cookie.ts`), which is signed and `HttpOnly`. `app/[locale]/layout.tsx` now calls `cookies()` to render the correct `data-theme` on first paint, which makes `/en` and `/ur` dynamically rendered (`ƒ`) instead of statically prerendered (`●`).

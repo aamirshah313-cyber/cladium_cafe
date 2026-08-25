@@ -1,5 +1,5 @@
 /**
- * Locale layout — Runbook Steps 13–14.
+ * Locale layout — Runbook Steps 13–15.
  *
  * Renders the real document shell (`<html>`/`<body>`) for every localized
  * route, with `lang`/`dir` derived from the validated route segment — never
@@ -15,6 +15,9 @@
  * flash. When no cookie is set yet, the attribute is omitted entirely and
  * `globals.css`'s `prefers-color-scheme` media query decides the first-visit
  * default (theme-mode.md) — never guessed here.
+ *
+ * `SiteHeader`/`SiteFooter` are the mobile-first site shell (Step 15);
+ * `#main-content` is the skip link's target.
  */
 
 import type { Metadata } from 'next';
@@ -22,13 +25,12 @@ import type { ReactNode } from 'react';
 import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
 import '../globals.css';
-import { chromeText } from '../../lib/i18n/chrome';
 import { LOCALES, isSupportedLocale, localeDirection } from '../../lib/i18n/locale';
 import { localeMetadataAlternates } from '../../lib/i18n/metadata';
 import { THEME_COOKIE_NAME } from '../../lib/theme/preference-cookie';
 import { isSupportedTheme, type Theme } from '../../lib/theme/theme';
-import { LanguageSwitcher } from './language-switcher';
-import { ThemeToggle } from './theme-toggle';
+import { SiteFooter } from './site-footer';
+import { SiteHeader } from './site-header';
 
 interface LocaleLayoutParams {
   readonly locale: string;
@@ -71,10 +73,9 @@ export default async function LocaleLayout({
   return (
     <html lang={locale} dir={localeDirection(locale)} data-theme={theme ?? undefined}>
       <body>
-        <a href="#main-content">{chromeText('skipToContent', locale)}</a>
-        <LanguageSwitcher locale={locale} currentPath={`/${locale}`} />
-        <ThemeToggle locale={locale} initialTheme={theme} />
+        <SiteHeader locale={locale} initialTheme={theme} />
         <main id="main-content">{children}</main>
+        <SiteFooter locale={locale} />
       </body>
     </html>
   );

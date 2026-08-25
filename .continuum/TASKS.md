@@ -2,7 +2,7 @@
 
 ## Active
 
-- [ ] P1 — Step 15: public shell and navigation.
+- [ ] P1 — Step 16: home, location, and contact.
 
 ## Next
 
@@ -42,6 +42,7 @@
 - [x] Step 12 — security foundation: signed opaque session cookies, CSRF/origin guards, safe redirects, request limits, CSP/security headers, provider-neutral rate/replay interfaces, HMAC webhook verification, safe 413/415 errors, and expanded redaction coverage. 36 focused security tests and full `npm run verify` pass.
 - [x] Step 13 — locale routing: server-rendered `/en`/`/ur` under `app/[locale]/`, `proxy.ts` negotiation (cookie → Accept-Language → default, never an open redirect), signed preference cookie via `/api/locale-preference`, `lang`/`dir`/hreflang/`x-default`, and a `(root-fallback)` route group fix for a real `lang="en"`-on-Urdu-routes bug found via live browser check (D-018). 209 tests total; full `npm run verify` and manual browser check pass.
 - [x] Step 14 — Day/Night design system: theme-mode.md tokens in `globals.css` (Day default; Night via `prefers-color-scheme` first-visit default and an explicit `data-theme` override); labelled, keyboard-accessible toggle (`theme-toggle.tsx`) that switches instantly client-side and persists via a deliberately unsigned, isomorphic cookie (D-019); server-aligned initial render (no flash) via `cookies()` in `[locale]/layout.tsx`; 180ms colour-only transition guarded by `prefers-reduced-motion`. 222 tests total; full `npm run verify` and manual browser check (both themes, both locales, instant switch, persistence) pass.
+- [x] Step 15 — public shell and navigation: `SiteHeader`/`SiteFooter` (skip link, brand, minimal nav, hours + live timezone-aware open/closed status via `lib/business/hours.ts`); loading/not-found/error states inside the localized shell plus self-sufficient root `not-found`/`global-error` fallbacks; a catch-all route added after finding an unmatched-path 404 skipped the localized shell entirely (D-020). 233 tests total; full `npm run verify` and manual browser check (both locales/themes, both 404 paths, the error boundary, 360px RTL/LTR) pass.
 
 ## Update rule
 
