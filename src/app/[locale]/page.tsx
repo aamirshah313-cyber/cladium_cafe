@@ -1,5 +1,5 @@
 /**
- * Home page — Runbook Step 16.
+ * Home page — Runbook Step 16, CTAs extended in Step 22.
  *
  * Deliberately modest: `design/site-map.md`'s "Taste" (menu teaser) and
  * atmospheric "Arrival"/"Place" photography are not built here — no menu
@@ -8,6 +8,11 @@
  * truthful and text-only rather than filling either gap with a placeholder.
  * The WhatsApp link uses `target="_blank" rel="noopener noreferrer"`, same
  * reasoning as `visit/page.tsx`.
+ *
+ * The two `/book` CTAs match site-map.md's "Action: Order, book, or
+ * continue the conversation" — "Request Treehouse Seating" only pre-selects
+ * the seating radio via `?seating=treehouse`; capacity is still
+ * staff-confirmed either way.
  */
 
 import { notFound } from 'next/navigation';
@@ -25,6 +30,14 @@ export default async function LocaleHomePage({ params }: { params: Promise<{ loc
       <h1>{BRAND_NAME}</h1>
       <p>{TAGLINE}</p>
       <p>{chromeText('homeIntro', locale)}</p>
+      <p>
+        <a href={`/${locale}/book`}>{chromeText('navBookLabel', locale)}</a>
+      </p>
+      <p>
+        <a href={`/${locale}/book?seating=treehouse`}>
+          {chromeText('treehouseSeatingCtaLabel', locale)}
+        </a>
+      </p>
       <p>
         <a href={`/${locale}/visit`}>{chromeText('homeVisitCtaLabel', locale)}</a>
       </p>

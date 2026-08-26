@@ -11,9 +11,13 @@
  * nav item to get wrong.
  *
  * Order matches `design/site-map.md`'s top-level nodes (Home, Menu, Visit,
- * Concierge). Menu is included even though it currently renders an honest
- * "not published yet" state (`menu/page.tsx`) rather than being hidden —
- * it is a real, working route, not an unbuilt one.
+ * Concierge), with `/book` inserted after Menu — the site map lists
+ * "Request a table" as a Home-page CTA rather than its own top-level node,
+ * but Step 22 needs it reachable from every page, not just Home. Menu is
+ * included even though it currently renders an honest "not published yet"
+ * state (`menu/page.tsx`) rather than being hidden — it is a real, working
+ * route, not an unbuilt one. Concierge has no route yet, so it is omitted
+ * rather than linking to an unbuilt page.
  */
 
 import Link from 'next/link';
@@ -30,6 +34,7 @@ interface NavItem {
 const ITEMS: readonly NavItem[] = [
   { path: '', labelKey: 'navHomeLabel' },
   { path: '/menu', labelKey: 'navMenuLabel' },
+  { path: '/book', labelKey: 'navBookLabel' },
   { path: '/visit', labelKey: 'navVisitLabel' },
 ];
 

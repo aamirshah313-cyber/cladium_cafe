@@ -87,6 +87,27 @@ export const chrome = {
     en: 'Ask staff to confirm availability',
     ur: 'دستیابی کی تصدیق کے لیے عملے سے پوچھیں',
   },
+  navBookLabel: { en: 'Request a Table', ur: 'میز کی درخواست' },
+  bookPageHeading: { en: 'Request a Table', ur: 'میز کی درخواست' },
+  treehouseSeatingCtaLabel: { en: 'Request Treehouse Seating', ur: 'ٹری ہاؤس نشست کی درخواست' },
+  bookFormNameLabel: { en: 'Your name', ur: 'آپ کا نام' },
+  bookFormPhoneLabel: { en: 'Phone number', ur: 'فون نمبر' },
+  bookFormDateLabel: { en: 'Date', ur: 'تاریخ' },
+  bookFormTimeLabel: { en: 'Time', ur: 'وقت' },
+  bookFormPartySizeLabel: { en: 'Party size', ur: 'مہمانوں کی تعداد' },
+  bookFormSeatingLabel: { en: 'Seating preference', ur: 'نشست کی ترجیح' },
+  seatingGeneralLabel: { en: 'General seating', ur: 'عمومی نشست' },
+  seatingTreehouseLabel: { en: 'Treehouse', ur: 'ٹری ہاؤس' },
+  bookFormNotesLabel: { en: 'Notes (optional)', ur: 'نوٹس (اختیاری)' },
+  bookReviewHeading: { en: 'Review your request', ur: 'اپنی درخواست کا جائزہ لیں' },
+  bookEditButtonLabel: { en: 'Edit details', ur: 'تفصیلات میں ترمیم کریں' },
+  bookConfirmButtonLabel: { en: 'Confirm request', ur: 'درخواست کی تصدیق کریں' },
+  bookSubmitButtonLabel: { en: 'Review request', ur: 'درخواست کا جائزہ لیں' },
+  bookConfirmedHeading: { en: 'Request received', ur: 'درخواست موصول ہو گئی' },
+  bookConfirmedBody: {
+    en: 'Your table request has been received. Staff will confirm your booking — this is not yet a confirmed reservation.',
+    ur: 'آپ کی میز کی درخواست موصول ہو گئی ہے۔ عملہ آپ کی بکنگ کی تصدیق کرے گا — یہ ابھی تک تصدیق شدہ ریزرویشن نہیں ہے۔',
+  },
 } as const satisfies Record<string, ChromeCopy>;
 
 export type ChromeKey = keyof typeof chrome;

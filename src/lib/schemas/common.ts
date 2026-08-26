@@ -71,6 +71,21 @@ export const phoneSchema = z
 /** Free-form notes are length-capped and excluded from analytics/logs. */
 export const notesSchema = z.string().trim().max(500);
 
+/**
+ * A requested date, shape-only — deliberately not checked against business
+ * hours/capacity here: "a requested time is not availability"
+ * (data-model-v2.md §5). Whether it's in the past is a temporal fact, not
+ * an availability claim, so that check lives separately where `now` can be
+ * injected for tests (`modules/bookings/request-window.ts`).
+ */
+export const requestedDateSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, 'Enter a valid date (YYYY-MM-DD).');
+
+export const requestedTimeSchema = z
+  .string()
+  .regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Enter a valid time (HH:MM, 24-hour).');
+
 /** Client-generated key that makes a submission safely retryable. */
 export const idempotencyKeySchema = z
   .string()
