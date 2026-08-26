@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isTodayOrFutureDate } from '../../src/modules/bookings/request-window';
+import { isTodayOrFutureDate } from '../../src/lib/business/request-window';
 
 describe('isTodayOrFutureDate', () => {
   it('accepts a future date', () => {

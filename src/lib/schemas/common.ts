@@ -86,6 +86,12 @@ export const requestedTimeSchema = z
   .string()
   .regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Enter a valid time (HH:MM, 24-hour).');
 
+/** Free-form event type, e.g. "Birthday", "Anniversary" — no fixed enum is sourced. */
+export const occasionSchema = z.string().trim().min(2).max(100);
+
+/** Same bound as `partySizeSchema` — no larger figure is sourced for events either. */
+export const guestCountSchema = z.number().int().min(1).max(200);
+
 /** Client-generated key that makes a submission safely retryable. */
 export const idempotencyKeySchema = z
   .string()

@@ -11,13 +11,13 @@
  * nav item to get wrong.
  *
  * Order matches `design/site-map.md`'s top-level nodes (Home, Menu, Visit,
- * Concierge), with `/book` inserted after Menu — the site map lists
- * "Request a table" as a Home-page CTA rather than its own top-level node,
- * but Step 22 needs it reachable from every page, not just Home. Menu is
- * included even though it currently renders an honest "not published yet"
- * state (`menu/page.tsx`) rather than being hidden — it is a real, working
- * route, not an unbuilt one. Concierge has no route yet, so it is omitted
- * rather than linking to an unbuilt page.
+ * Concierge), with `/book` and `/event` inserted after Menu — the site map
+ * lists "Request a table"/décor enquiries as Home-page CTAs rather than
+ * their own top-level nodes, but Steps 22–23 need them reachable from every
+ * page, not just Home. Menu is included even though it currently renders an
+ * honest "not published yet" state (`menu/page.tsx`) rather than being
+ * hidden — it is a real, working route, not an unbuilt one. Concierge has
+ * no route yet, so it is omitted rather than linking to an unbuilt page.
  */
 
 import Link from 'next/link';
@@ -35,6 +35,7 @@ const ITEMS: readonly NavItem[] = [
   { path: '', labelKey: 'navHomeLabel' },
   { path: '/menu', labelKey: 'navMenuLabel' },
   { path: '/book', labelKey: 'navBookLabel' },
+  { path: '/event', labelKey: 'navPlanBirthdayLabel' },
   { path: '/visit', labelKey: 'navVisitLabel' },
 ];
 

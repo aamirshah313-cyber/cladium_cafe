@@ -1,5 +1,5 @@
 /**
- * Home page — Runbook Step 16, CTAs extended in Step 22.
+ * Home page — Runbook Step 16, CTAs extended in Steps 22–23.
  *
  * Deliberately modest: `design/site-map.md`'s "Taste" (menu teaser) and
  * atmospheric "Arrival"/"Place" photography are not built here — no menu
@@ -9,10 +9,11 @@
  * The WhatsApp link uses `target="_blank" rel="noopener noreferrer"`, same
  * reasoning as `visit/page.tsx`.
  *
- * The two `/book` CTAs match site-map.md's "Action: Order, book, or
- * continue the conversation" — "Request Treehouse Seating" only pre-selects
- * the seating radio via `?seating=treehouse`; capacity is still
- * staff-confirmed either way.
+ * The CTAs match CLAUDE.md's request-accurate CTA list and site-map.md's
+ * "Action: Order, book, or continue the conversation" — "Request Treehouse
+ * Seating" only pre-selects the seating radio via `?seating=treehouse`
+ * (capacity is still staff-confirmed either way), and "Plan a Birthday"
+ * links to the event/décor enquiry flow, never promising a quote.
  */
 
 import { notFound } from 'next/navigation';
@@ -37,6 +38,9 @@ export default async function LocaleHomePage({ params }: { params: Promise<{ loc
         <a href={`/${locale}/book?seating=treehouse`}>
           {chromeText('treehouseSeatingCtaLabel', locale)}
         </a>
+      </p>
+      <p>
+        <a href={`/${locale}/event`}>{chromeText('navPlanBirthdayLabel', locale)}</a>
       </p>
       <p>
         <a href={`/${locale}/visit`}>{chromeText('homeVisitCtaLabel', locale)}</a>

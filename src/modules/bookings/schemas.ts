@@ -3,8 +3,9 @@
  *
  * `requestedDate`'s "not in the past" check is a `.refine()` against the
  * real clock — deliberately not unit-testable at the schema level (the
- * testable, injectable-`now` version is `request-window.ts`'s
- * `isTodayOrFutureDate`, exercised directly). This refinement exists so a
+ * testable, injectable-`now` version is `lib/business/request-window.ts`'s
+ * `isTodayOrFutureDate`, exercised directly, and shared with
+ * `modules/events/schemas.ts` since Step 23). This refinement exists so a
  * request that's already stale on arrival fails at the boundary with a
  * field-level issue, not deeper inside the domain service.
  */
@@ -22,7 +23,7 @@ import {
   sourceChannelSchema,
   strictObject,
 } from '../../lib/schemas/common';
-import { isTodayOrFutureDate } from './request-window';
+import { isTodayOrFutureDate } from '../../lib/business/request-window';
 
 const csrfTokenSchema = z.string().min(1).max(256);
 

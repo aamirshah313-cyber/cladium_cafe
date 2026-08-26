@@ -108,6 +108,24 @@ export const chrome = {
     en: 'Your table request has been received. Staff will confirm your booking — this is not yet a confirmed reservation.',
     ur: 'آپ کی میز کی درخواست موصول ہو گئی ہے۔ عملہ آپ کی بکنگ کی تصدیق کرے گا — یہ ابھی تک تصدیق شدہ ریزرویشن نہیں ہے۔',
   },
+  navPlanBirthdayLabel: { en: 'Plan a Birthday', ur: 'سالگرہ کی منصوبہ بندی کریں' },
+  eventPageHeading: { en: 'Plan a Birthday or Event', ur: 'سالگرہ یا تقریب کی منصوبہ بندی' },
+  eventFormOccasionLabel: { en: 'Occasion', ur: 'موقع' },
+  eventFormGuestCountLabel: { en: 'Number of guests', ur: 'مہمانوں کی تعداد' },
+  eventFormDecorInterestLabel: {
+    en: 'Interested in décor?',
+    ur: 'کیا آپ سجاوٹ میں دلچسپی رکھتے ہیں؟',
+  },
+  yesLabel: { en: 'Yes', ur: 'جی ہاں' },
+  noLabel: { en: 'No', ur: 'نہیں' },
+  eventReviewHeading: { en: 'Review your enquiry', ur: 'اپنی انکوائری کا جائزہ لیں' },
+  eventConfirmButtonLabel: { en: 'Confirm enquiry', ur: 'انکوائری کی تصدیق کریں' },
+  eventSubmitButtonLabel: { en: 'Review enquiry', ur: 'انکوائری کا جائزہ لیں' },
+  eventConfirmedHeading: { en: 'Enquiry received', ur: 'انکوائری موصول ہو گئی' },
+  eventConfirmedBody: {
+    en: 'Your birthday/event enquiry has been received. Staff will follow up with décor availability and a quote — this is not yet a confirmed quote or booking.',
+    ur: 'آپ کی سالگرہ/تقریب کی انکوائری موصول ہو گئی ہے۔ عملہ سجاوٹ کی دستیابی اور قیمت کے ساتھ رابطہ کرے گا — یہ ابھی تک تصدیق شدہ قیمت یا بکنگ نہیں ہے۔',
+  },
 } as const satisfies Record<string, ChromeCopy>;
 
 export type ChromeKey = keyof typeof chrome;
