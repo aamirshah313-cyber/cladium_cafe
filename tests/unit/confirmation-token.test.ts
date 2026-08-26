@@ -137,4 +137,27 @@ describe('consumeConfirmationToken', () => {
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error.code).toBe('STALE_REVIEW');
   });
+
+  it('Step 21: a genuine double-click (two concurrent consumes of the same token) succeeds exactly once', async () => {
+    const store = createInMemoryConfirmationTokenStore();
+    const { rawToken } = await issue(store);
+    const input = {
+      rawToken,
+      sessionId: 'session-1',
+      action: 'TAKEAWAY_REQUEST' as const,
+      reviewHash: 'review-hash-a',
+      now: ISSUED_AT,
+    };
+
+    // Fired together, not one at a time — this is what actually exercises
+    // the claimIfUnused race a sequential test cannot reach.
+    const [a, b] = await Promise.all([
+      consumeConfirmationToken(store, input),
+      consumeConfirmationToken(store, input),
+    ]);
+
+    const results = [a, b];
+    expect(results.filter((r) => r.ok)).toHaveLength(1);
+    expect(results.filter((r) => !r.ok && r.error.code === 'NOT_FOUND')).toHaveLength(1);
+  });
 });

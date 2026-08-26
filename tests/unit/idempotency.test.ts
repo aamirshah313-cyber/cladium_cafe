@@ -74,13 +74,54 @@ describe('runIdempotent', () => {
     expect(b).toEqual(ok({ id: 'order-2' }));
   });
 
-  it('rejects a concurrent duplicate still IN_PROGRESS rather than running fn twice', async () => {
+  it('rejects a duplicate still IN_PROGRESS rather than running fn twice', async () => {
     const store = createInMemoryIdempotencyStore<{ id: string }>();
-    await store.begin('session-1:submitTakeaway', 'key-1', 'fp-a', NOW());
+    await store.findOrBegin('session-1:submitTakeaway', 'key-1', 'fp-a', NOW());
 
     const result = await runIdempotent(
       store,
       { scope: 'session-1:submitTakeaway', key: 'key-1', fingerprint: 'fp-a', now: NOW },
+      async () => ok({ id: 'order-1' }),
+    );
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.code).toBe('IDEMPOTENCY_CONFLICT');
+  });
+
+  it('Step 21: two genuinely concurrent calls with the same key/fingerprint run fn exactly once', async () => {
+    const store = createInMemoryIdempotencyStore<{ id: string }>();
+    let calls = 0;
+    const run = () =>
+      runIdempotent(
+        store,
+        { scope: 'session-1:submitTakeaway', key: 'key-1', fingerprint: 'fp-a', now: NOW },
+        async () => {
+          calls++;
+          return ok({ id: 'order-1' });
+        },
+      );
+
+    // Fired together (not awaited one at a time) — this is what actually
+    // exercises the race the sequential tests above cannot reach.
+    const [a, b] = await Promise.all([run(), run()]);
+
+    expect(calls).toBe(1);
+    const results = [a, b];
+    expect(results.filter((r) => r.ok)).toHaveLength(1);
+    expect(results.filter((r) => !r.ok && r.error.code === 'IDEMPOTENCY_CONFLICT')).toHaveLength(1);
+  });
+
+  it('a FAILED record with a different fingerprint still blocks as a mismatch, not a free retry', async () => {
+    const store = createInMemoryIdempotencyStore<{ id: string }>();
+    await runIdempotent(
+      store,
+      { scope: 'session-1:submitTakeaway', key: 'key-1', fingerprint: 'fp-a', now: NOW },
+      async () => err(internalError()),
+    );
+
+    const result = await runIdempotent(
+      store,
+      { scope: 'session-1:submitTakeaway', key: 'key-1', fingerprint: 'fp-DIFFERENT', now: NOW },
       async () => ok({ id: 'order-1' }),
     );
 

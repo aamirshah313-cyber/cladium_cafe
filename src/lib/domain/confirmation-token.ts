@@ -1,5 +1,5 @@
 /**
- * Single-use confirmation tokens — Runbook Step 19 (data-model-v2.md
+ * Single-use confirmation tokens — Runbook Steps 19 and 21 (data-model-v2.md
  * `confirmation_tokens`).
  *
  * "Store a hash—not the raw token—with session ID, action type, review
@@ -13,6 +13,16 @@
  * A review-hash mismatch (the menu/price changed since the guest reviewed
  * it) reuses `staleReview` from `lib/errors.ts` — this is exactly the
  * scenario that error was built for.
+ *
+ * `claimIfUnused` is the one atomic step (Step 21): field validation
+ * (session/action/expiry/review hash) happens first, against a plain read,
+ * since those fields never change and don't need cross-call atomicity —
+ * only "was this already used, and is it being used *right now*" does. The
+ * original Step 19 version combined the used-check and the mark-used write
+ * into two separate `await`ed store calls with validation in between, so a
+ * genuine double-click (two concurrent calls, not two sequential ones)
+ * could let both see `usedAt === null` before either wrote — found by an
+ * explicit `Promise.all` concurrency test.
  */
 
 import { randomBytes, createHash } from 'node:crypto';
@@ -38,7 +48,14 @@ export interface ConfirmationTokenRecord {
 export interface ConfirmationTokenStore {
   save(record: ConfirmationTokenRecord): Promise<void>;
   find(tokenHash: string): Promise<ConfirmationTokenRecord | null>;
-  markUsed(tokenHash: string, now: Date): Promise<void>;
+  /**
+   * Atomically marks the record used and returns its *pre-use* state, but
+   * only if it exists and was not already used — returns `null` for either
+   * "not found" or "already used." A real adapter must do this as a single
+   * conditional update (e.g. `UPDATE ... SET used_at = now() WHERE used_at
+   * IS NULL RETURNING *`), not a separate read-then-write.
+   */
+  claimIfUnused(tokenHash: string, now: Date): Promise<ConfirmationTokenRecord | null>;
 }
 
 export function createInMemoryConfirmationTokenStore(): ConfirmationTokenStore & {
@@ -53,10 +70,14 @@ export function createInMemoryConfirmationTokenStore(): ConfirmationTokenStore &
     async find(tokenHash) {
       return records.get(tokenHash) ?? null;
     },
-    async markUsed(tokenHash, now) {
+    // No `await` before the Map write below — see the interface doc
+    // comment for why that is exactly what makes this safe under real
+    // concurrency (two calls racing on the same token hash).
+    async claimIfUnused(tokenHash, now) {
       const existing = records.get(tokenHash);
-      if (!existing) return;
+      if (!existing || existing.usedAt !== null) return null;
       records.set(tokenHash, { ...existing, usedAt: now.toISOString() });
+      return existing;
     },
   };
 }
@@ -104,28 +125,34 @@ export interface ConsumeConfirmationTokenInput {
 }
 
 /**
- * Validates and marks a token used in one step — a token can only ever be
- * consumed once. Session/action mismatches and unknown tokens are
- * `NOT_FOUND` (indistinguishable from a bad token, deliberately, so a
- * guessed token doesn't reveal which part was wrong); a stale review hash
- * is `STALE_REVIEW` specifically, since the guest needs to know to review
- * again, not that they mistyped something.
+ * Validates and marks a token used — a token can only ever be consumed
+ * once, even under two genuinely concurrent calls (see module doc
+ * comment). Session/action mismatches and unknown tokens are `NOT_FOUND`
+ * (indistinguishable from a bad token, deliberately, so a guessed token
+ * doesn't reveal which part was wrong); a stale review hash is
+ * `STALE_REVIEW` specifically, since the guest needs to know to review
+ * again, not that they mistyped something. Field validation runs first,
+ * against a plain read; `claimIfUnused` — the one atomic, racy-if-done-
+ * wrong step — runs last and only for a request that already passed every
+ * other check.
  */
 export async function consumeConfirmationToken(
   store: ConfirmationTokenStore,
   input: ConsumeConfirmationTokenInput,
 ): Promise<Result<ConfirmationTokenRecord, AppError>> {
   const now = input.now ?? (() => new Date());
-  const record = await store.find(hashToken(input.rawToken));
+  const tokenHash = hashToken(input.rawToken);
+  const record = await store.find(tokenHash);
 
   if (!record) return err(notFound(input.correlationId));
   if (record.sessionId !== input.sessionId) return err(notFound(input.correlationId));
   if (record.action !== input.action) return err(notFound(input.correlationId));
-  if (record.usedAt !== null) return err(notFound(input.correlationId));
   if (new Date(record.expiresAt).getTime() <= now().getTime())
     return err(notFound(input.correlationId));
   if (record.reviewHash !== input.reviewHash) return err(staleReview(input.correlationId));
 
-  await store.markUsed(record.tokenHash, now());
-  return ok(record);
+  const claimed = await store.claimIfUnused(tokenHash, now());
+  if (!claimed) return err(notFound(input.correlationId));
+
+  return ok(claimed);
 }

@@ -236,6 +236,83 @@ describe('submitTakeawayRequest — idempotent replay', () => {
   });
 });
 
+describe('submitTakeawayRequest — Step 21 concurrency and double-click', () => {
+  it('two genuinely concurrent submits with the same idempotency key create exactly one request', async () => {
+    const deps = harness();
+    const cart = cartWithRibeye();
+    const prepared = await prepareTakeawayRequest(deps, {
+      sessionId: 'session-1',
+      cart,
+      ...GUEST_DETAILS,
+    });
+    if (!prepared.ok) throw new Error('prepare failed');
+
+    const input = {
+      sessionId: 'session-1',
+      cart,
+      ...GUEST_DETAILS,
+      sourceChannel: 'WEB' as const,
+      confirmationToken: prepared.value.confirmationToken,
+      idempotencyKey: 'idem-key-concurrent01',
+      correlationId: 'corr-1',
+    };
+
+    // Promise.all, not two sequential awaits — a double-click fires both
+    // requests before either has a response, which is what this actually
+    // exercises (a sequential test can't reach the race at all). Unlike a
+    // *sequential* replay (the "idempotent replay" describe block above,
+    // where the first call has already recorded SUCCEEDED before the
+    // second ever starts), a true concurrent duplicate arrives while the
+    // first is still IN_PROGRESS — so the correct outcome is one winner and
+    // one IDEMPOTENCY_CONFLICT, not two identical successes. The point
+    // isn't that the loser looks nice; it's that the system never creates
+    // a second request.
+    const [a, b] = await Promise.all([
+      submitTakeawayRequest(deps, input),
+      submitTakeawayRequest(deps, input),
+    ]);
+
+    const results = [a, b];
+    expect(results.filter((r) => r.ok)).toHaveLength(1);
+    expect(results.filter((r) => !r.ok && r.error.code === 'IDEMPOTENCY_CONFLICT')).toHaveLength(1);
+    const requestStore = deps.requestStore as unknown as { records: Map<string, unknown> };
+    expect(requestStore.records.size).toBe(1);
+    const snapshot = (deps.itemSnapshots as unknown as { events: unknown[] }).events;
+    expect(snapshot).toHaveLength(1); // not duplicated
+  });
+
+  it('a double-click that races two different idempotency keys against the same token still creates exactly one request', async () => {
+    const deps = harness();
+    const cart = cartWithRibeye();
+    const prepared = await prepareTakeawayRequest(deps, {
+      sessionId: 'session-1',
+      cart,
+      ...GUEST_DETAILS,
+    });
+    if (!prepared.ok) throw new Error('prepare failed');
+
+    const baseInput = {
+      sessionId: 'session-1',
+      cart,
+      ...GUEST_DETAILS,
+      sourceChannel: 'WEB' as const,
+      confirmationToken: prepared.value.confirmationToken,
+      correlationId: 'corr-1',
+    };
+
+    const [a, b] = await Promise.all([
+      submitTakeawayRequest(deps, { ...baseInput, idempotencyKey: 'idem-key-race-a0000' }),
+      submitTakeawayRequest(deps, { ...baseInput, idempotencyKey: 'idem-key-race-b0000' }),
+    ]);
+
+    const results = [a, b];
+    expect(results.filter((r) => r.ok)).toHaveLength(1); // exactly one winner
+    expect(results.filter((r) => !r.ok)).toHaveLength(1); // the other loses on the now-used token
+    const requestStore = deps.requestStore as unknown as { records: Map<string, unknown> };
+    expect(requestStore.records.size).toBe(1);
+  });
+});
+
 describe('submitTakeawayRequest — stale review', () => {
   it('fails STALE_REVIEW when the menu price changed since the review was issued', async () => {
     const deps = harness();
