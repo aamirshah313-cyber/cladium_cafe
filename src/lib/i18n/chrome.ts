@@ -64,6 +64,29 @@ export const chrome = {
   mapCtaLabel: { en: 'View on Google Maps', ur: 'گوگل میپس پر دیکھیں' },
   goodToKnowHeading: { en: 'Good to know', ur: 'اہم معلومات' },
   homeVisitCtaLabel: { en: 'Plan your visit', ur: 'اپنا وزٹ پلان کریں' },
+  navMenuLabel: { en: 'Menu', ur: 'مینو' },
+  menuUnpublishedHeading: {
+    en: "Our online menu isn't available yet",
+    ur: 'ہمارا آن لائن مینو ابھی دستیاب نہیں ہے',
+  },
+  menuUnpublishedBody: {
+    en: "Please contact us on WhatsApp or visit us in person to see today's menu.",
+    ur: 'براہ کرم واٹس ایپ پر رابطہ کریں یا آج کا مینو دیکھنے کے لیے خود آئیں۔',
+  },
+  menuSearchLabel: { en: 'Search the menu', ur: 'مینو میں تلاش کریں' },
+  menuSearchButtonLabel: { en: 'Search', ur: 'تلاش کریں' },
+  menuCategoryFilterLabel: { en: 'Category', ur: 'زمرہ' },
+  menuAllCategoriesLabel: { en: 'All categories', ur: 'تمام زمرے' },
+  menuNoResultsText: {
+    en: 'No items match your search.',
+    ur: 'آپ کی تلاش سے کوئی آئٹم مماثل نہیں۔',
+  },
+  availabilityAvailable: { en: 'Available', ur: 'دستیاب' },
+  availabilityUnavailable: { en: 'Currently unavailable', ur: 'فی الحال دستیاب نہیں' },
+  availabilityUnknown: {
+    en: 'Ask staff to confirm availability',
+    ur: 'دستیابی کی تصدیق کے لیے عملے سے پوچھیں',
+  },
 } as const satisfies Record<string, ChromeCopy>;
 
 export type ChromeKey = keyof typeof chrome;

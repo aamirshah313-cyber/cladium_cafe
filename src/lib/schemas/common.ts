@@ -28,6 +28,7 @@ export const partySizeSchema = z.number().int().min(1).max(200);
 export const seatingPreferenceSchema = z.enum(['GENERAL', 'TREEHOUSE']);
 
 export const availabilityStatusSchema = z.enum(['AVAILABLE', 'UNAVAILABLE', 'UNKNOWN']);
+export type AvailabilityStatus = z.infer<typeof availabilityStatusSchema>;
 
 /** Minimal PII: a display name only, with a strict length bound. */
 export const guestNameSchema = z.string().trim().min(2).max(80);

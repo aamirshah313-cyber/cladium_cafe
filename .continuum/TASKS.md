@@ -2,7 +2,7 @@
 
 ## Active
 
-- [ ] P1 — Step 17: accessible menu browsing.
+- [ ] P1 — Step 18: menu carousel enhancement.
 
 ## Next
 
@@ -44,6 +44,7 @@
 - [x] Step 14 — Day/Night design system: theme-mode.md tokens in `globals.css` (Day default; Night via `prefers-color-scheme` first-visit default and an explicit `data-theme` override); labelled, keyboard-accessible toggle (`theme-toggle.tsx`) that switches instantly client-side and persists via a deliberately unsigned, isomorphic cookie (D-019); server-aligned initial render (no flash) via `cookies()` in `[locale]/layout.tsx`; 180ms colour-only transition guarded by `prefers-reduced-motion`. 222 tests total; full `npm run verify` and manual browser check (both themes, both locales, instant switch, persistence) pass.
 - [x] Step 15 — public shell and navigation: `SiteHeader`/`SiteFooter` (skip link, brand, minimal nav, hours + live timezone-aware open/closed status via `lib/business/hours.ts`); loading/not-found/error states inside the localized shell plus self-sufficient root `not-found`/`global-error` fallbacks; a catch-all route added after finding an unmatched-path 404 skipped the localized shell entirely (D-020). 233 tests total; full `npm run verify` and manual browser check (both locales/themes, both 404 paths, the error boundary, 360px RTL/LTR) pass.
 - [x] Step 16 — home, location, and contact: `modules/business/facts.ts` expanded (address, map URL, WhatsApp, policy prose as `LocalizedText` — no invented Urdu); new `/visit` page (directions/map, hours+status, WhatsApp, policy list); light truthful Home update (tagline, Visit/WhatsApp CTAs); no photography or menu teaser (not approved/built yet). `primary-nav.tsx` added for a real nav active-state now that there are two real routes. 248 tests total; full `npm run verify` and manual browser check (both locales/themes, nav active-state, external-link attributes, 360px) pass.
+- [x] Step 17 — accessible menu browsing: `modules/menu/menu-view.ts` (`PublishedMenuView` shape, `getPublishedMenuView()` always `UNPUBLISHED` today per D-021 — user-confirmed, matching release-gates-v2.md Gate 0/Gate 2/D-005 since owner sign-off is still outstanding); full search/category-filter/availability/PKR UI (`menu/page.tsx`) built as a no-JS `<form method="GET">`, live-verified against a temporary fixture then reverted; live `/menu` shows an honest not-yet-published state with WhatsApp/Visit fallbacks. 260 tests total; full `npm run verify` and manual browser check pass.
 
 ## Update rule
 

@@ -2,6 +2,12 @@
 
 Newest decisions go first. Each entry stays short and points to authoritative evidence.
 
+## D-021 — Menu browsing is built and tested now; the live route stays honestly unpublished
+
+- Decision: `modules/menu/menu-view.ts` defines the guest-facing `PublishedMenuView` shape and `getPublishedMenuView()`, which always returns `{ status: 'UNPUBLISHED' }` today. The full accessible/searchable rendering UI (`app/[locale]/menu/page.tsx`) is built and tested against synthetic fixtures, but the live `/menu` route shows an honest "not available online yet" message with WhatsApp/Visit fallbacks — never the real 118 transcribed items.
+- Why: user-confirmed choice (asked directly, given a genuine tension in the source documents). `operations/release-gates-v2.md` Gate 0/Gate 2 explicitly require owner approval — "The owner has approved the transcribed menu names, variants, and prices" and "The public menu reads only the owner-approved published version" — before the public menu reads real content, and D-005 ("Owner publishes") agrees; neither has happened (`cladium-research/data/validation/owner-signoff-report.md`'s sign-off checklist is still unchecked). Runbook Step 17's own wording ("Do not publish unreviewed **Urdu** translations") reads as license to show English content pre-approval, which is the tension — resolved in favor of the release gates over the runbook's literal step ordering.
+- Evidence: `tests/unit/menu-view.test.ts`, `tests/unit/money.test.ts`; live browser check with a temporary fixture substituted for `getPublishedMenuView()` (search, category filter, no-results, all three availability states, PKR formatting, both locales, no-JS query-param filtering, 360px) — then reverted before commit, confirmed reverted live.
+
 ## D-020 — A catch-all route, not just `not-found.tsx`, is required for locale-correct 404s
 
 - Decision: `app/[locale]/[...rest]/page.tsx` calls `notFound()` unconditionally for any path under a valid locale that doesn't match a real route.

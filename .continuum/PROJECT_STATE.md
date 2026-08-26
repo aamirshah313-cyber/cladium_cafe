@@ -1,18 +1,18 @@
 # Cladium compact project state
 
-Updated: 2026-08-25
+Updated: 2026-08-26
 Architecture: Version 2  
-Phase: Runbook Phases 0–2 complete (Steps 1–12); Phase 3 underway (Steps 13–16 complete)
-Application code: scaffolded (Next.js App Router, TypeScript strict) with CI gates, shared platform primitives, locale routing, Day/Night theming, a public site shell, and a Visit page — no menu/request/concierge features built yet
-Baseline commit: `8732db0` "chore: establish Cladium pre-build baseline" (local only, not pushed). Steps 8–10 committed at `150db60` (local only, not pushed). Steps 11–13 committed at `ec45245` (local only, not pushed). Step 14 committed at `84e37db` (local only, not pushed). Step 15 committed at `443cd0e` "feat: public site shell and navigation (Step 15)" (local only, not pushed). Step 16 complete in the working tree.
+Phase: Runbook Phases 0–2 complete (Steps 1–12); Phase 3 underway (Steps 13–17 complete)
+Application code: scaffolded (Next.js App Router, TypeScript strict) with CI gates, shared platform primitives, locale routing, Day/Night theming, a public site shell, a Visit page, and a menu-browsing UI (honestly unpublished live) — no request/concierge features built yet
+Baseline commit: `8732db0` "chore: establish Cladium pre-build baseline" (local only, not pushed). Steps 8–10 committed at `150db60` (local only, not pushed). Steps 11–13 committed at `ec45245` (local only, not pushed). Step 14 committed at `84e37db` (local only, not pushed). Step 15 committed at `443cd0e` (local only, not pushed). Step 16 committed at `d6eceb9` "feat: home, location, and contact (Step 16)" (local only, not pushed). Step 17 complete in the working tree.
 
 ## Progress (step-completion metrics, not effort estimates)
 
-- Overall: 16/47 runbook steps = 34.0%
+- Overall: 17/47 runbook steps = 36.2%
 - Phase 0 (governance/evidence, steps 1–3): 3/3 = 100%
 - Phase 1 (repo/app foundation, steps 4–6): 3/3 = 100%
 - Phase 2 (data/auth/security, steps 7–12): 6/6 = 100%
-- Phase 3 (bilingual/dual-theme public experience, steps 13–18): 4/6 = 66.7%
+- Phase 3 (bilingual/dual-theme public experience, steps 13–18): 5/6 = 83.3%
 - Deployment is step 46.
 - Every step counts equally regardless of size/duration. See `CLAUDE.md` Workflow rules for the reporting rule.
 
@@ -60,10 +60,12 @@ Build a luxury, mobile-first Cladium Café & Resort web application on Next.js/V
 
 - Runbook Step 16 home, location, and contact: `modules/business/facts.ts` expanded with address, Google Maps URL, WhatsApp number/URL, and policy prose (directions, seating, delivery, birthday/décor, cakes, outside food) — every value transcribed from `business-profile.json`/`approved-operations-knowledge.md`, policy prose wrapped as `LocalizedText` via `canonicalLocalizedText` (renders English in both locales until an owner approves Urdu — none is yet). New `/visit` route (one page, matching site-map.md's single "Visit" node: directions/map, hours+live status, WhatsApp contact, a "Good to know" policy list) and a light truthful Home update (retained tagline, a "Plan your visit" link, a WhatsApp CTA) — no photography (none approved yet) and no menu teaser (Step 17, not built yet). Map/WhatsApp links are `target="_blank" rel="noopener noreferrer"`. `SiteHeader`'s primary nav gained a real active-state indicator (`primary-nav.tsx`, a small client island using `usePathname()`, now that Visit is a second real destination — Step 15's single-item placeholder wasn't worth that investment yet). Evidence: 25 new focused tests (exact-value transcription checks, no-invented-Urdu checks, a source-scan confirming every external link carries `rel="noopener noreferrer"`); full `npm run verify` passes; live browser check of the Visit page and updated Home in both locales/themes, correct nav active-state, correct external-link attributes, and no horizontal overflow at 360px.
 
+- Runbook Step 17 accessible menu browsing: `modules/menu/menu-view.ts` defines the guest-facing `PublishedMenuView` shape (categories → items → variants, tri-state availability, integer PKR) and `getPublishedMenuView()`, which always returns `UNPUBLISHED` today — deliberately, per D-021 (user-confirmed): the owner sign-off gates (release-gates-v2.md Gate 0/Gate 2, D-005) aren't satisfied yet, so the live `/menu` route shows an honest "not available online yet" state with WhatsApp/Visit fallbacks rather than the real, unapproved 118 items. The full search/category-filter/availability/PKR-formatting rendering UI (`menu/page.tsx`) is completely built — a plain `<form method="GET">` reading `searchParams` server-side, so it works with no JavaScript at all — and was verified live against a temporary fixture (reverted before commit) covering both locales, all three availability states, no-results, and no-JS query-param filtering. `formatPkr` (`lib/business/money.ts`) matches the "PKR 8,000" style already used in approved copy. Menu now appears in primary nav (a real, working route, just without content yet). Evidence: 12 new focused tests (`filterMenuCategories` logic, `formatPkr`, a tripwire asserting `getPublishedMenuView()` stays `UNPUBLISHED`); full `npm run verify` passes; live browser check as described above, plus no horizontal overflow at 360px.
+
 ## Next
 
 1. Review this state and `.continuum/TASKS.md`.
-2. Runbook Step 17 (accessible menu browsing).
+2. Runbook Step 18 (menu carousel enhancement).
 3. Note for later: full-stack local work (Studio/Storage/Realtime/Edge Functions) needs Docker raised to ~7 GB; the migration workflow itself does not.
 
 ## Production blockers
