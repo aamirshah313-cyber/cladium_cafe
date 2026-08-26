@@ -212,4 +212,16 @@ describe('recomputeCartTotals', () => {
     const totals = recomputeCartTotals(withItem.value, menuWithItemPulled);
     expect(totals.ok).toBe(false);
   });
+
+  it('fails STALE_REVIEW immediately when the published menu version has moved on', () => {
+    const withItem = addItemToCart(CART, MENU, { menuItemId: 'steaks.ribeye', quantity: 1 });
+    expect(withItem.ok).toBe(true);
+    if (!withItem.ok) return;
+
+    const newerMenuVersion: PublishedMenuView = { ...MENU, versionNumber: 2 };
+
+    const totals = recomputeCartTotals(withItem.value, newerMenuVersion);
+    expect(totals.ok).toBe(false);
+    if (!totals.ok) expect(totals.error.code).toBe('STALE_REVIEW');
+  });
 });

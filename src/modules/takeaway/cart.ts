@@ -12,7 +12,7 @@
  */
 
 import { err, ok, type Result } from '../../lib/result';
-import { notFound, validationFailed, type AppError } from '../../lib/errors';
+import { notFound, staleReview, validationFailed, type AppError } from '../../lib/errors';
 import type { MenuViewItem, PublishedMenuView } from '../menu/menu-view';
 
 export interface CartLine {
@@ -153,11 +153,21 @@ export interface CartTotals {
  * trust a client-supplied total. Also used, unchanged, as step 3 of the
  * submission transaction contract ("reload published menu/version and
  * recompute integer totals").
+ *
+ * Stale-menu handling (Step 20): if the published menu version has moved on
+ * since this cart was started, this fails `STALE_REVIEW` immediately,
+ * before checking individual items/prices — the guest needs to see a fresh
+ * menu and rebuild their cart, not a line-by-line diff. A same-version
+ * price edit is still caught below, per line, the same as before.
  */
 export function recomputeCartTotals(
   cart: Cart,
   menuView: PublishedMenuView,
 ): Result<CartTotals, AppError> {
+  if (menuView.status === 'PUBLISHED' && menuView.versionNumber !== cart.menuVersionNumber) {
+    return err(staleReview());
+  }
+
   const lines: CartLineTotal[] = [];
 
   for (const cartLine of cart.lines) {

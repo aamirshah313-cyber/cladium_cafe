@@ -38,3 +38,14 @@ type EnvSource = Record<string, string | undefined>;
 export function parseClientEnv(source: EnvSource = process.env): ClientEnv {
   return clientEnvSchema.parse(source);
 }
+
+const appUrlSchema = clientEnvSchema.pick({ NEXT_PUBLIC_APP_URL: true });
+
+/**
+ * Narrow accessor for just `NEXT_PUBLIC_APP_URL`, for callers (origin/CSRF
+ * checks — `lib/http/session-route.ts`) that need the app's own origin but
+ * must not require unrelated config (Supabase URL/anon key) to be set first.
+ */
+export function parseAppUrl(source: EnvSource = process.env): string {
+  return appUrlSchema.parse(source).NEXT_PUBLIC_APP_URL;
+}
