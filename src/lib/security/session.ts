@@ -1,5 +1,8 @@
 /**
- * Signed opaque guest session cookies.
+ * Signed opaque session cookies — originally guest-only, and reused as-is
+ * for the staff session (`lib/staff-session.ts`, Step 24) via the `baseName`
+ * parameter threaded through every function below, so the two cookies never
+ * collide in one browser.
  *
  * The cookie value carries no meaning by itself: a random session ID plus an
  * expiry, HMAC-SHA256 signed, so a tampered or forged cookie fails
@@ -22,13 +25,18 @@ import { err, ok, type Result } from '../result';
 
 assertServerOnly('src/lib/security/session.ts');
 
-const SECURE_COOKIE_NAME = '__Host-cladium_session';
-const INSECURE_COOKIE_NAME = 'cladium_session';
+const DEFAULT_BASE_NAME = 'cladium_session';
 
 const DEFAULT_TTL_SECONDS = 60 * 60 * 24 * 7; // 7 days: an idle guest session, not an authenticated staff one
 
-export function sessionCookieName(secure = true): string {
-  return secure ? SECURE_COOKIE_NAME : INSECURE_COOKIE_NAME;
+/**
+ * `baseName` lets a second caller (`lib/staff-session.ts` — Step 24) mint a
+ * distinct cookie from the same guest default, so a guest and a staff
+ * session can coexist in one browser without colliding. Guest call sites
+ * never pass it, so their cookie name is unchanged from before Step 24.
+ */
+export function sessionCookieName(secure = true, baseName: string = DEFAULT_BASE_NAME): string {
+  return secure ? `__Host-${baseName}` : baseName;
 }
 
 export interface SessionPayload {
@@ -116,13 +124,15 @@ export interface SessionCookieOptions {
   /** Defaults to true. Only pass false for plain-HTTP local development. */
   readonly secure?: boolean;
   readonly maxAgeSeconds?: number;
+  /** Defaults to the guest cookie's base name (`sessionCookieName`'s default). */
+  readonly baseName?: string;
 }
 
 /** Builds a `Set-Cookie` header value. `HttpOnly`, `SameSite=Lax`, and `Path=/` are fixed, not configurable. */
 export function serializeSessionCookie(token: string, options: SessionCookieOptions = {}): string {
   const secure = options.secure ?? true;
   const attributes = [
-    `${sessionCookieName(secure)}=${token}`,
+    `${sessionCookieName(secure, options.baseName)}=${token}`,
     'Path=/',
     'HttpOnly',
     'SameSite=Lax',
@@ -133,10 +143,10 @@ export function serializeSessionCookie(token: string, options: SessionCookieOpti
 }
 
 /** Builds a `Set-Cookie` header value that clears the session cookie (logout / invalidation). */
-export function clearSessionCookie(options: { secure?: boolean } = {}): string {
+export function clearSessionCookie(options: { secure?: boolean; baseName?: string } = {}): string {
   const secure = options.secure ?? true;
   const attributes = [
-    `${sessionCookieName(secure)}=`,
+    `${sessionCookieName(secure, options.baseName)}=`,
     'Path=/',
     'HttpOnly',
     'SameSite=Lax',
@@ -160,13 +170,13 @@ function readCookieHeader(headers: HeaderSource): string | undefined {
 /** Extracts the raw session token from a `Cookie` request header, if present. */
 export function readSessionToken(
   headers: HeaderSource | undefined,
-  options: { secure?: boolean } = {},
+  options: { secure?: boolean; baseName?: string } = {},
 ): string | undefined {
   if (!headers) return undefined;
   const cookieHeader = readCookieHeader(headers);
   if (!cookieHeader) return undefined;
 
-  const name = sessionCookieName(options.secure ?? true);
+  const name = sessionCookieName(options.secure ?? true, options.baseName);
   for (const part of cookieHeader.split(';')) {
     const separatorIndex = part.indexOf('=');
     if (separatorIndex < 0) continue;

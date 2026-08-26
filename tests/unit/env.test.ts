@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { parseClientEnv } from '../../src/lib/env';
-import { isFeatureEnabled, parseFeatureFlags, parseServerEnv } from '../../src/lib/env.server';
+import {
+  isFeatureEnabled,
+  parseFeatureFlags,
+  parseServerEnv,
+  parseStaffDevAccounts,
+} from '../../src/lib/env.server';
 import { launchFeatureFlags, validClientEnv, validServerEnv } from '../fixtures/env';
 
 // Fixtures are synthetic placeholders, not real credentials — see tests/fixtures/env.ts.
@@ -62,5 +67,35 @@ describe('parseFeatureFlags', () => {
     ] as const) {
       expect(isFeatureEnabled(flag, launchFeatureFlags)).toBe(false);
     }
+  });
+});
+
+describe('parseStaffDevAccounts', () => {
+  it('returns an empty array when STAFF_DEV_ACCOUNTS is unset — production default', () => {
+    expect(parseStaffDevAccounts({})).toEqual([]);
+  });
+
+  it('returns an empty array for a blank value', () => {
+    expect(parseStaffDevAccounts({ STAFF_DEV_ACCOUNTS: '' })).toEqual([]);
+  });
+
+  it('parses a well-formed account list', () => {
+    const raw = JSON.stringify([
+      { staffId: 'staff-1', displayName: 'Aamir', roles: ['OWNER'], devPassword: 'x'.repeat(12) },
+    ]);
+    expect(parseStaffDevAccounts({ STAFF_DEV_ACCOUNTS: raw })).toEqual([
+      { staffId: 'staff-1', displayName: 'Aamir', roles: ['OWNER'], devPassword: 'x'.repeat(12) },
+    ]);
+  });
+
+  it('fails closed (empty array) for malformed JSON rather than throwing', () => {
+    expect(parseStaffDevAccounts({ STAFF_DEV_ACCOUNTS: '{not json' })).toEqual([]);
+  });
+
+  it('fails closed (empty array) for a schema-invalid account (short password, bad role)', () => {
+    const raw = JSON.stringify([
+      { staffId: 'staff-1', displayName: 'Aamir', roles: ['NOT_A_ROLE'], devPassword: 'short' },
+    ]);
+    expect(parseStaffDevAccounts({ STAFF_DEV_ACCOUNTS: raw })).toEqual([]);
   });
 });

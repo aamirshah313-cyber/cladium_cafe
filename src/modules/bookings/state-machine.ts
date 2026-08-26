@@ -44,6 +44,16 @@ export const BOOKING_CUSTOMER_CREATABLE_STATE: BookingState = 'REQUESTED';
 
 export const BOOKING_STAFF_ROLES: readonly StaffRole[] = ['OWNER', 'MANAGER', 'BOOKING_STAFF'];
 
+/** Step 24: who may *view* the booking queue/history — the transition roles plus AUDITOR, who reads everything but writes nothing (Step 10). */
+export const BOOKING_VIEWER_ROLES: readonly StaffRole[] = [...BOOKING_STAFF_ROLES, 'AUDITOR'];
+
+/** Step 24's "mandatory reasons where needed": a negative outcome must be explained; a positive-progression transition needs no reason. */
+export const BOOKING_REASON_REQUIRED_STATES: readonly BookingState[] = [
+  'DECLINED',
+  'CANCELLED',
+  'NO_SHOW',
+];
+
 export const bookingStateMachine: StateMachine<BookingState> = {
   transitions: {
     DRAFT: ['REQUESTED'],

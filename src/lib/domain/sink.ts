@@ -10,6 +10,15 @@
 
 export interface AppendOnlySink<T> {
   append(event: T): Promise<void>;
+  /**
+   * Every event, unfiltered — Runbook Step 24's staff detail views read a
+   * request's status-event history by filtering this by `entityId` above
+   * the storage boundary, the same place a real adapter's `WHERE entity_id
+   * = ...` would live. Not needed by the outbox dispatcher (Step 25), which
+   * only ever appends and drains — but the interface is shared, so every
+   * sink gets it.
+   */
+  list(): Promise<readonly T[]>;
 }
 
 export interface InMemorySink<T> extends AppendOnlySink<T> {
@@ -22,6 +31,9 @@ export function createInMemorySink<T>(): InMemorySink<T> {
     events,
     async append(event: T) {
       events.push(event);
+    },
+    async list() {
+      return [...events];
     },
   };
 }

@@ -46,6 +46,12 @@ export const EVENT_CUSTOMER_TRANSITION: { readonly from: EventState; readonly to
 /** No dedicated "event staff" role exists in the initial five (data-model-v2.md §6); events are Booking Staff's scope alongside Owner/Manager. */
 export const EVENT_STAFF_ROLES: readonly StaffRole[] = ['OWNER', 'MANAGER', 'BOOKING_STAFF'];
 
+/** Step 24: who may *view* the event queue/history — the transition roles plus AUDITOR, who reads everything but writes nothing (Step 10). */
+export const EVENT_VIEWER_ROLES: readonly StaffRole[] = [...EVENT_STAFF_ROLES, 'AUDITOR'];
+
+/** Step 24's "mandatory reasons where needed": a negative outcome must be explained; a positive-progression transition (including QUOTED, which carries an amount instead) needs no reason. */
+export const EVENT_REASON_REQUIRED_STATES: readonly EventState[] = ['CANCELLED'];
+
 export const eventStateMachine: StateMachine<EventState> = {
   transitions: {
     ENQUIRY: ['REQUESTED', 'CANCELLED'],

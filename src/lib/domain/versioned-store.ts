@@ -23,6 +23,14 @@ export interface VersionedStore<T extends VersionedRecord> {
     expectedVersion: number,
     patch: Partial<Omit<T, 'id' | 'version'>>,
   ): Promise<T | null>;
+  /**
+   * Every record, unfiltered — Runbook Step 24's staff queues filter/search
+   * above this boundary (role scope, state, free text), the same place a
+   * real adapter's `WHERE`/`ORDER BY` would live. Added alongside the staff
+   * workspace because nothing before Step 24 ever needed to read more than
+   * one record at a time.
+   */
+  list(): Promise<readonly T[]>;
 }
 
 export function createInMemoryVersionedStore<T extends VersionedRecord>(): VersionedStore<T> & {
@@ -43,6 +51,9 @@ export function createInMemoryVersionedStore<T extends VersionedRecord>(): Versi
       const updated: T = { ...existing, ...patch, version: existing.version + 1 };
       records.set(id, updated);
       return updated;
+    },
+    async list() {
+      return [...records.values()];
     },
   };
 }

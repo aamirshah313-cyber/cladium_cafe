@@ -12,6 +12,7 @@
 
 import { z } from 'zod';
 import { assertServerOnly } from './server-only';
+import { staffRoleSchema } from './schemas/common';
 
 assertServerOnly('src/lib/env.server.ts');
 
@@ -90,4 +91,40 @@ export function isFeatureEnabled(
   source: EnvSource = process.env,
 ): boolean {
   return parseFeatureFlags(source)[flag] === 'true';
+}
+
+/**
+ * A single development-only staff sign-in fixture — Runbook Step 24. Real
+ * staff identity is Supabase Auth linked to `staff_profiles`
+ * (data-model-v2.md §6), which needs a live project this sandbox does not
+ * have (D-017); this is a stand-in so the staff workspace can be built and
+ * tested now, never a second production auth path.
+ */
+const staffDevAccountSchema = z.object({
+  staffId: z.string().min(1),
+  displayName: z.string().min(1),
+  roles: z.array(staffRoleSchema).min(1),
+  devPassword: z.string().min(8),
+});
+
+export type StaffDevAccount = z.infer<typeof staffDevAccountSchema>;
+
+const staffDevAccountsSchema = z.array(staffDevAccountSchema);
+
+/**
+ * Parses the optional `STAFF_DEV_ACCOUNTS` env var (a JSON array of
+ * `StaffDevAccount`). Absent, empty, or malformed all resolve to `[]` —
+ * fail closed, the same as an unconfigured feature rather than a crash —
+ * so production (where this variable must never be set) always has zero
+ * accounts and staff sign-in always fails. Never log or echo the parsed
+ * array: it carries `devPassword` values.
+ */
+export function parseStaffDevAccounts(source: EnvSource = process.env): readonly StaffDevAccount[] {
+  const raw = source.STAFF_DEV_ACCOUNTS;
+  if (!raw) return [];
+  try {
+    return staffDevAccountsSchema.parse(JSON.parse(raw));
+  } catch {
+    return [];
+  }
 }

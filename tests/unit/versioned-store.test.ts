@@ -55,4 +55,34 @@ describe('createInMemoryVersionedStore', () => {
     expect(secondWriter).toBeNull();
     expect((await store.find('r1'))?.state).toBe('B');
   });
+
+  describe('list', () => {
+    it('returns an empty array for an empty store', async () => {
+      const store = createInMemoryVersionedStore<TestRecord>();
+      expect(await store.list()).toEqual([]);
+    });
+
+    it('returns every created record', async () => {
+      const store = createInMemoryVersionedStore<TestRecord>();
+      await store.create({ id: 'r1', version: 1, state: 'A' });
+      await store.create({ id: 'r2', version: 1, state: 'B' });
+
+      const all = await store.list();
+      expect(all).toHaveLength(2);
+      expect(all).toEqual(
+        expect.arrayContaining([
+          { id: 'r1', version: 1, state: 'A' },
+          { id: 'r2', version: 1, state: 'B' },
+        ]),
+      );
+    });
+
+    it('reflects an update made after the store was created', async () => {
+      const store = createInMemoryVersionedStore<TestRecord>();
+      await store.create({ id: 'r1', version: 1, state: 'A' });
+      await store.updateIfVersionMatches('r1', 1, { state: 'B' });
+
+      expect(await store.list()).toEqual([{ id: 'r1', version: 2, state: 'B' }]);
+    });
+  });
 });

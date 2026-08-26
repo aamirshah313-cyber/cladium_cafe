@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { createInMemorySink } from '../../src/lib/domain/sink';
-import { performStaffTransition } from '../../src/lib/domain/staff-transition';
+import {
+  performStaffAssignment,
+  performStaffTransition,
+} from '../../src/lib/domain/staff-transition';
 import {
   createInMemoryVersionedStore,
   type VersionedRecord,
@@ -18,6 +21,7 @@ import type { StatusEvent } from '../../src/lib/domain/status-event';
 interface TakeawayRecord extends VersionedRecord {
   readonly state: TakeawayState;
   readonly guestName: string;
+  readonly assignedStaffId: string | null;
 }
 
 const NOW = () => new Date('2026-08-26T12:00:00Z');
@@ -34,7 +38,13 @@ function harness() {
 }
 
 async function seedRequested(store: ReturnType<typeof harness>['store']) {
-  await store.create({ id: 'order-1', version: 1, state: 'REQUESTED', guestName: 'Aamir' });
+  await store.create({
+    id: 'order-1',
+    version: 1,
+    state: 'REQUESTED',
+    guestName: 'Aamir',
+    assignedStaffId: null,
+  });
 }
 
 function baseInput(
@@ -70,7 +80,13 @@ describe('performStaffTransition — happy path', () => {
 
     expect(result).toEqual({
       ok: true,
-      value: { id: 'order-1', version: 2, state: 'ACCEPTED', guestName: 'Aamir' },
+      value: {
+        id: 'order-1',
+        version: 2,
+        state: 'ACCEPTED',
+        guestName: 'Aamir',
+        assignedStaffId: null,
+      },
     });
     expect(h.statusEvents.events).toEqual([
       expect.objectContaining({
@@ -202,11 +218,188 @@ describe('performStaffTransition — illegal transitions', () => {
 
   it('rejects transitioning out of a terminal state', async () => {
     const h = harness();
-    await h.store.create({ id: 'order-1', version: 1, state: 'COLLECTED', guestName: 'Aamir' });
+    await h.store.create({
+      id: 'order-1',
+      version: 1,
+      state: 'COLLECTED',
+      guestName: 'Aamir',
+      assignedStaffId: null,
+    });
 
     const result = await performStaffTransition(baseInput(h, { newState: 'REQUESTED' }));
 
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error.code).toBe('VALIDATION_FAILED');
+  });
+});
+
+describe('performStaffTransition — Step 24 mandatory reasons', () => {
+  it('rejects a reason-required transition with no reasonCode at all', async () => {
+    const h = harness();
+    await seedRequested(h.store);
+
+    const result = await performStaffTransition(
+      baseInput(h, { newState: 'REJECTED', reasonRequiredStates: ['REJECTED', 'CANCELLED'] }),
+    );
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.code).toBe('VALIDATION_FAILED');
+      expect(result.error.issues).toEqual([{ path: 'reasonCode', code: 'required' }]);
+    }
+    expect(h.statusEvents.events).toHaveLength(0);
+  });
+
+  it('rejects a reason-required transition with a blank/whitespace-only reasonCode', async () => {
+    const h = harness();
+    await seedRequested(h.store);
+
+    const result = await performStaffTransition(
+      baseInput(h, {
+        newState: 'REJECTED',
+        reasonCode: '   ',
+        reasonRequiredStates: ['REJECTED'],
+      }),
+    );
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.code).toBe('VALIDATION_FAILED');
+  });
+
+  it('accepts a reason-required transition once a reasonCode is supplied', async () => {
+    const h = harness();
+    await seedRequested(h.store);
+
+    const result = await performStaffTransition(
+      baseInput(h, {
+        newState: 'REJECTED',
+        reasonCode: 'out_of_stock',
+        reasonRequiredStates: ['REJECTED'],
+      }),
+    );
+
+    expect(result.ok).toBe(true);
+    expect(h.statusEvents.events).toEqual([
+      expect.objectContaining({ reasonCode: 'out_of_stock' }),
+    ]);
+  });
+
+  it('never requires a reason for a target state not listed', async () => {
+    const h = harness();
+    await seedRequested(h.store);
+
+    const result = await performStaffTransition(
+      baseInput(h, { newState: 'ACCEPTED', reasonRequiredStates: ['REJECTED', 'CANCELLED'] }),
+    );
+
+    expect(result.ok).toBe(true);
+  });
+
+  it('checks the reason requirement before writing anything, even for an otherwise-valid transition', async () => {
+    const h = harness();
+    await seedRequested(h.store);
+
+    await performStaffTransition(
+      baseInput(h, { newState: 'REJECTED', reasonRequiredStates: ['REJECTED'] }),
+    );
+
+    expect((await h.store.find('order-1'))?.version).toBe(1);
+    expect((await h.store.find('order-1'))?.state).toBe('REQUESTED');
+  });
+});
+
+describe('performStaffAssignment', () => {
+  function baseAssignInput(
+    h: ReturnType<typeof harness>,
+    overrides: Partial<Parameters<typeof performStaffAssignment<TakeawayRecord>>[0]> = {},
+  ) {
+    return {
+      entityType: 'TAKEAWAY_REQUEST' as const,
+      store: h.store,
+      allowedRoles: TAKEAWAY_STAFF_ROLES,
+      actor: ORDER_STAFF,
+      entityId: 'order-1',
+      expectedVersion: 1,
+      assignedStaffId: 'staff-9',
+      correlationId: 'corr-1',
+      auditEvents: h.auditEvents,
+      now: NOW,
+      ...overrides,
+    };
+  }
+
+  it('assigns the record and appends an audit event, without touching state or status history', async () => {
+    const h = harness();
+    await seedRequested(h.store);
+
+    const result = await performStaffAssignment(baseAssignInput(h));
+
+    expect(result).toEqual({
+      ok: true,
+      value: {
+        id: 'order-1',
+        version: 2,
+        state: 'REQUESTED',
+        guestName: 'Aamir',
+        assignedStaffId: 'staff-9',
+      },
+    });
+    expect(h.auditEvents.events).toHaveLength(1);
+    expect(h.statusEvents.events).toHaveLength(0);
+  });
+
+  it('null explicitly unassigns', async () => {
+    const h = harness();
+    await seedRequested(h.store);
+    await performStaffAssignment(baseAssignInput(h));
+
+    const result = await performStaffAssignment(
+      baseAssignInput(h, { expectedVersion: 2, assignedStaffId: null }),
+    );
+
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.value.assignedStaffId).toBeNull();
+  });
+
+  it('forbids an actor without an allowed role', async () => {
+    const h = harness();
+    await seedRequested(h.store);
+
+    const result = await performStaffAssignment(baseAssignInput(h, { actor: AUDITOR }));
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.code).toBe('FORBIDDEN');
+  });
+
+  it('returns NOT_FOUND for an unknown entity', async () => {
+    const h = harness();
+    const result = await performStaffAssignment(baseAssignInput(h, { entityId: 'missing' }));
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.code).toBe('NOT_FOUND');
+  });
+
+  it('returns CONFLICT on a stale expected version', async () => {
+    const h = harness();
+    await seedRequested(h.store);
+
+    const result = await performStaffAssignment(baseAssignInput(h, { expectedVersion: 99 }));
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.code).toBe('CONFLICT');
+  });
+
+  it('the loser of a race against a concurrent assignment gets CONFLICT, not a silent overwrite', async () => {
+    const h = harness();
+    await seedRequested(h.store);
+
+    const first = await performStaffAssignment(baseAssignInput(h));
+    expect(first.ok).toBe(true);
+
+    // Second caller still holds the pre-assignment version (1).
+    const second = await performStaffAssignment(baseAssignInput(h, { assignedStaffId: 'staff-2' }));
+
+    expect(second.ok).toBe(false);
+    if (!second.ok) expect(second.error.code).toBe('CONFLICT');
+    expect((await h.store.find('order-1'))?.assignedStaffId).toBe('staff-9');
   });
 });

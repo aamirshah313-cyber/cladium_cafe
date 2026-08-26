@@ -46,6 +46,12 @@ export const TAKEAWAY_CUSTOMER_CREATABLE_STATE: TakeawayState = 'REQUESTED';
 /** OWNER/MANAGER have superset authority; ORDER_STAFF is the day-to-day operator role. AUDITOR is deliberately excluded (read-only by design — Step 10). */
 export const TAKEAWAY_STAFF_ROLES: readonly StaffRole[] = ['OWNER', 'MANAGER', 'ORDER_STAFF'];
 
+/** Step 24: who may *view* the takeaway queue/history — the transition roles plus AUDITOR, who reads everything but writes nothing (Step 10). */
+export const TAKEAWAY_VIEWER_ROLES: readonly StaffRole[] = [...TAKEAWAY_STAFF_ROLES, 'AUDITOR'];
+
+/** Step 24's "mandatory reasons where needed": a negative outcome must be explained; a positive-progression transition needs no reason. */
+export const TAKEAWAY_REASON_REQUIRED_STATES: readonly TakeawayState[] = ['REJECTED', 'CANCELLED'];
+
 export const takeawayStateMachine: StateMachine<TakeawayState> = {
   transitions: {
     DRAFT: ['REQUESTED'],
