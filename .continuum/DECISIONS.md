@@ -2,6 +2,12 @@
 
 Newest decisions go first. Each entry stays short and points to authoritative evidence.
 
+## D-022 — Step 18 (menu carousel) is explicitly deferred, not built
+
+- Decision: no carousel UI is built. Runbook Step 18 and CLAUDE.md are both explicit: "Implement the approved Cladium adaptation in `design/menu-carousel-reference.md` only when the runtime menu adapter and approved media mapping are available." Neither precondition holds — the menu is still `UNPUBLISHED` (D-021) and zero approved photos exist (a tracked production blocker). Unlike Step 17's search/filter logic, a carousel's entire value is showcasing photographed dishes attractively, so a placeholder/fixture version would not be a meaningful version of "the approved adaptation."
+- Why: user-confirmed choice (asked directly, given the explicit precondition). Deferring is an accepted, documented state under `operations/release-gates-v2.md`'s own framing ("mandatory evidence or an explicitly disabled/deferred feature").
+- Revisit when: the menu is actually published (Step 19's repository + owner sign-off) and an approved photo/media mapping exists.
+
 ## D-021 — Menu browsing is built and tested now; the live route stays honestly unpublished
 
 - Decision: `modules/menu/menu-view.ts` defines the guest-facing `PublishedMenuView` shape and `getPublishedMenuView()`, which always returns `{ status: 'UNPUBLISHED' }` today. The full accessible/searchable rendering UI (`app/[locale]/menu/page.tsx`) is built and tested against synthetic fixtures, but the live `/menu` route shows an honest "not available online yet" message with WhatsApp/Visit fallbacks — never the real 118 transcribed items.

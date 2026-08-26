@@ -2,17 +2,17 @@
 
 Updated: 2026-08-26
 Architecture: Version 2  
-Phase: Runbook Phases 0–2 complete (Steps 1–12); Phase 3 underway (Steps 13–17 complete)
+Phase: Runbook Phases 0–2 complete (Steps 1–12); Phase 3 done for now (Steps 13–17 complete, Step 18 explicitly deferred — D-022); Phase 4 starting
 Application code: scaffolded (Next.js App Router, TypeScript strict) with CI gates, shared platform primitives, locale routing, Day/Night theming, a public site shell, a Visit page, and a menu-browsing UI (honestly unpublished live) — no request/concierge features built yet
-Baseline commit: `8732db0` "chore: establish Cladium pre-build baseline" (local only, not pushed). Steps 8–10 committed at `150db60` (local only, not pushed). Steps 11–13 committed at `ec45245` (local only, not pushed). Step 14 committed at `84e37db` (local only, not pushed). Step 15 committed at `443cd0e` (local only, not pushed). Step 16 committed at `d6eceb9` "feat: home, location, and contact (Step 16)" (local only, not pushed). Step 17 complete in the working tree.
+Baseline commit: `8732db0` "chore: establish Cladium pre-build baseline" (local only, not pushed). Steps 8–10 committed at `150db60` (local only, not pushed). Steps 11–13 committed at `ec45245` (local only, not pushed). Step 14 committed at `84e37db` (local only, not pushed). Step 15 committed at `443cd0e` (local only, not pushed). Step 16 committed at `d6eceb9` (local only, not pushed). Step 17 committed at `3b5a58c` "feat: accessible menu browsing, honestly unpublished (Step 17)" (local only, not pushed).
 
 ## Progress (step-completion metrics, not effort estimates)
 
-- Overall: 17/47 runbook steps = 36.2%
+- Overall: 17/47 runbook steps = 36.2% (Step 18 explicitly deferred, not counted as complete — see D-022)
 - Phase 0 (governance/evidence, steps 1–3): 3/3 = 100%
 - Phase 1 (repo/app foundation, steps 4–6): 3/3 = 100%
 - Phase 2 (data/auth/security, steps 7–12): 6/6 = 100%
-- Phase 3 (bilingual/dual-theme public experience, steps 13–18): 5/6 = 83.3%
+- Phase 3 (bilingual/dual-theme public experience, steps 13–18): 5/6 = 83.3% (1 deferred, not outstanding-forgotten)
 - Deployment is step 46.
 - Every step counts equally regardless of size/duration. See `CLAUDE.md` Workflow rules for the reporting rule.
 
@@ -62,11 +62,14 @@ Build a luxury, mobile-first Cladium Café & Resort web application on Next.js/V
 
 - Runbook Step 17 accessible menu browsing: `modules/menu/menu-view.ts` defines the guest-facing `PublishedMenuView` shape (categories → items → variants, tri-state availability, integer PKR) and `getPublishedMenuView()`, which always returns `UNPUBLISHED` today — deliberately, per D-021 (user-confirmed): the owner sign-off gates (release-gates-v2.md Gate 0/Gate 2, D-005) aren't satisfied yet, so the live `/menu` route shows an honest "not available online yet" state with WhatsApp/Visit fallbacks rather than the real, unapproved 118 items. The full search/category-filter/availability/PKR-formatting rendering UI (`menu/page.tsx`) is completely built — a plain `<form method="GET">` reading `searchParams` server-side, so it works with no JavaScript at all — and was verified live against a temporary fixture (reverted before commit) covering both locales, all three availability states, no-results, and no-JS query-param filtering. `formatPkr` (`lib/business/money.ts`) matches the "PKR 8,000" style already used in approved copy. Menu now appears in primary nav (a real, working route, just without content yet). Evidence: 12 new focused tests (`filterMenuCategories` logic, `formatPkr`, a tripwire asserting `getPublishedMenuView()` stays `UNPUBLISHED`); full `npm run verify` passes; live browser check as described above, plus no horizontal overflow at 360px.
 
+- Runbook Step 18 menu carousel: explicitly deferred, not built (D-022, user-confirmed). Both of the step's own stated preconditions are unmet — the menu is `UNPUBLISHED` (Step 17/D-021) and zero approved photos exist — so this is a documented, deliberate skip, not an oversight. Revisit once the menu is actually published and a photo/media mapping is owner-approved.
+
 ## Next
 
 1. Review this state and `.continuum/TASKS.md`.
-2. Runbook Step 18 (menu carousel enhancement).
+2. Runbook Step 19 (domain repositories and state machines) — Phase 4 begins.
 3. Note for later: full-stack local work (Studio/Storage/Realtime/Edge Functions) needs Docker raised to ~7 GB; the migration workflow itself does not.
+4. Note for later: revisit Step 18 (menu carousel) once the menu is published and photos are approved.
 
 ## Production blockers
 

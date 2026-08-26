@@ -2,11 +2,12 @@
 
 ## Active
 
-- [ ] P1 — Step 18: menu carousel enhancement.
+- [ ] P1 — Step 19: domain repositories and state machines (Phase 4 begins).
 
 ## Next
 
 - [ ] P2 — Optional: raise Docker to ~7 GB for full-stack local work (Studio/Storage/Realtime/Edge Functions). Not needed for migrations — see `docs/database-environments.md`.
+- [ ] P3 — Step 18 (menu carousel): explicitly deferred (D-022) until the menu is published and photos are owner-approved. Not a blocker for later steps.
 
 ## Blocked for production, not safe scaffolding
 
