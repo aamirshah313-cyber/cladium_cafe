@@ -101,6 +101,12 @@ export const forbidden = (correlationId?: string): AppError =>
 export const notFound = (correlationId?: string): AppError =>
   appError('NOT_FOUND', 'That item could not be found.', { correlationId });
 
+/** An optimistic-lock version mismatch — the record changed since it was last read. */
+export const conflict = (correlationId?: string): AppError =>
+  appError('CONFLICT', 'This was just updated elsewhere. Please refresh and try again.', {
+    correlationId,
+  });
+
 /**
  * The reviewed draft changed (for example a price moved) after the guest saw
  * it, so the confirmation token no longer matches the review hash.

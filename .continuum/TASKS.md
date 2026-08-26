@@ -2,11 +2,12 @@
 
 ## Active
 
-- [ ] P1 — Step 19: domain repositories and state machines (Phase 4 begins).
+- [ ] P1 — Step 20: takeaway draft and review (wires `modules/takeaway/` to a real cart UI and API routes).
 
 ## Next
 
 - [ ] P2 — Optional: raise Docker to ~7 GB for full-stack local work (Studio/Storage/Realtime/Edge Functions). Not needed for migrations — see `docs/database-environments.md`.
+- [ ] P2 — A real Postgres/Supabase adapter for `lib/domain/`'s repository interfaces (D-023) is needed before Steps 20–23 can persist for real. Build once a live database connection is available (D-017).
 - [ ] P3 — Step 18 (menu carousel): explicitly deferred (D-022) until the menu is published and photos are owner-approved. Not a blocker for later steps.
 
 ## Blocked for production, not safe scaffolding
@@ -46,6 +47,8 @@
 - [x] Step 15 — public shell and navigation: `SiteHeader`/`SiteFooter` (skip link, brand, minimal nav, hours + live timezone-aware open/closed status via `lib/business/hours.ts`); loading/not-found/error states inside the localized shell plus self-sufficient root `not-found`/`global-error` fallbacks; a catch-all route added after finding an unmatched-path 404 skipped the localized shell entirely (D-020). 233 tests total; full `npm run verify` and manual browser check (both locales/themes, both 404 paths, the error boundary, 360px RTL/LTR) pass.
 - [x] Step 16 — home, location, and contact: `modules/business/facts.ts` expanded (address, map URL, WhatsApp, policy prose as `LocalizedText` — no invented Urdu); new `/visit` page (directions/map, hours+status, WhatsApp, policy list); light truthful Home update (tagline, Visit/WhatsApp CTAs); no photography or menu teaser (not approved/built yet). `primary-nav.tsx` added for a real nav active-state now that there are two real routes. 248 tests total; full `npm run verify` and manual browser check (both locales/themes, nav active-state, external-link attributes, 360px) pass.
 - [x] Step 17 — accessible menu browsing: `modules/menu/menu-view.ts` (`PublishedMenuView` shape, `getPublishedMenuView()` always `UNPUBLISHED` today per D-021 — user-confirmed, matching release-gates-v2.md Gate 0/Gate 2/D-005 since owner sign-off is still outstanding); full search/category-filter/availability/PKR UI (`menu/page.tsx`) built as a no-JS `<form method="GET">`, live-verified against a temporary fixture then reverted; live `/menu` shows an honest not-yet-published state with WhatsApp/Visit fallbacks. 260 tests total; full `npm run verify` and manual browser check pass.
+- [x] Step 18 — menu carousel: explicitly deferred, not built (D-022) — both stated preconditions (published menu, approved photos) are unmet.
+- [x] Step 19 — domain repositories and state machines (D-023): `lib/domain/` provider-neutral primitives (actor/role authorization, generic state-machine + `performStaffTransition` orchestrator implementing data-model-v2.md §7's staff-transition contract, idempotency, single-use confirmation tokens, review-hash, append-only status/audit/outbox builders, optimistic-lock versioned store) — all dependency-injected, tested against in-memory reference stores (no live Postgres adapter yet). `modules/{takeaway,bookings,events}/state-machine.ts` encode the three diagrams exactly (role scope, guest-vs-staff transitions). `modules/takeaway/cart.ts` and `modules/{takeaway,bookings,events}/submission-service.ts` implement the full §7 submission transaction contract for all three request types. 292 new focused tests (exhaustive transition tables, idempotency, confirmation tokens, optimistic-lock races, full submission happy/idempotent-replay/stale-review paths). 526 tests total; full `npm run verify` passes. Nothing wired to a route yet — that's Steps 20–23.
 
 ## Update rule
 

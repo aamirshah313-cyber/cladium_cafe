@@ -2,17 +2,18 @@
 
 Updated: 2026-08-26
 Architecture: Version 2  
-Phase: Runbook Phases 0–2 complete (Steps 1–12); Phase 3 done for now (Steps 13–17 complete, Step 18 explicitly deferred — D-022); Phase 4 starting
-Application code: scaffolded (Next.js App Router, TypeScript strict) with CI gates, shared platform primitives, locale routing, Day/Night theming, a public site shell, a Visit page, and a menu-browsing UI (honestly unpublished live) — no request/concierge features built yet
-Baseline commit: `8732db0` "chore: establish Cladium pre-build baseline" (local only, not pushed). Steps 8–10 committed at `150db60` (local only, not pushed). Steps 11–13 committed at `ec45245` (local only, not pushed). Step 14 committed at `84e37db` (local only, not pushed). Step 15 committed at `443cd0e` (local only, not pushed). Step 16 committed at `d6eceb9` (local only, not pushed). Step 17 committed at `3b5a58c` "feat: accessible menu browsing, honestly unpublished (Step 17)" (local only, not pushed).
+Phase: Runbook Phases 0–2 complete (Steps 1–12); Phase 3 done for now (Steps 13–17 complete, Step 18 explicitly deferred — D-022); Phase 4 underway (Step 19 complete)
+Application code: scaffolded (Next.js App Router, TypeScript strict) with CI gates, shared platform primitives, locale routing, Day/Night theming, a public site shell, a Visit page, a menu-browsing UI (honestly unpublished live), and a full provider-neutral domain/repository layer for takeaway/booking/event requests (D-023) — no routes/UI wired to it yet, that is Steps 20–23
+Baseline commit: `8732db0` "chore: establish Cladium pre-build baseline" (local only, not pushed). Steps 8–10 committed at `150db60` (local only, not pushed). Steps 11–13 committed at `ec45245` (local only, not pushed). Step 14 committed at `84e37db` (local only, not pushed). Step 15 committed at `443cd0e` (local only, not pushed). Step 16 committed at `d6eceb9` (local only, not pushed). Step 17 committed at `3b5a58c` (local only, not pushed). Step 18 deferral documented at `3976cf6` (local only, not pushed). Step 19 complete in the working tree.
 
 ## Progress (step-completion metrics, not effort estimates)
 
-- Overall: 17/47 runbook steps = 36.2% (Step 18 explicitly deferred, not counted as complete — see D-022)
+- Overall: 18/47 runbook steps = 38.3% (Step 18 explicitly deferred, not counted as complete — see D-022)
 - Phase 0 (governance/evidence, steps 1–3): 3/3 = 100%
 - Phase 1 (repo/app foundation, steps 4–6): 3/3 = 100%
 - Phase 2 (data/auth/security, steps 7–12): 6/6 = 100%
 - Phase 3 (bilingual/dual-theme public experience, steps 13–18): 5/6 = 83.3% (1 deferred, not outstanding-forgotten)
+- Phase 4 (deterministic requests and staff workflows, steps 19–25): 1/7 = 14.3%
 - Deployment is step 46.
 - Every step counts equally regardless of size/duration. See `CLAUDE.md` Workflow rules for the reporting rule.
 
@@ -64,12 +65,15 @@ Build a luxury, mobile-first Cladium Café & Resort web application on Next.js/V
 
 - Runbook Step 18 menu carousel: explicitly deferred, not built (D-022, user-confirmed). Both of the step's own stated preconditions are unmet — the menu is `UNPUBLISHED` (Step 17/D-021) and zero approved photos exist — so this is a documented, deliberate skip, not an oversight. Revisit once the menu is actually published and a photo/media mapping is owner-approved.
 
+- Runbook Step 19 domain repositories and state machines (D-023): `lib/domain/` — provider-neutral, dependency-injected primitives shared across all three entities: `actor.ts` (Actor/StaffRole/`hasAnyRole`), `state-machine.ts` (generic `canTransition`/`isTerminal`), `staff-transition.ts` (the one `performStaffTransition` orchestrator implementing data-model-v2.md §7's staff-transition contract exactly — authorize, lock+version-check, validate transition, update, append status+audit events, optional outbox notification), `idempotency.ts` (`runIdempotent` — same key+fingerprint replays without re-running; different fingerprint or an in-flight duplicate is rejected), `confirmation-token.ts` (single-use, only a SHA-256 hash stored, a review-hash mismatch is `STALE_REVIEW`), `review-hash.ts`, `status-event.ts`/`audit-event.ts`/`outbox.ts` (append-only builders), `versioned-store.ts` and `sink.ts` (in-memory reference stores — no live Postgres adapter yet, see D-023 for why). `modules/{takeaway,bookings,events}/state-machine.ts` encode data-model-v2.md §5/tool-contracts.md's three diagrams exactly, including which actor type may perform each transition (AUDITOR excluded everywhere; event's `QUOTED → CUSTOMER_ACCEPTED` is guest-performed, uniquely, but has no service yet — no tool contract requests it). `modules/takeaway/cart.ts` (add/modify/remove/recompute against a `PublishedMenuView`, blocking only confirmed-`UNAVAILABLE` items) and `modules/{takeaway,bookings,events}/submission-service.ts` (`prepare*`/`submit*`, implementing the full §7 submission transaction contract step-by-step) are the concrete per-entity services. Evidence: 292 new focused tests — every state×state pair for all three machines asserted against an independently-written expectation table; idempotency replay/conflict/concurrent-duplicate/retry-after-failure; confirmation-token issue/single-use/session-and-action-mismatch/expiry/stale-review; optimistic-lock races; full submission-service happy paths, idempotent replay, and stale-review for takeaway/booking/event. Full `npm run verify` passes (526 tests total, production build unaffected — nothing here is wired to a route yet).
+
 ## Next
 
 1. Review this state and `.continuum/TASKS.md`.
-2. Runbook Step 19 (domain repositories and state machines) — Phase 4 begins.
+2. Runbook Step 20 (takeaway draft and review) — wires `modules/takeaway/cart.ts`/`submission-service.ts` to an actual session-owned cart UI and API routes.
 3. Note for later: full-stack local work (Studio/Storage/Realtime/Edge Functions) needs Docker raised to ~7 GB; the migration workflow itself does not.
 4. Note for later: revisit Step 18 (menu carousel) once the menu is published and photos are approved.
+5. Note for later: a real Postgres/Supabase adapter for `lib/domain/`'s repository interfaces is still needed before any of Steps 20–23 can persist for real (D-023) — build it once a live database connection is available (see D-017).
 
 ## Production blockers
 

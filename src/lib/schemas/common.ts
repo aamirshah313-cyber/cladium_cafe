@@ -26,9 +26,34 @@ export const quantitySchema = z.number().int().min(1).max(99);
 export const partySizeSchema = z.number().int().min(1).max(200);
 
 export const seatingPreferenceSchema = z.enum(['GENERAL', 'TREEHOUSE']);
+export type SeatingPreference = z.infer<typeof seatingPreferenceSchema>;
 
 export const availabilityStatusSchema = z.enum(['AVAILABLE', 'UNAVAILABLE', 'UNKNOWN']);
 export type AvailabilityStatus = z.infer<typeof availabilityStatusSchema>;
+
+/** Who performed a state transition or wrote an audit/status event (data-model-v2.md §6). */
+export const actorTypeSchema = z.enum(['GUEST', 'STAFF', 'SYSTEM']);
+export type ActorType = z.infer<typeof actorTypeSchema>;
+
+/** data-model-v2.md §6 `staff_profiles`: initial roles. */
+export const staffRoleSchema = z.enum([
+  'OWNER',
+  'MANAGER',
+  'ORDER_STAFF',
+  'BOOKING_STAFF',
+  'AUDITOR',
+]);
+export type StaffRole = z.infer<typeof staffRoleSchema>;
+
+/** Where a request/session originated — recorded on submissions, never inferred after the fact. */
+export const sourceChannelSchema = z.enum([
+  'WEB',
+  'TEXT_CONCIERGE',
+  'VOICE_EN',
+  'VOICE_UR',
+  'STAFF',
+]);
+export type SourceChannel = z.infer<typeof sourceChannelSchema>;
 
 /** Minimal PII: a display name only, with a strict length bound. */
 export const guestNameSchema = z.string().trim().min(2).max(80);
