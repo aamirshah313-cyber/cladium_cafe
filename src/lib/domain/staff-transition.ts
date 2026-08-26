@@ -16,6 +16,7 @@
  * each of the three staff services that call this function.
  */
 
+import { randomUUID } from 'node:crypto';
 import { err, ok, type Result } from '../result';
 import { conflict, forbidden, notFound, validationFailed, type AppError } from '../errors';
 import { hasAnyRole, type Actor, type StaffRole } from './actor';
@@ -59,7 +60,11 @@ export interface PerformStaffTransitionInput<
   readonly auditEvents: AppendOnlySink<AuditEvent>;
   readonly outbox: AppendOnlySink<OutboxEvent>;
   /** Returning `null` skips the notification for this particular transition. */
-  readonly buildOutboxNotification?: (record: T) => Omit<BuildOutboxEventInput, 'now'> | null;
+  readonly buildOutboxNotification?: (
+    record: T,
+  ) => Omit<BuildOutboxEventInput, 'now' | 'generateId'> | null;
+  /** Defaults to `randomUUID` — only used when `buildOutboxNotification` actually produces a notification. */
+  readonly generateId?: () => string;
   readonly now?: () => Date;
 }
 
@@ -125,7 +130,13 @@ export async function performStaffTransition<
   // 6. enqueue a notification, if this transition warrants one.
   const notification = input.buildOutboxNotification?.(updated) ?? null;
   if (notification) {
-    await input.outbox.append(buildOutboxEvent({ ...notification, now: input.now }));
+    await input.outbox.append(
+      buildOutboxEvent({
+        ...notification,
+        generateId: input.generateId ?? randomUUID,
+        now: input.now,
+      }),
+    );
   }
 
   return ok(updated);

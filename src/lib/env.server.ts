@@ -85,6 +85,19 @@ export function parseSessionSecret(source: EnvSource = process.env): string {
   return sessionSecretSchema.parse(source).SESSION_SECRET;
 }
 
+const cronSecretSchema = serverEnvSchema.pick({ CRON_SECRET: true });
+
+/**
+ * Narrow accessor for just `CRON_SECRET` — Step 20's `parseAppUrl` bug (the
+ * full-schema version fails closed even for a correctly-configured caller
+ * whenever an unrelated var like a Vapi/WhatsApp key is unset) applies
+ * identically here, so `app/api/cron/outbox-dispatch/route.ts` uses this,
+ * not `parseServerEnv`.
+ */
+export function parseCronSecret(source: EnvSource = process.env): string | undefined {
+  return cronSecretSchema.safeParse(source).data?.CRON_SECRET;
+}
+
 /** Narrow boolean view of a flag, for readable call sites. */
 export function isFeatureEnabled(
   flag: keyof FeatureFlagEnv,

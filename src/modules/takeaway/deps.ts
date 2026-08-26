@@ -7,6 +7,9 @@
  * on restart/redeploy, and does not coordinate across concurrent Vercel
  * function instances. A real Postgres adapter replaces every store this
  * factory builds, later, without any route file needing to change (D-023).
+ * `outbox` is the Step 25 shared singleton (`modules/notifications/deps.ts`),
+ * not a private sink — `outbox_events` is one table, not one per entity, so
+ * one dispatcher drains all three.
  */
 
 import { randomUUID } from 'node:crypto';
@@ -14,6 +17,7 @@ import { createInMemorySink } from '../../lib/domain/sink';
 import { createInMemoryConfirmationTokenStore } from '../../lib/domain/confirmation-token';
 import { createInMemoryIdempotencyStore } from '../../lib/domain/idempotency';
 import { createInMemoryVersionedStore } from '../../lib/domain/versioned-store';
+import { outboxStore } from '../notifications/deps';
 import { getPublishedMenuView } from '../menu/menu-view';
 import { createInMemoryCartStore } from './cart-store';
 import type { TakeawayHttpDeps } from './http';
@@ -29,7 +33,7 @@ function createTakeawayDeps(): TakeawayHttpDeps {
     itemSnapshots: createInMemorySink<TakeawayItemSnapshot>(),
     statusEvents: createInMemorySink(),
     auditEvents: createInMemorySink(),
-    outbox: createInMemorySink(),
+    outbox: outboxStore,
     cartStore: createInMemoryCartStore(),
     generateId: randomUUID,
   };

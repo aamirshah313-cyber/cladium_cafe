@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { parseClientEnv } from '../../src/lib/env';
 import {
   isFeatureEnabled,
+  parseCronSecret,
   parseFeatureFlags,
   parseServerEnv,
   parseStaffDevAccounts,
@@ -97,5 +98,19 @@ describe('parseStaffDevAccounts', () => {
       { staffId: 'staff-1', displayName: 'Aamir', roles: ['NOT_A_ROLE'], devPassword: 'short' },
     ]);
     expect(parseStaffDevAccounts({ STAFF_DEV_ACCOUNTS: raw })).toEqual([]);
+  });
+});
+
+describe('parseCronSecret', () => {
+  it('returns the configured secret', () => {
+    expect(parseCronSecret({ CRON_SECRET: 'a-cron-secret' })).toBe('a-cron-secret');
+  });
+
+  it('returns undefined, not a throw, when unset', () => {
+    expect(parseCronSecret({})).toBeUndefined();
+  });
+
+  it('does not require any other server env var to be set', () => {
+    expect(parseCronSecret({ CRON_SECRET: 'a-cron-secret' })).toBe('a-cron-secret');
   });
 });

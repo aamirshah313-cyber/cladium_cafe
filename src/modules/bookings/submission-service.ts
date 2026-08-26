@@ -188,6 +188,7 @@ export async function submitBookingRequest(
           entityId: requestId,
           payload: { partySize: record.partySize, seatingPreference: record.seatingPreference },
           destination: 'staff_notification',
+          generateId: deps.generateId,
           now,
         }),
       );

@@ -242,6 +242,7 @@ export async function submitTakeawayRequest(
           entityId: requestId,
           payload: { totalPkr: record.totalPkr, itemCount: totals.lines.length },
           destination: 'staff_notification',
+          generateId: deps.generateId,
           now,
         }),
       );

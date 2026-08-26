@@ -193,6 +193,7 @@ export async function submitEventRequest(
           entityId: requestId,
           payload: { guestCount: record.guestCount, decorInterest: record.decorInterest },
           destination: 'staff_notification',
+          generateId: deps.generateId,
           now,
         }),
       );

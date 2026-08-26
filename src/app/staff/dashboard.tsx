@@ -1,12 +1,17 @@
 'use client';
 
 /**
- * Staff dashboard / sign-in — Runbook Step 24.
+ * Staff dashboard / sign-in — Runbook Step 24, notifications added Step 25.
  *
  * The sign-in form posts a development-only credential pair
  * (`modules/staff/dev-credentials.ts` — never production auth; disabled by
  * default because `STAFF_DEV_ACCOUNTS` is unset). Once signed in, the three
- * queue links are the entry points into `[entity]/page.tsx`.
+ * queue links are the entry points into `[entity]/page.tsx`. The
+ * notification list is a plain poll of `/api/staff/notifications`, not a
+ * Supabase Realtime subscription — no live Supabase project exists yet
+ * (D-017), and per ADR-0007, "Realtime is a speed-up, not the delivery
+ * guarantee" anyway: polling the durably-dispatched outbox result already
+ * gives every notification, just not instantly.
  */
 
 import { useEffect, useState } from 'react';
@@ -17,6 +22,14 @@ interface StaffSession {
   readonly staffId: string;
   readonly displayName: string;
   readonly roles: readonly string[];
+}
+
+interface StaffNotification {
+  readonly id: string;
+  readonly eventType: string;
+  readonly entityType: string;
+  readonly entityId: string;
+  readonly deliveredAt: string;
 }
 
 async function fetchSession(): Promise<StaffSession | null> {
@@ -31,6 +44,7 @@ export function StaffDashboard() {
   const [devPassword, setDevPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [notifications, setNotifications] = useState<readonly StaffNotification[] | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -41,6 +55,19 @@ export function StaffDashboard() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!session || session === 'loading') return;
+    let cancelled = false;
+    fetch('/api/staff/notifications')
+      .then((response) => (response.ok ? response.json() : null))
+      .then((body: { notifications?: readonly StaffNotification[] } | null) => {
+        if (!cancelled && body?.notifications) setNotifications(body.notifications);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [session]);
 
   async function handleSignIn(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -125,6 +152,23 @@ export function StaffDashboard() {
           ))}
         </ul>
       </nav>
+
+      <section aria-labelledby="staff-notifications-heading">
+        <h2 id="staff-notifications-heading">Notifications</h2>
+        {!notifications || notifications.length === 0 ? (
+          <p>No notifications yet.</p>
+        ) : (
+          <ul>
+            {notifications.map((notification) => (
+              <li key={notification.id}>
+                {notification.deliveredAt}: {notification.eventType} ({notification.entityType}{' '}
+                {notification.entityId})
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
       <button type="button" onClick={() => void handleSignOut()}>
         Sign out
       </button>
