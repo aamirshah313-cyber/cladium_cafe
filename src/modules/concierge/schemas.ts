@@ -12,7 +12,7 @@
  */
 
 import { z } from 'zod';
-import { stableIdSchema, strictObject, uuidSchema } from '../../lib/schemas/common';
+import { localeSchema, stableIdSchema, strictObject, uuidSchema } from '../../lib/schemas/common';
 
 export const getMenuInputSchema = strictObject({
   query: z.string().trim().min(1).max(100).optional(),
@@ -43,3 +43,17 @@ export type ViewCartInput = z.infer<typeof viewCartInputSchema>;
 
 export const getRequestStatusInputSchema = strictObject({ requestId: uuidSchema });
 export type GetRequestStatusInput = z.infer<typeof getRequestStatusInputSchema>;
+
+/**
+ * `POST /api/concierge/chat`'s body — Runbook Step 27. `locale` comes from
+ * the page the chat widget is embedded on (the same locale that page
+ * already resolved), never guessed server-side; the orchestrator only
+ * ever accepts one new message per call — the rest of the conversation is
+ * server-held state (`conversation-store.ts`), never client-supplied.
+ */
+export const chatMessageBodySchema = strictObject({
+  message: z.string().trim().min(1).max(2000),
+  locale: localeSchema,
+  csrfToken: z.string().min(1).max(256),
+});
+export type ChatMessageBody = z.infer<typeof chatMessageBodySchema>;

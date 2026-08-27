@@ -98,6 +98,20 @@ export function parseCronSecret(source: EnvSource = process.env): string | undef
   return cronSecretSchema.safeParse(source).data?.CRON_SECRET;
 }
 
+const anthropicApiKeySchema = serverEnvSchema.pick({ ANTHROPIC_API_KEY: true });
+
+/**
+ * Narrow accessor for just `ANTHROPIC_API_KEY` — same reasoning as
+ * `parseSessionSecret`/`parseCronSecret`: `modules/integrations/
+ * anthropic-client.ts` must not require every other unrelated secret
+ * (Vapi, WhatsApp, session) to be configured before it can even attempt a
+ * call. Throws if unset — a chat client is only ever constructed to be
+ * used, unlike a cron endpoint that might legitimately never be called.
+ */
+export function parseAnthropicApiKey(source: EnvSource = process.env): string {
+  return anthropicApiKeySchema.parse(source).ANTHROPIC_API_KEY;
+}
+
 /** Narrow boolean view of a flag, for readable call sites. */
 export function isFeatureEnabled(
   flag: keyof FeatureFlagEnv,
