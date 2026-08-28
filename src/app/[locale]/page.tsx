@@ -1,5 +1,5 @@
 /**
- * Home page — Runbook Step 16, CTAs extended in Steps 22–23.
+ * Home page — Runbook Step 16, CTAs extended in Steps 22–23 and 28.
  *
  * Deliberately modest: `design/site-map.md`'s "Taste" (menu teaser) and
  * atmospheric "Arrival"/"Place" photography are not built here — no menu
@@ -44,6 +44,9 @@ export default async function LocaleHomePage({ params }: { params: Promise<{ loc
       </p>
       <p>
         <a href={`/${locale}/visit`}>{chromeText('homeVisitCtaLabel', locale)}</a>
+      </p>
+      <p>
+        <a href={`/${locale}/concierge`}>{chromeText('navConciergeLabel', locale)}</a>
       </p>
       <p>
         <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer">

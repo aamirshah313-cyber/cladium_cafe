@@ -126,6 +126,20 @@ export const chrome = {
     en: 'Your birthday/event enquiry has been received. Staff will follow up with décor availability and a quote — this is not yet a confirmed quote or booking.',
     ur: 'آپ کی سالگرہ/تقریب کی انکوائری موصول ہو گئی ہے۔ عملہ سجاوٹ کی دستیابی اور قیمت کے ساتھ رابطہ کرے گا — یہ ابھی تک تصدیق شدہ قیمت یا بکنگ نہیں ہے۔',
   },
+  navConciergeLabel: { en: 'Ask Cladium Concierge', ur: 'کلیڈیم قونصیرج سے پوچھیں' },
+  conciergePageHeading: { en: 'Ask Cladium Concierge', ur: 'کلیڈیم قونصیرج سے پوچھیں' },
+  conciergeIntro: {
+    en: "Ask about the menu, hours, directions, or start a table or event request. For anything I can't help with, our team is on WhatsApp.",
+    ur: 'مینو، اوقات، راستے کے بارے میں پوچھیں، یا میز یا تقریب کی درخواست شروع کریں۔ جس چیز میں مدد نہ کر سکوں، ہماری ٹیم واٹس ایپ پر موجود ہے۔',
+  },
+  conciergeInputLabel: { en: 'Your message', ur: 'آپ کا پیغام' },
+  conciergeSendButtonLabel: { en: 'Send', ur: 'بھیجیں' },
+  conciergeThinkingLabel: { en: 'Thinking…', ur: 'سوچ رہے ہیں…' },
+  conciergeDismissButtonLabel: { en: 'Not now', ur: 'ابھی نہیں' },
+  conciergeConfirmDraftHeading: {
+    en: 'Ready to send this request?',
+    ur: 'کیا یہ درخواست بھیجنی ہے؟',
+  },
 } as const satisfies Record<string, ChromeCopy>;
 
 export type ChromeKey = keyof typeof chrome;

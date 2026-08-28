@@ -357,3 +357,133 @@ describe('orchestrateTurn — rate limiting', () => {
     expect(calls).toHaveLength(calledSoFar); // no new model call was made
   });
 });
+
+describe('orchestrateTurn — Step 28 pendingConfirmation', () => {
+  const BOOKING_TOOL_INPUT = {
+    guestName: 'Aamir Shah',
+    guestPhone: '+923001234567',
+    requestedDate: '2999-01-01',
+    requestedTime: '19:00',
+    partySize: 4,
+    seatingPreference: 'GENERAL',
+  };
+
+  it('a successful prepareBookingRequest call surfaces pendingConfirmation with kind BOOKING', async () => {
+    const { deps } = harness((_input, callIndex) =>
+      callIndex === 0
+        ? toolUseResult('prepareBookingRequest', BOOKING_TOOL_INPUT)
+        : textResult('Here is your table request — please confirm below.'),
+    );
+
+    const result = await orchestrateTurn(deps, {
+      sessionId: 'session-1',
+      locale: 'en',
+      userMessage: 'Book a table for 4 tonight at 7pm, name Aamir, phone 03001234567',
+      correlationId: 'corr-1',
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.pendingConfirmation).toMatchObject({
+      kind: 'BOOKING',
+      confirmationToken: expect.any(String),
+      review: expect.objectContaining({ guestName: 'Aamir Shah' }),
+    });
+  });
+
+  it('no pendingConfirmation is present when no prepare tool was ever called', async () => {
+    const { deps } = harness(() => textResult('We are open 12 pm to 12 am.'));
+
+    const result = await orchestrateTurn(deps, {
+      sessionId: 'session-1',
+      locale: 'en',
+      userMessage: 'What are your hours?',
+      correlationId: 'corr-1',
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.value.pendingConfirmation).toBeUndefined();
+  });
+
+  it('a failed prepare call (invalid tool input) never produces a pendingConfirmation', async () => {
+    const { deps } = harness((_input, callIndex) =>
+      callIndex === 0
+        ? toolUseResult('prepareBookingRequest', { guestName: 'x' }) // missing required fields
+        : textResult('I need a few more details from you.'),
+    );
+
+    const result = await orchestrateTurn(deps, {
+      sessionId: 'session-1',
+      locale: 'en',
+      userMessage: 'Book a table',
+      correlationId: 'corr-1',
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.value.pendingConfirmation).toBeUndefined();
+  });
+
+  it('the pendingConfirmation survives even if a later call in the same turn throws', async () => {
+    const { deps } = harness((_input, callIndex) => {
+      if (callIndex === 0) return toolUseResult('prepareBookingRequest', BOOKING_TOOL_INPUT);
+      throw new Error('network failure after the draft was already issued');
+    });
+
+    const result = await orchestrateTurn(deps, {
+      sessionId: 'session-1',
+      locale: 'en',
+      userMessage: 'Book a table for 4 tonight at 7pm, name Aamir, phone 03001234567',
+      correlationId: 'corr-1',
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.escalate).toBe(true);
+    expect(result.value.pendingConfirmation).toMatchObject({ kind: 'BOOKING' });
+  });
+
+  it('only the latest prepare call in a turn is kept when the model calls more than one', async () => {
+    const eventInput = {
+      guestName: 'Aamir Shah',
+      guestPhone: '+923001234567',
+      occasion: 'Birthday',
+      requestedDate: '2999-01-01',
+      requestedTime: '19:00',
+      guestCount: 20,
+      decorInterest: true,
+    };
+    const { deps } = harness((_input, callIndex) => {
+      if (callIndex === 0) {
+        return {
+          content: [
+            {
+              type: 'tool_use' as const,
+              id: 'tu_1',
+              name: 'prepareBookingRequest',
+              input: BOOKING_TOOL_INPUT,
+            },
+            {
+              type: 'tool_use' as const,
+              id: 'tu_2',
+              name: 'prepareEventRequest',
+              input: eventInput,
+            },
+          ],
+          stopReason: 'tool_use' as const,
+          usage: ZERO_USAGE,
+        };
+      }
+      return textResult('Which would you like to confirm?');
+    });
+
+    const result = await orchestrateTurn(deps, {
+      sessionId: 'session-1',
+      locale: 'en',
+      userMessage: 'I might want a table or a birthday event',
+      correlationId: 'corr-1',
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.value.pendingConfirmation?.kind).toBe('EVENT');
+  });
+});

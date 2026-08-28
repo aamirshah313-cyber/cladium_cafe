@@ -1,5 +1,5 @@
 /**
- * The concierge tool registry — Runbook Step 27, on top of Step 26's
+ * The concierge tool registry — Runbook Steps 27–28, on top of Step 26's
  * schemas/tools. Each entry pairs a hand-written JSON schema (never an
  * auto-derived one that could silently drop `additionalProperties: false`
  * — ADR-0005: "strict, schema-validated tools that reject unknown
@@ -11,6 +11,17 @@
  * `ToolExecutionContext` is server-resolved (`sessionId`, `locale`) —
  * never something the model supplies, matching `viewCart`'s "no
  * browser-supplied session ID" contract for every tool, not only that one.
+ *
+ * Step 28's `prepareBookingRequest`/`prepareEventRequest` only ever draft
+ * — echo a review, issue a single-use confirmation token — never write a
+ * request record. There is deliberately no `submitBookingRequest`/
+ * `submitEventRequest`/`submitTakeawayRequest` entry in this registry at
+ * all: "the assistant may present a structured review but cannot submit
+ * directly." The model is structurally unable to cause a write (an
+ * attempt to call an unregistered submit tool name fails `NOT_FOUND`,
+ * the same as any other unknown tool) — only a guest tapping the visible
+ * confirm control the chat UI renders, which calls the existing
+ * `POST /api/{bookings,events}/submit` route directly, ever can.
  */
 
 import { err, ok, type Result } from '../../lib/result';
@@ -21,12 +32,16 @@ import {
   getMenuInputSchema,
   getRequestStatusInputSchema,
   getVenueInfoInputSchema,
+  prepareBookingInputSchema,
+  prepareEventInputSchema,
   viewCartInputSchema,
 } from './schemas';
 import { getMenu } from './tools/get-menu';
 import { getVenueInfo } from './tools/get-venue-info';
 import { viewCart } from './tools/view-cart';
 import { getRequestStatus } from './tools/get-request-status';
+import { prepareBookingDraft } from './tools/prepare-booking';
+import { prepareEventDraft } from './tools/prepare-event';
 import { cartDeps, requestStatusDeps } from './deps';
 
 export interface ToolExecutionContext {
@@ -86,6 +101,58 @@ const GET_REQUEST_STATUS_SCHEMA: Record<string, unknown> = {
   },
 };
 
+const PREPARE_BOOKING_SCHEMA: Record<string, unknown> = {
+  type: 'object',
+  additionalProperties: false,
+  required: [
+    'guestName',
+    'guestPhone',
+    'requestedDate',
+    'requestedTime',
+    'partySize',
+    'seatingPreference',
+  ],
+  properties: {
+    guestName: { type: 'string', minLength: 2, maxLength: 80 },
+    guestPhone: {
+      type: 'string',
+      description: 'A Pakistani mobile number, e.g. 03001234567 or +923001234567.',
+    },
+    requestedDate: { type: 'string', description: 'YYYY-MM-DD, today or a future date.' },
+    requestedTime: { type: 'string', description: 'HH:MM, 24-hour.' },
+    partySize: { type: 'integer', minimum: 1, maximum: 200 },
+    seatingPreference: { type: 'string', enum: ['GENERAL', 'TREEHOUSE'] },
+    notes: { type: 'string', maxLength: 500 },
+  },
+};
+
+const PREPARE_EVENT_SCHEMA: Record<string, unknown> = {
+  type: 'object',
+  additionalProperties: false,
+  required: [
+    'guestName',
+    'guestPhone',
+    'occasion',
+    'requestedDate',
+    'requestedTime',
+    'guestCount',
+    'decorInterest',
+  ],
+  properties: {
+    guestName: { type: 'string', minLength: 2, maxLength: 80 },
+    guestPhone: {
+      type: 'string',
+      description: 'A Pakistani mobile number, e.g. 03001234567 or +923001234567.',
+    },
+    occasion: { type: 'string', minLength: 2, maxLength: 100 },
+    requestedDate: { type: 'string', description: 'YYYY-MM-DD, today or a future date.' },
+    requestedTime: { type: 'string', description: 'HH:MM, 24-hour.' },
+    guestCount: { type: 'integer', minimum: 1, maximum: 200 },
+    decorInterest: { type: 'boolean' },
+    notes: { type: 'string', maxLength: 500 },
+  },
+};
+
 const REGISTRY: Readonly<Record<string, ToolRegistryEntry>> = {
   getMenu: {
     definition: {
@@ -138,6 +205,34 @@ const REGISTRY: Readonly<Record<string, ToolRegistryEntry>> = {
       const parsed = getRequestStatusInputSchema.safeParse(rawInput);
       if (!parsed.success) return { error: 'Invalid input for getRequestStatus.' };
       return getRequestStatus(requestStatusDeps, context.sessionId, parsed.data.requestId);
+    },
+  },
+  prepareBookingRequest: {
+    definition: {
+      name: 'prepareBookingRequest',
+      description:
+        'Draft a table/treehouse booking request once you have gathered every field from the guest in conversation. Only ever prepares a review and a confirmation code — it never books or confirms anything. Tell the guest their request is not booked until they tap Confirm on the review you show them; treehouse capacity always needs staff confirmation regardless.',
+      inputSchema: PREPARE_BOOKING_SCHEMA,
+    },
+    async execute(rawInput, context) {
+      const parsed = prepareBookingInputSchema.safeParse(rawInput);
+      if (!parsed.success) return { error: 'Invalid input for prepareBookingRequest.' };
+      const result = await prepareBookingDraft(parsed.data, context.sessionId);
+      return result.ok ? result.value : { error: result.error.message };
+    },
+  },
+  prepareEventRequest: {
+    definition: {
+      name: 'prepareEventRequest',
+      description:
+        'Draft a birthday/event enquiry once you have gathered every field from the guest in conversation. Only ever prepares a review and a confirmation code — it never books, quotes, or confirms anything. Décor starts from PKR 8,000; never state a final price. Tell the guest their enquiry is not confirmed until they tap Confirm and staff follow up with a real quote.',
+      inputSchema: PREPARE_EVENT_SCHEMA,
+    },
+    async execute(rawInput, context) {
+      const parsed = prepareEventInputSchema.safeParse(rawInput);
+      if (!parsed.success) return { error: 'Invalid input for prepareEventRequest.' };
+      const result = await prepareEventDraft(parsed.data, context.sessionId);
+      return result.ok ? result.value : { error: result.error.message };
     },
   },
 };

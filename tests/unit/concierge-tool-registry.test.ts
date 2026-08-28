@@ -4,10 +4,24 @@ import { TOOL_DEFINITIONS, dispatchToolCall } from '../../src/modules/concierge/
 const CONTEXT = { sessionId: 'session-1', locale: 'en' as const, correlationId: 'corr-1' };
 
 describe('TOOL_DEFINITIONS', () => {
-  it('lists exactly the four Step 26 read tools', () => {
+  it('lists exactly the four Step 26 read tools plus the two Step 28 prepare tools', () => {
     expect(TOOL_DEFINITIONS.map((t) => t.name).sort()).toEqual(
-      ['getMenu', 'getRequestStatus', 'getVenueInfo', 'viewCart'].sort(),
+      [
+        'getMenu',
+        'getRequestStatus',
+        'getVenueInfo',
+        'prepareBookingRequest',
+        'prepareEventRequest',
+        'viewCart',
+      ].sort(),
     );
+  });
+
+  it('never lists a submit tool — the model is structurally unable to cause a write', () => {
+    const names = TOOL_DEFINITIONS.map((t) => t.name);
+    expect(names).not.toContain('submitBookingRequest');
+    expect(names).not.toContain('submitEventRequest');
+    expect(names).not.toContain('submitTakeawayRequest');
   });
 
   it('every tool rejects unknown properties at the JSON-schema level', () => {
@@ -44,6 +58,56 @@ describe('dispatchToolCall — valid calls execute the real tool', () => {
     );
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.value).toEqual({ found: false });
+  });
+});
+
+describe('dispatchToolCall — the two Step 28 prepare tools', () => {
+  const BOOKING_INPUT = {
+    guestName: 'Aamir Shah',
+    guestPhone: '+923001234567',
+    requestedDate: '2999-01-01',
+    requestedTime: '19:00',
+    partySize: 4,
+    seatingPreference: 'GENERAL',
+  };
+  const EVENT_INPUT = {
+    guestName: 'Aamir Shah',
+    guestPhone: '+923001234567',
+    occasion: 'Birthday',
+    requestedDate: '2999-01-01',
+    requestedTime: '19:00',
+    guestCount: 20,
+    decorInterest: true,
+  };
+
+  it('prepareBookingRequest drafts a review with a confirmation token, never a request record', async () => {
+    const result = await dispatchToolCall('prepareBookingRequest', BOOKING_INPUT, CONTEXT);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value).toMatchObject({
+        review: expect.any(Object),
+        confirmationToken: expect.any(String),
+      });
+    }
+  });
+
+  it('prepareEventRequest drafts a review with a confirmation token, never a request record', async () => {
+    const result = await dispatchToolCall('prepareEventRequest', EVENT_INPUT, CONTEXT);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value).toMatchObject({
+        review: expect.any(Object),
+        confirmationToken: expect.any(String),
+      });
+    }
+  });
+});
+
+describe('dispatchToolCall — a hypothetical submit-tool call name', () => {
+  it('resolves NOT_FOUND — there is nothing registered to execute even if the model tried', async () => {
+    const result = await dispatchToolCall('submitBookingRequest', {}, CONTEXT);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.code).toBe('NOT_FOUND');
   });
 });
 

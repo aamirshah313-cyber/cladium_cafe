@@ -1,18 +1,31 @@
 /**
- * Strict tool-input schemas for the read-only concierge tools — Runbook
- * Step 26 (`agent/tool-contracts.md`'s "Read-only tools" table). Every
- * schema rejects unknown properties (`strictObject`) — the model selects a
- * tool but cannot smuggle an extra field past validation.
+ * Strict tool-input schemas for the concierge — Step 26's read-only tools
+ * (`agent/tool-contracts.md`'s "Read-only tools" table) plus Step 28's two
+ * draft-preparation tools. Every schema rejects unknown properties
+ * (`strictObject`) — the model selects a tool but cannot smuggle an extra
+ * field past validation.
  *
  * `viewCartInputSchema` is deliberately empty: `tool-contracts.md` for
  * `viewCart` is explicit — "no browser-supplied session ID; use
  * authenticated server context" — so the model supplies nothing at all;
  * the server injects the caller's own verified session ID, the same
  * server-only mechanism `lib/customer-session.ts` already provides.
+ *
+ * `prepareBookingInputSchema`/`prepareEventInputSchema` reuse the exact
+ * field validators `modules/{bookings,events}/schemas.ts` already export
+ * for the manual forms — same "not in the past" date check, same phone/
+ * name/notes bounds — so a guest describing a request to the concierge is
+ * held to the identical standard as one filling in `/book`/`/event`
+ * directly, never a looser one. There is no `prepareTakeawayRequest` tool
+ * yet: it needs a cart, and the menu is still `UNPUBLISHED` (D-021), the
+ * same reason the manual takeaway UI is deferred (D-024) — nothing to
+ * prepare a takeaway draft from exists yet, on either path.
  */
 
 import { z } from 'zod';
 import { localeSchema, stableIdSchema, strictObject, uuidSchema } from '../../lib/schemas/common';
+import { bookingDraftFieldsSchema } from '../bookings/schemas';
+import { eventDraftFieldsSchema } from '../events/schemas';
 
 export const getMenuInputSchema = strictObject({
   query: z.string().trim().min(1).max(100).optional(),
@@ -43,6 +56,12 @@ export type ViewCartInput = z.infer<typeof viewCartInputSchema>;
 
 export const getRequestStatusInputSchema = strictObject({ requestId: uuidSchema });
 export type GetRequestStatusInput = z.infer<typeof getRequestStatusInputSchema>;
+
+export const prepareBookingInputSchema = strictObject({ ...bookingDraftFieldsSchema });
+export type PrepareBookingInput = z.infer<typeof prepareBookingInputSchema>;
+
+export const prepareEventInputSchema = strictObject({ ...eventDraftFieldsSchema });
+export type PrepareEventInput = z.infer<typeof prepareEventInputSchema>;
 
 /**
  * `POST /api/concierge/chat`'s body — Runbook Step 27. `locale` comes from

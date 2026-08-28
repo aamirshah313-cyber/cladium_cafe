@@ -1,7 +1,7 @@
 /**
  * Bounded server-side chat orchestration — Runbook Step 27 (ADR-0005: "The
  * orchestration loop is bounded by tool-call, token, and time limits with
- * a safe staff/WhatsApp fallback").
+ * a safe staff/WhatsApp fallback"), extended in Step 28 for draft actions.
  *
  * One call = one guest turn: rate-limit, load bounded server-held history
  * (never browser-supplied — `conversation-store.ts`), run a bounded
@@ -17,6 +17,18 @@
  * same is true of every tool result, which only ever enters the message
  * array as a `tool_result` block (an untrusted-data role Anthropic's API
  * itself never treats as instructions), never appended to `system`.
+ *
+ * Step 28's `prepareBookingRequest`/`prepareEventRequest` tools only ever
+ * draft (`tool-registry.ts`'s doc comment) — this function additionally
+ * surfaces that draft structurally as `pendingConfirmation`, not only as
+ * text the model might phrase, so the chat UI can render a real review
+ * card with a tappable confirm control. Only the *last* successful
+ * prepare call in a turn is kept — a guest confirms one draft at a time.
+ * The confirmation token itself was already issued by the exact same
+ * deterministic submission service the manual `/book`/`/event` forms use
+ * (Step 19); nothing about a later timeout/escalation in this same turn
+ * invalidates it, so it is always included once issued, regardless of how
+ * the rest of the turn resolves.
  */
 
 import { err, ok, type Result } from '../../lib/result';
@@ -55,10 +67,24 @@ export interface OrchestrateTurnInput {
   readonly correlationId: string;
 }
 
+export type PendingConfirmationKind = 'BOOKING' | 'EVENT';
+
+export interface PendingConfirmation {
+  readonly kind: PendingConfirmationKind;
+  readonly review: unknown;
+  readonly confirmationToken: string;
+}
+
 export interface OrchestrateTurnResult {
   readonly reply: string;
   readonly escalate: boolean;
+  readonly pendingConfirmation?: PendingConfirmation;
 }
+
+const PREPARE_TOOL_KIND: Readonly<Record<string, PendingConfirmationKind>> = {
+  prepareBookingRequest: 'BOOKING',
+  prepareEventRequest: 'EVENT',
+};
 
 function textOf(blocks: readonly ChatContentBlock[]): string {
   return blocks
@@ -66,6 +92,15 @@ function textOf(blocks: readonly ChatContentBlock[]): string {
     .map((block) => block.text)
     .join('\n')
     .trim();
+}
+
+function asPrepareToolResult(
+  value: unknown,
+): { review: unknown; confirmationToken: string } | null {
+  if (typeof value !== 'object' || value === null) return null;
+  const candidate = value as { review?: unknown; confirmationToken?: unknown };
+  if (typeof candidate.confirmationToken !== 'string' || !('review' in candidate)) return null;
+  return { review: candidate.review, confirmationToken: candidate.confirmationToken };
 }
 
 export async function orchestrateTurn(
@@ -100,6 +135,7 @@ export async function orchestrateTurn(
   let totalTokens = 0;
   let reply = FALLBACK_REPLY;
   let escalate = false;
+  let pendingConfirmation: PendingConfirmation | undefined;
 
   try {
     while (true) {
@@ -156,6 +192,12 @@ export async function orchestrateTurn(
           ),
           isError: !dispatchResult.ok,
         });
+
+        const kind = PREPARE_TOOL_KIND[toolUse.name];
+        if (kind && dispatchResult.ok) {
+          const prepared = asPrepareToolResult(dispatchResult.value);
+          if (prepared) pendingConfirmation = { kind, ...prepared };
+        }
       }
       messages.push({ role: 'user', content: resultBlocks });
     }
@@ -167,7 +209,7 @@ export async function orchestrateTurn(
       toolCalls: toolCallCount,
       errorType: error instanceof Error ? error.constructor.name : typeof error,
     });
-    return ok({ reply: FALLBACK_REPLY, escalate: true });
+    return ok({ reply: FALLBACK_REPLY, escalate: true, pendingConfirmation });
   }
 
   const occurredAt = now().toISOString();
@@ -188,5 +230,5 @@ export async function orchestrateTurn(
     escalate,
   });
 
-  return ok({ reply, escalate });
+  return ok({ reply, escalate, pendingConfirmation });
 }

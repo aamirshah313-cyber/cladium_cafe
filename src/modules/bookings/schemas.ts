@@ -27,7 +27,8 @@ import { isTodayOrFutureDate } from '../../lib/business/request-window';
 
 const csrfTokenSchema = z.string().min(1).max(256);
 
-const bookingDraftFieldsSchema = {
+/** Exported so `modules/concierge/schemas.ts` (Step 28) can build its prepare-tool input from the exact same field validators, never a duplicate that could drift. */
+export const bookingDraftFieldsSchema = {
   guestName: guestNameSchema,
   guestPhone: phoneSchema,
   requestedDate: requestedDateSchema.refine((value) => isTodayOrFutureDate(value, new Date()), {

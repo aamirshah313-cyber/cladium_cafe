@@ -16,8 +16,8 @@
  * their own top-level nodes, but Steps 22–23 need them reachable from every
  * page, not just Home. Menu is included even though it currently renders an
  * honest "not published yet" state (`menu/page.tsx`) rather than being
- * hidden — it is a real, working route, not an unbuilt one. Concierge has
- * no route yet, so it is omitted rather than linking to an unbuilt page.
+ * hidden — it is a real, working route, not an unbuilt one. Concierge
+ * (Step 28) is last, matching the site map's own top-level ordering.
  */
 
 import Link from 'next/link';
@@ -37,6 +37,7 @@ const ITEMS: readonly NavItem[] = [
   { path: '/book', labelKey: 'navBookLabel' },
   { path: '/event', labelKey: 'navPlanBirthdayLabel' },
   { path: '/visit', labelKey: 'navVisitLabel' },
+  { path: '/concierge', labelKey: 'navConciergeLabel' },
 ];
 
 interface PrimaryNavProps {
