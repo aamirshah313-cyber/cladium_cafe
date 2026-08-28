@@ -135,6 +135,20 @@ export function parseVapiCredentials(source: EnvSource = process.env): VapiCrede
   return vapiCredentialsSchema.parse(source);
 }
 
+const vapiWebhookSecretSchema = serverEnvSchema.pick({ VAPI_WEBHOOK_HMAC_SECRET: true });
+
+/**
+ * Narrow accessor for just `VAPI_WEBHOOK_HMAC_SECRET` — same "returns
+ * `undefined` rather than throwing" shape as `parseCronSecret`: an
+ * unconfigured secret must make every inbound `/api/vapi/{tools,webhook}`
+ * request fail closed (rejected), not 500. Step 32's routes reject before
+ * ever calling the HMAC verifier when this is falsy — the same reasoning
+ * `security/cron-auth.ts#verifyCronAuthHeader` already documents.
+ */
+export function parseVapiWebhookSecret(source: EnvSource = process.env): string | undefined {
+  return vapiWebhookSecretSchema.safeParse(source).data?.VAPI_WEBHOOK_HMAC_SECRET;
+}
+
 /** Narrow boolean view of a flag, for readable call sites. */
 export function isFeatureEnabled(
   flag: keyof FeatureFlagEnv,

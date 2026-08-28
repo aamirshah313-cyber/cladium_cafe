@@ -11,5 +11,13 @@ Vapi profiles, token issuance, tools, and webhooks.
   signing adapter lives in `modules/integrations/vapi-client.ts` — never
   live-called in this sandbox (no `VAPI_PRIVATE_KEY`), same standing
   limitation as `modules/integrations/anthropic-client.ts` (D-031).
-- Authenticated tools/webhooks (`/api/vapi/tools`, `/api/vapi/webhook`) and
-  the voice web UI are later runbook steps (32–33), not built yet.
+- `tools/`, `webhook-auth.ts` — `POST /api/vapi/tools`/`/api/vapi/webhook`
+  (Runbook Step 32): HMAC-SHA256/timestamp/replay-verified
+  (`webhook-auth.ts`, reusing `lib/security/webhook.ts` unchanged),
+  `toolCallId`-idempotent (`tools/execute-vapi-tool-calls.ts`, reusing Step
+  19's `runIdempotent`), bounded (call-count cap + per-call timeout), and
+  dispatches through the exact same `modules/concierge/tool-registry.ts`
+  text chat uses — never a second tool implementation. No live Vapi
+  webhook traffic exists in this sandbox (no `VAPI_WEBHOOK_HMAC_SECRET`
+  attempt), same standing limitation as Step 31's token issuance.
+- The voice web UI is a later runbook step (33), not built yet.
