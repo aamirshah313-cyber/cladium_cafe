@@ -112,6 +112,29 @@ export function parseAnthropicApiKey(source: EnvSource = process.env): string {
   return anthropicApiKeySchema.parse(source).ANTHROPIC_API_KEY;
 }
 
+const vapiCredentialsSchema = serverEnvSchema.pick({
+  VAPI_ORG_ID: true,
+  VAPI_PRIVATE_KEY: true,
+  VAPI_ASSISTANT_EN_ID: true,
+  VAPI_ASSISTANT_UR_ID: true,
+});
+
+export type VapiCredentials = z.infer<typeof vapiCredentialsSchema>;
+
+/**
+ * Narrow accessor for just the four Vapi values `modules/integrations/
+ * vapi-client.ts#createVapiTokenIssuer` needs — same reasoning as
+ * `parseAnthropicApiKey`: token issuance must not require every other
+ * unrelated secret (session, cron, Anthropic) to be configured first.
+ * `VAPI_WEBHOOK_HMAC_SECRET` is deliberately excluded — that belongs to
+ * Step 32's tool/webhook verification, a different caller, at a different
+ * trust boundary. Throws if unset, same as `parseAnthropicApiKey`: token
+ * issuance is only ever attempted to be used.
+ */
+export function parseVapiCredentials(source: EnvSource = process.env): VapiCredentials {
+  return vapiCredentialsSchema.parse(source);
+}
+
 /** Narrow boolean view of a flag, for readable call sites. */
 export function isFeatureEnabled(
   flag: keyof FeatureFlagEnv,
