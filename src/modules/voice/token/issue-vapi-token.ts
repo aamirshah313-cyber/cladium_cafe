@@ -12,6 +12,17 @@
  * action than one chat turn). A thrown error (a real Vapi credential
  * missing/malformed) never reaches the client with its own message — same
  * "safe fallback, no leaked detail" shape `orchestrateTurn` (Step 27) uses.
+ *
+ * Step 33 addition: the response also echoes back `sessionId`. The guest
+ * session cookie is `HttpOnly` (`security/session.ts`) — client JS cannot
+ * read it — but `voice-panel.tsx` needs the actual id to embed as
+ * `assistantOverrides.metadata.sessionId` when starting the Vapi call
+ * (`vapi-web-client.ts`), so a voice call can see the same cart/request-
+ * status a guest's text session sees (`vapi-webhook.ts`'s `sessionIdForCall`).
+ * The id itself is an opaque, non-secret identifier — CSRF protection
+ * already depends on the derived HMAC token, never on the session id
+ * staying hidden — so returning it here in an already session/CSRF/origin-
+ * guarded response costs nothing.
  */
 
 import { err, ok, type Result } from '../../../lib/result';
@@ -49,10 +60,14 @@ const FLAG_BY_LOCALE: Readonly<Record<Locale, keyof FeatureFlagEnv>> = {
   ur: 'FEATURE_VOICE_UR',
 };
 
+export interface IssuedVapiTokenWithSession extends IssuedVapiToken {
+  readonly sessionId: string;
+}
+
 export async function issueVapiToken(
   deps: IssueVapiTokenDeps,
   input: IssueVapiTokenInput,
-): Promise<Result<IssuedVapiToken, AppError>> {
+): Promise<Result<IssuedVapiTokenWithSession, AppError>> {
   const now = deps.now ?? (() => new Date());
 
   if (!isFeatureEnabled(FLAG_BY_LOCALE[input.locale], deps.envSource)) {
@@ -72,7 +87,7 @@ export async function issueVapiToken(
       origin: input.origin,
       now: now(),
     });
-    return ok(issued);
+    return ok({ ...issued, sessionId: input.sessionId });
   } catch (error) {
     // Never log the raw error message — it could embed credential detail
     // (same reasoning as `orchestrator.ts`'s catch block). A type name only.

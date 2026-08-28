@@ -51,23 +51,44 @@ describe('localeForAssistantId', () => {
 });
 
 describe('sessionIdForCall', () => {
-  it('uses a real sessionId from metadata when present', () => {
-    expect(sessionIdForCall('call_1', { sessionId: 'guest-session-abc' })).toBe(
-      'guest-session-abc',
+  it('prefers a real sessionId from assistantOverrides.metadata — the confirmed real Vapi path', () => {
+    expect(
+      sessionIdForCall('call_1', {
+        assistantOverrides: { metadata: { sessionId: 'guest-session-abc' } },
+      }),
+    ).toBe('guest-session-abc');
+  });
+
+  it('falls back to call.metadata.sessionId when assistantOverrides is absent (defensive legacy path)', () => {
+    expect(sessionIdForCall('call_1', { metadata: { sessionId: 'guest-session-xyz' } })).toBe(
+      'guest-session-xyz',
     );
   });
 
-  it('falls back to a call-scoped synthetic id when metadata is absent', () => {
-    expect(sessionIdForCall('call_1', undefined)).toBe('voice:call_1');
+  it('assistantOverrides.metadata wins over call.metadata when both are present', () => {
+    expect(
+      sessionIdForCall('call_1', {
+        metadata: { sessionId: 'from-legacy-path' },
+        assistantOverrides: { metadata: { sessionId: 'from-real-path' } },
+      }),
+    ).toBe('from-real-path');
   });
 
-  it('falls back to a call-scoped synthetic id when metadata.sessionId is not a non-empty string', () => {
-    expect(sessionIdForCall('call_1', { sessionId: '' })).toBe('voice:call_1');
-    expect(sessionIdForCall('call_1', { sessionId: 42 })).toBe('voice:call_1');
+  it('falls back to a call-scoped synthetic id when neither metadata source is present', () => {
+    expect(sessionIdForCall('call_1', {})).toBe('voice:call_1');
+  });
+
+  it('falls back to a call-scoped synthetic id when sessionId is not a non-empty string', () => {
+    expect(
+      sessionIdForCall('call_1', { assistantOverrides: { metadata: { sessionId: '' } } }),
+    ).toBe('voice:call_1');
+    expect(
+      sessionIdForCall('call_1', { assistantOverrides: { metadata: { sessionId: 42 } } }),
+    ).toBe('voice:call_1');
   });
 
   it('two different calls never collide on the fallback synthetic id', () => {
-    expect(sessionIdForCall('call_1', undefined)).not.toBe(sessionIdForCall('call_2', undefined));
+    expect(sessionIdForCall('call_1', {})).not.toBe(sessionIdForCall('call_2', {}));
   });
 });
 
@@ -87,6 +108,19 @@ describe('vapiToolCallWebhookSchema', () => {
           { id: 'c1', type: 'function', function: { name: 'getMenu', arguments: {} } },
         ],
         call: { id: 'call_1', assistantId: 'asst_1', metadata: { sessionId: 's1' } },
+      },
+    });
+    expect(parsed.success).toBe(true);
+  });
+
+  it('accepts call.assistantOverrides.metadata — the confirmed real path for a passed-through sessionId', () => {
+    const parsed = vapiToolCallWebhookSchema.safeParse({
+      message: {
+        type: 'tool-calls',
+        toolCallList: [
+          { id: 'c1', type: 'function', function: { name: 'getMenu', arguments: {} } },
+        ],
+        call: { id: 'call_1', assistantOverrides: { metadata: { sessionId: 's1' } } },
       },
     });
     expect(parsed.success).toBe(true);

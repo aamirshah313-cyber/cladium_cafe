@@ -3,23 +3,25 @@
  * (ADR-0006: HMAC-SHA256, timestamp freshness, replay rejection, `toolCallId`
  * idempotency).
  *
- * `vapiToolCallWebhookSchema`'s shape (`message.type`/`toolCallList`/`call`)
- * is a **best-effort mapping to Vapi's documented "Server URL" tool-calls
- * message format, never verified against live Vapi traffic in this
- * sandbox** — the same standing limitation `vapi-client.ts` flags for its
- * token-restriction claims (D-035) and `voice/profiles/` flags for the
- * assistant-creation procedure (D-034). Deliberately *not* `strictObject`:
- * this is a third-party payload that will legitimately carry fields this
- * codebase doesn't know about yet, unlike our own API contracts where an
- * unknown field is a client bug worth rejecting. Confirm this shape against
- * Vapi's current docs before any real call depends on it; if it differs,
- * only this schema (and `execute-vapi-tool-calls.ts`'s reads of it) needs
- * to change.
- *
- * `function.arguments` is typed as `string | Record<string, unknown>`
- * because tool-call argument encoding varies by provider convention (some
- * send a parsed object, others — OpenAI-style function calling among them —
- * send a JSON-encoded string); `parseToolArguments` normalizes either.
+ * `vapiToolCallWebhookSchema`'s `message.type`/`toolCallList`/`toolCallList[].
+ * {id,type,function.{name,arguments}}` shape is now **verified**, not
+ * guessed: Step 33 installed `@vapi-ai/web` (the real client SDK) to build
+ * the voice web experience, and its bundled `dist/api.d.ts` ships Vapi's own
+ * `ServerMessageToolCalls`/`ToolCall`/`ToolCallFunction` types, which this
+ * schema matches field-for-field (`arguments` really is always a string on
+ * the wire — the `Record<string, unknown>` half of the union stays only as
+ * defensive tolerance, not because real traffic sends it). `call.
+ * assistantOverrides.metadata` is similarly confirmed real (`Call.
+ * assistantOverrides?: AssistantOverrides`, `AssistantOverrides.metadata?:
+ * object`) — this is where a guest's real `sessionId`, set via `vapi.start(
+ * assistantId, { metadata: { sessionId } })` (`voice-panel.tsx`), actually
+ * surfaces server-side, not `call.metadata` directly as originally guessed
+ * when this module was first written with no SDK installed. `call.metadata`
+ * itself is kept as a defensive fallback read, never assumed authoritative.
+ * Deliberately *not* `strictObject`: this is a third-party payload that
+ * legitimately carries many fields this codebase doesn't read yet, unlike
+ * our own API contracts where an unknown field is a client bug worth
+ * rejecting.
  */
 
 import { z } from 'zod';
@@ -44,7 +46,13 @@ export const vapiToolCallWebhookSchema = z.object({
     call: z.object({
       id: z.string().min(1),
       assistantId: z.string().min(1).optional(),
+      /** Legacy/defensive read path — the confirmed real path is `assistantOverrides.metadata`, below. */
       metadata: z.record(z.string(), z.unknown()).optional(),
+      assistantOverrides: z
+        .object({
+          metadata: z.record(z.string(), z.unknown()).optional(),
+        })
+        .optional(),
     }),
   }),
 });
@@ -85,9 +93,13 @@ export function localeForAssistantId(
 }
 
 /**
- * A `call.metadata.sessionId` set by the browser at call-start time
- * (`modules/voice`'s later web-UI step) would let a voice call see the same
- * cart/request-status a guest's text session sees; until that exists, a
+ * `voice-panel.tsx` (Step 33) passes the guest's real session id via
+ * `vapi.start(assistantId, { metadata: { sessionId } })`, which surfaces
+ * server-side as `call.assistantOverrides.metadata.sessionId` (confirmed
+ * against `@vapi-ai/web`'s own types — see this module's doc comment);
+ * `call.metadata.sessionId` is checked too, defensively, in case a future
+ * Vapi payload surfaces it there instead. Either path lets a voice call see
+ * the same cart/request-status a guest's text session sees. Absent both, a
  * call-scoped synthetic id keeps every call's tool results correctly
  * isolated (never colliding across two different real Vapi calls) without
  * ever needing to trust unauthenticated client metadata for isolation
@@ -96,9 +108,15 @@ export function localeForAssistantId(
  */
 export function sessionIdForCall(
   callId: string,
-  metadata: Record<string, unknown> | undefined,
+  call: {
+    readonly metadata?: Record<string, unknown>;
+    readonly assistantOverrides?: { readonly metadata?: Record<string, unknown> };
+  },
 ): string {
-  const candidate = metadata?.sessionId;
+  const fromOverrides = call.assistantOverrides?.metadata?.sessionId;
+  const fromLegacy = call.metadata?.sessionId;
+  const candidate =
+    typeof fromOverrides === 'string' && fromOverrides.length > 0 ? fromOverrides : fromLegacy;
   return typeof candidate === 'string' && candidate.length > 0 ? candidate : `voice:${callId}`;
 }
 

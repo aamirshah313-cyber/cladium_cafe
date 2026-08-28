@@ -6,6 +6,7 @@ import {
   type ExecuteVapiToolCallsDeps,
 } from '../../src/modules/voice/tools/execute-vapi-tool-calls';
 import { createInMemoryIdempotencyStore } from '../../src/lib/domain/idempotency';
+import { createInMemoryPendingConfirmationStore } from '../../src/modules/voice/pending-confirmation-store';
 import { ok, type Result } from '../../src/lib/result';
 import type { AppError } from '../../src/lib/errors';
 import type { VapiFunctionCall } from '../../src/modules/integrations/vapi-webhook';
@@ -201,5 +202,105 @@ describe('executeVapiToolCalls — result serialization matches text chat', () =
       correlationId: 'corr-1',
     });
     expect(results[0]!.result).toBe(JSON.stringify({ error: 'That item could not be found.' }));
+  });
+});
+
+describe('executeVapiToolCalls — Step 33 pendingConfirmationStore wiring', () => {
+  const PREPARED_BOOKING = { review: { guestName: 'Ahmed' }, confirmationToken: 'tok-1' };
+
+  it('records a successful prepareBookingRequest result, keyed by session id', async () => {
+    const pendingConfirmationStore = createInMemoryPendingConfirmationStore();
+    const dispatch: ExecuteVapiToolCallsDeps['dispatch'] = async () => ok(PREPARED_BOOKING);
+    await executeVapiToolCalls(buildDeps({ dispatch, pendingConfirmationStore }), {
+      toolCallList: [toolCall('c1', 'prepareBookingRequest')],
+      sessionId: 'session-abc',
+      locale: 'en',
+      correlationId: 'corr-1',
+    });
+
+    expect(pendingConfirmationStore.get('session-abc', NOW)).toEqual({
+      kind: 'BOOKING',
+      ...PREPARED_BOOKING,
+    });
+  });
+
+  it('records prepareEventRequest as kind EVENT', async () => {
+    const pendingConfirmationStore = createInMemoryPendingConfirmationStore();
+    const dispatch: ExecuteVapiToolCallsDeps['dispatch'] = async () =>
+      ok({ review: { guestName: 'Sana' }, confirmationToken: 'tok-2' });
+    await executeVapiToolCalls(buildDeps({ dispatch, pendingConfirmationStore }), {
+      toolCallList: [toolCall('c1', 'prepareEventRequest')],
+      sessionId: 'session-abc',
+      locale: 'en',
+      correlationId: 'corr-1',
+    });
+
+    expect(pendingConfirmationStore.get('session-abc', NOW)?.kind).toBe('EVENT');
+  });
+
+  it('never records a non-prepare tool call (e.g. getMenu)', async () => {
+    const pendingConfirmationStore = createInMemoryPendingConfirmationStore();
+    const dispatch: ExecuteVapiToolCallsDeps['dispatch'] = async () => ok({ items: [] });
+    await executeVapiToolCalls(buildDeps({ dispatch, pendingConfirmationStore }), {
+      toolCallList: [toolCall('c1', 'getMenu')],
+      sessionId: 'session-abc',
+      locale: 'en',
+      correlationId: 'corr-1',
+    });
+
+    expect(pendingConfirmationStore.get('session-abc', NOW)).toBeNull();
+  });
+
+  it('never records a failed prepare call (invalid input)', async () => {
+    const pendingConfirmationStore = createInMemoryPendingConfirmationStore();
+    const failing: ExecuteVapiToolCallsDeps['dispatch'] = async (): Promise<
+      Result<unknown, AppError>
+    > => ({
+      ok: false,
+      error: { code: 'VALIDATION_FAILED', message: 'Invalid input.', status: 400 },
+    });
+    await executeVapiToolCalls(buildDeps({ dispatch: failing, pendingConfirmationStore }), {
+      toolCallList: [toolCall('c1', 'prepareBookingRequest')],
+      sessionId: 'session-abc',
+      locale: 'en',
+      correlationId: 'corr-1',
+    });
+
+    expect(pendingConfirmationStore.get('session-abc', NOW)).toBeNull();
+  });
+
+  it('never throws or breaks dispatch when no pendingConfirmationStore is supplied (it is optional)', async () => {
+    const dispatch: ExecuteVapiToolCallsDeps['dispatch'] = async () => ok(PREPARED_BOOKING);
+    const results = await executeVapiToolCalls(buildDeps({ dispatch }), {
+      toolCallList: [toolCall('c1', 'prepareBookingRequest')],
+      sessionId: 'session-abc',
+      locale: 'en',
+      correlationId: 'corr-1',
+    });
+    expect(JSON.parse(results[0]!.result)).toEqual(PREPARED_BOOKING);
+  });
+
+  it('a second prepare call in a later delivery for the same session replaces the first — "only the latest wins"', async () => {
+    const pendingConfirmationStore = createInMemoryPendingConfirmationStore();
+    const dispatch: ExecuteVapiToolCallsDeps['dispatch'] = async () => ok(PREPARED_BOOKING);
+    const deps = buildDeps({ dispatch, pendingConfirmationStore });
+
+    await executeVapiToolCalls(deps, {
+      toolCallList: [toolCall('c1', 'prepareBookingRequest')],
+      sessionId: 'session-abc',
+      locale: 'en',
+      correlationId: 'corr-1',
+    });
+
+    const eventDispatch: ExecuteVapiToolCallsDeps['dispatch'] = async () =>
+      ok({ review: { guestName: 'Sana' }, confirmationToken: 'tok-2' });
+    await executeVapiToolCalls(buildDeps({ dispatch: eventDispatch, pendingConfirmationStore }), {
+      toolCallList: [toolCall('c2', 'prepareEventRequest')],
+      sessionId: 'session-abc',
+      locale: 'en',
+      correlationId: 'corr-2',
+    });
+
+    expect(pendingConfirmationStore.get('session-abc', NOW)?.kind).toBe('EVENT');
   });
 });

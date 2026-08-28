@@ -72,7 +72,19 @@ describe('issueVapiToken', () => {
       origin: 'https://cladium.example',
       correlationId: 'corr-1',
     });
-    expect(result).toEqual({ ok: true, value: SUCCESSFUL_TOKEN });
+    expect(result).toEqual({ ok: true, value: { ...SUCCESSFUL_TOKEN, sessionId: 'session-1' } });
+  });
+
+  it("echoes back the caller's own sessionId — needed client-side since the session cookie is HttpOnly", async () => {
+    const deps = buildDeps();
+    const result = await issueVapiToken(deps, {
+      sessionId: 'session-xyz',
+      locale: 'en',
+      origin: 'https://cladium.example',
+      correlationId: 'corr-1',
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.value.sessionId).toBe('session-xyz');
   });
 
   it("rejects with FEATURE_DISABLED when the requested locale's flag is off, without calling the issuer", async () => {

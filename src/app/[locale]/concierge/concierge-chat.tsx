@@ -5,20 +5,25 @@
  *
  * Plain message list + input, posting to `/api/concierge/chat`
  * (Step 27). When a reply carries `pendingConfirmation` (Step 28's
- * `prepareBookingRequest`/`prepareEventRequest` tools), this renders a
- * real review card with a tappable Confirm control — the assistant
- * itself never submits anything (`tool-registry.ts`'s doc comment: no
- * submit tool is ever registered). Tapping Confirm calls the exact same
- * `POST /api/bookings/submit` / `POST /api/events/submit` endpoints the
- * manual `/book`/`/event` forms use, with the same confirmation-token/
- * idempotency-key contract — "manual/text workflows produce equivalent
- * records," not a second write path.
+ * `prepareBookingRequest`/`prepareEventRequest` tools), this renders the
+ * shared review card (`pending-confirmation.tsx`, extracted in Step 33 so
+ * `voice-panel.tsx` renders the identical card) with a tappable Confirm
+ * control — the assistant itself never submits anything (`tool-registry.ts`'s
+ * doc comment: no submit tool is ever registered). Tapping Confirm calls
+ * the exact same `POST /api/bookings/submit` / `POST /api/events/submit`
+ * endpoints the manual `/book`/`/event` forms use, with the same
+ * confirmation-token/idempotency-key contract — "manual/text workflows
+ * produce equivalent records," not a second write path.
  */
 
 import { useEffect, useState } from 'react';
 import { chromeText } from '../../../lib/i18n/chrome';
 import type { Locale } from '../../../lib/i18n/locale';
-import type { SeatingPreference } from '../../../lib/schemas/common';
+import {
+  PendingConfirmationCard,
+  submitPendingConfirmation,
+  type PendingConfirmationView,
+} from './pending-confirmation';
 
 interface ConciergeChatProps {
   readonly locale: Locale;
@@ -29,43 +34,10 @@ interface ChatTurn {
   readonly content: string;
 }
 
-interface BookingReviewView {
-  readonly guestName: string;
-  readonly guestPhone: string;
-  readonly requestedDate: string;
-  readonly requestedTime: string;
-  readonly partySize: number;
-  readonly seatingPreference: SeatingPreference;
-  readonly notes: string | null;
-}
-
-interface EventReviewView {
-  readonly guestName: string;
-  readonly guestPhone: string;
-  readonly occasion: string;
-  readonly requestedDate: string;
-  readonly requestedTime: string;
-  readonly guestCount: number;
-  readonly decorInterest: boolean;
-  readonly notes: string | null;
-}
-
-type PendingConfirmation =
-  | {
-      readonly kind: 'BOOKING';
-      readonly review: BookingReviewView;
-      readonly confirmationToken: string;
-    }
-  | {
-      readonly kind: 'EVENT';
-      readonly review: EventReviewView;
-      readonly confirmationToken: string;
-    };
-
 interface ChatResponseBody {
   readonly reply: string;
   readonly escalate: boolean;
-  readonly pendingConfirmation?: PendingConfirmation;
+  readonly pendingConfirmation?: PendingConfirmationView;
 }
 
 async function parseApiError(response: Response): Promise<string> {
@@ -81,7 +53,7 @@ export function ConciergeChat({ locale }: ConciergeChatProps) {
   const [csrfToken, setCsrfToken] = useState<string | null>(null);
   const [turns, setTurns] = useState<readonly ChatTurn[]>([]);
   const [input, setInput] = useState('');
-  const [pending, setPending] = useState<PendingConfirmation | null>(null);
+  const [pending, setPending] = useState<PendingConfirmationView | null>(null);
   const [confirmedKind, setConfirmedKind] = useState<'BOOKING' | 'EVENT' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -136,55 +108,14 @@ export function ConciergeChat({ locale }: ConciergeChatProps) {
     setSubmitting(true);
     setError(null);
 
-    try {
-      const endpoint = pending.kind === 'BOOKING' ? '/api/bookings/submit' : '/api/events/submit';
-      const review = pending.review;
-      const body =
-        pending.kind === 'BOOKING'
-          ? {
-              guestName: review.guestName,
-              guestPhone: review.guestPhone,
-              requestedDate: review.requestedDate,
-              requestedTime: review.requestedTime,
-              partySize: (review as BookingReviewView).partySize,
-              seatingPreference: (review as BookingReviewView).seatingPreference,
-              notes: review.notes ?? undefined,
-              sourceChannel: 'TEXT_CONCIERGE',
-              confirmationToken: pending.confirmationToken,
-              idempotencyKey: crypto.randomUUID(),
-              csrfToken,
-            }
-          : {
-              guestName: review.guestName,
-              guestPhone: review.guestPhone,
-              occasion: (review as EventReviewView).occasion,
-              requestedDate: review.requestedDate,
-              requestedTime: review.requestedTime,
-              guestCount: (review as EventReviewView).guestCount,
-              decorInterest: (review as EventReviewView).decorInterest,
-              notes: review.notes ?? undefined,
-              sourceChannel: 'TEXT_CONCIERGE',
-              confirmationToken: pending.confirmationToken,
-              idempotencyKey: crypto.randomUUID(),
-              csrfToken,
-            };
-
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      if (!response.ok) {
-        setError(await parseApiError(response));
-        return;
-      }
+    const result = await submitPendingConfirmation(pending, csrfToken, 'TEXT_CONCIERGE');
+    if (!result.ok) {
+      setError(result.error);
+    } else {
       setConfirmedKind(pending.kind);
       setPending(null);
-    } catch {
-      setError('Could not reach the server. Please try again.');
-    } finally {
-      setSubmitting(false);
     }
+    setSubmitting(false);
   }
 
   return (
@@ -214,62 +145,13 @@ export function ConciergeChat({ locale }: ConciergeChatProps) {
       ) : null}
 
       {pending ? (
-        <div>
-          <h2>{chromeText('conciergeConfirmDraftHeading', locale)}</h2>
-          <dl>
-            <dt>{chromeText('bookFormNameLabel', locale)}</dt>
-            <dd>{pending.review.guestName}</dd>
-            <dt>{chromeText('bookFormPhoneLabel', locale)}</dt>
-            <dd>{pending.review.guestPhone}</dd>
-            {pending.kind === 'EVENT' ? (
-              <>
-                <dt>{chromeText('eventFormOccasionLabel', locale)}</dt>
-                <dd>{pending.review.occasion}</dd>
-              </>
-            ) : null}
-            <dt>{chromeText('bookFormDateLabel', locale)}</dt>
-            <dd>{pending.review.requestedDate}</dd>
-            <dt>{chromeText('bookFormTimeLabel', locale)}</dt>
-            <dd>{pending.review.requestedTime}</dd>
-            {pending.kind === 'BOOKING' ? (
-              <>
-                <dt>{chromeText('bookFormPartySizeLabel', locale)}</dt>
-                <dd>{pending.review.partySize}</dd>
-                <dt>{chromeText('bookFormSeatingLabel', locale)}</dt>
-                <dd>
-                  {pending.review.seatingPreference === 'TREEHOUSE'
-                    ? chromeText('seatingTreehouseLabel', locale)
-                    : chromeText('seatingGeneralLabel', locale)}
-                </dd>
-              </>
-            ) : (
-              <>
-                <dt>{chromeText('eventFormGuestCountLabel', locale)}</dt>
-                <dd>{pending.review.guestCount}</dd>
-                <dt>{chromeText('eventFormDecorInterestLabel', locale)}</dt>
-                <dd>
-                  {pending.review.decorInterest
-                    ? chromeText('yesLabel', locale)
-                    : chromeText('noLabel', locale)}
-                </dd>
-              </>
-            )}
-            {pending.review.notes ? (
-              <>
-                <dt>{chromeText('bookFormNotesLabel', locale)}</dt>
-                <dd>{pending.review.notes}</dd>
-              </>
-            ) : null}
-          </dl>
-          <button type="button" onClick={() => setPending(null)} disabled={submitting}>
-            {chromeText('conciergeDismissButtonLabel', locale)}
-          </button>
-          <button type="button" onClick={() => void handleConfirm()} disabled={submitting}>
-            {pending.kind === 'BOOKING'
-              ? chromeText('bookConfirmButtonLabel', locale)
-              : chromeText('eventConfirmButtonLabel', locale)}
-          </button>
-        </div>
+        <PendingConfirmationCard
+          pending={pending}
+          locale={locale}
+          submitting={submitting}
+          onDismiss={() => setPending(null)}
+          onConfirm={() => void handleConfirm()}
+        />
       ) : null}
 
       {error ? (

@@ -140,6 +140,48 @@ export const chrome = {
     en: 'Ready to send this request?',
     ur: 'کیا یہ درخواست بھیجنی ہے؟',
   },
+  conciergeModeSwitcherLabel: { en: 'Concierge mode', ur: 'قونصیرج موڈ' },
+  conciergeModeTypeLabel: { en: 'Type', ur: 'لکھیں' },
+  conciergeModeTalkLabel: { en: 'Talk', ur: 'بات کریں' },
+  voicePanelHeading: { en: 'Talk to Cladium', ur: 'کلیڈیم سے بات کریں' },
+  voicePanelIntro: {
+    en: "Start a voice call with the concierge. You can ask about the menu, hours, or start a table or event request — you'll always review and confirm on screen before anything is sent.",
+    ur: 'قونصیرج کے ساتھ صوتی کال شروع کریں۔ آپ مینو، اوقات کے بارے میں پوچھ سکتے ہیں، یا میز یا تقریب کی درخواست شروع کر سکتے ہیں — کچھ بھیجنے سے پہلے آپ ہمیشہ اسکرین پر جائزہ لے کر تصدیق کریں گے۔',
+  },
+  voiceStartCallButtonLabel: { en: 'Start voice call', ur: 'صوتی کال شروع کریں' },
+  voiceEndCallButtonLabel: { en: 'End call', ur: 'کال ختم کریں' },
+  voiceMuteButtonLabel: { en: 'Mute microphone', ur: 'مائیکروفون خاموش کریں' },
+  voiceUnmuteButtonLabel: { en: 'Unmute microphone', ur: 'مائیکروفون آن کریں' },
+  voiceStatusConnecting: { en: 'Connecting…', ur: 'رابطہ ہو رہا ہے…' },
+  voiceStatusActive: { en: 'Call in progress', ur: 'کال جاری ہے' },
+  voiceStatusListening: { en: 'Listening…', ur: 'سن رہے ہیں…' },
+  voiceStatusSpeaking: { en: 'Speaking…', ur: 'بول رہے ہیں…' },
+  voiceStatusEnded: { en: 'Call ended', ur: 'کال ختم ہو گئی' },
+  voiceErrorPermissionDenied: {
+    en: "We couldn't access your microphone. Please allow microphone access in your browser and try again.",
+    ur: 'ہم آپ کے مائیکروفون تک رسائی حاصل نہیں کر سکے۔ براہ کرم اپنے براؤزر میں مائیکروفون تک رسائی کی اجازت دیں اور دوبارہ کوشش کریں۔',
+  },
+  voiceErrorDeviceLost: {
+    en: 'We lost access to your microphone. Please check your device and try again.',
+    ur: 'ہم نے آپ کے مائیکروفون تک رسائی کھو دی۔ براہ کرم اپنا آلہ چیک کریں اور دوبارہ کوشش کریں۔',
+  },
+  voiceErrorConnectionFailed: {
+    en: "The call couldn't connect. Please check your connection and try again, or reach us on WhatsApp.",
+    ur: 'کال منسلک نہیں ہو سکی۔ براہ کرم اپنا کنکشن چیک کریں اور دوبارہ کوشش کریں، یا ہم سے واٹس ایپ پر رابطہ کریں۔',
+  },
+  voiceErrorUnknown: {
+    en: 'Something went wrong with the call. Please try again, or reach us on WhatsApp.',
+    ur: 'کال میں کچھ غلط ہو گیا۔ براہ کرم دوبارہ کوشش کریں، یا ہم سے واٹس ایپ پر رابطہ کریں۔',
+  },
+  voiceTranscriptHeading: { en: 'Live transcript', ur: 'براہ راست ٹرانسکرپٹ' },
+  voiceRecordingNotice: {
+    en: 'This call is not recorded.',
+    ur: 'یہ کال ریکارڈ نہیں کی جاتی۔',
+  },
+  voiceUnavailableNotice: {
+    en: "Voice isn't available in this language yet — you can still type to the concierge.",
+    ur: 'اس زبان میں آواز ابھی دستیاب نہیں ہے — آپ اب بھی قونصیرج کو لکھ سکتے ہیں۔',
+  },
 } as const satisfies Record<string, ChromeCopy>;
 
 export type ChromeKey = keyof typeof chrome;

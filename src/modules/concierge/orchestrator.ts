@@ -29,6 +29,12 @@
  * (Step 19); nothing about a later timeout/escalation in this same turn
  * invalidates it, so it is always included once issued, regardless of how
  * the rest of the turn resolves.
+ *
+ * `PendingConfirmation`/`PREPARE_TOOL_KIND`/`asPrepareToolResult` moved to
+ * `prepare-tool-result.ts` in Step 33 so `modules/voice/tools/
+ * execute-vapi-tool-calls.ts` can recognize the identical draft-tool result
+ * shape for voice calls — re-exported here unchanged so nothing importing
+ * `PendingConfirmation`/`PendingConfirmationKind` from this module breaks.
  */
 
 import { err, ok, type Result } from '../../lib/result';
@@ -41,6 +47,14 @@ import { CONCIERGE_SYSTEM_POLICY } from './policy';
 import { TOOL_DEFINITIONS, dispatchToolCall } from './tool-registry';
 import type { ConversationStore } from './conversation-store';
 import { WHATSAPP_DISPLAY } from '../business/facts';
+import {
+  PREPARE_TOOL_KIND,
+  asPrepareToolResult,
+  type PendingConfirmation,
+  type PendingConfirmationKind,
+} from './prepare-tool-result';
+
+export type { PendingConfirmation, PendingConfirmationKind };
 
 export const MAX_USER_MESSAGE_LENGTH = 2000;
 export const MAX_TOOL_CALLS_PER_TURN = 5;
@@ -67,24 +81,11 @@ export interface OrchestrateTurnInput {
   readonly correlationId: string;
 }
 
-export type PendingConfirmationKind = 'BOOKING' | 'EVENT';
-
-export interface PendingConfirmation {
-  readonly kind: PendingConfirmationKind;
-  readonly review: unknown;
-  readonly confirmationToken: string;
-}
-
 export interface OrchestrateTurnResult {
   readonly reply: string;
   readonly escalate: boolean;
   readonly pendingConfirmation?: PendingConfirmation;
 }
-
-const PREPARE_TOOL_KIND: Readonly<Record<string, PendingConfirmationKind>> = {
-  prepareBookingRequest: 'BOOKING',
-  prepareEventRequest: 'EVENT',
-};
 
 function textOf(blocks: readonly ChatContentBlock[]): string {
   return blocks
@@ -92,15 +93,6 @@ function textOf(blocks: readonly ChatContentBlock[]): string {
     .map((block) => block.text)
     .join('\n')
     .trim();
-}
-
-function asPrepareToolResult(
-  value: unknown,
-): { review: unknown; confirmationToken: string } | null {
-  if (typeof value !== 'object' || value === null) return null;
-  const candidate = value as { review?: unknown; confirmationToken?: unknown };
-  if (typeof candidate.confirmationToken !== 'string' || !('review' in candidate)) return null;
-  return { review: candidate.review, confirmationToken: candidate.confirmationToken };
 }
 
 export async function orchestrateTurn(

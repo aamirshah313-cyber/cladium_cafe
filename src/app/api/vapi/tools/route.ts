@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  const sessionId = sessionIdForCall(call.id, call.metadata);
+  const sessionId = sessionIdForCall(call.id, call);
 
   const results = await executeVapiToolCalls(executeVapiToolCallsDeps, {
     toolCallList,

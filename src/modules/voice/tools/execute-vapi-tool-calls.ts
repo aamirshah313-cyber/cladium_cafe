@@ -22,10 +22,20 @@
  * new scope (`vapi-tool-call`) and a new key source (Vapi's own
  * `toolCallId`, which is the exact "at-least-once delivery" identifier
  * `production-architecture-v2.md` §9 names for this purpose).
+ *
+ * Step 33 addition: a successful `prepareBookingRequest`/
+ * `prepareEventRequest` dispatch is also recorded in
+ * `pendingConfirmationStore` (when supplied) — the exact same
+ * `PREPARE_TOOL_KIND`/`asPrepareToolResult` recognition `orchestrator.ts`
+ * uses for text chat (`prepare-tool-result.ts`, shared) — so
+ * `voice-panel.tsx` can poll `GET /api/vapi/pending-confirmation` and
+ * render the identical review card a text-chat guest would see. This
+ * never happens for a bounded-rejection or timed-out/failed call.
  */
 
 import { createHash } from 'node:crypto';
 import { dispatchToolCall } from '../../concierge/tool-registry';
+import { PREPARE_TOOL_KIND, asPrepareToolResult } from '../../concierge/prepare-tool-result';
 import { runIdempotent, type IdempotencyStore } from '../../../lib/domain/idempotency';
 import { ok, type Result } from '../../../lib/result';
 import { internalError, type AppError } from '../../../lib/errors';
@@ -35,6 +45,7 @@ import {
   type VapiFunctionCall,
   type VapiToolResult,
 } from '../../integrations/vapi-webhook';
+import type { PendingConfirmationStore } from '../pending-confirmation-store';
 
 export const MAX_TOOL_CALLS_PER_WEBHOOK = 5;
 export const TOOL_CALL_TIMEOUT_MS = 8_000;
@@ -49,6 +60,8 @@ export interface ExecuteVapiToolCallsDeps {
    * tool being artificially slow.
    */
   readonly dispatch?: typeof dispatchToolCall;
+  /** Optional — when supplied, a successful prepare-tool result is recorded here for `voice-panel.tsx` to poll. */
+  readonly pendingConfirmationStore?: PendingConfirmationStore;
 }
 
 export interface ExecuteVapiToolCallsInput {
@@ -99,6 +112,14 @@ async function executeOne(
     },
     raced,
   );
+
+  const kind = PREPARE_TOOL_KIND[toolCall.function.name];
+  if (kind && result.ok && deps.pendingConfirmationStore) {
+    const prepared = asPrepareToolResult(result.value);
+    if (prepared) {
+      deps.pendingConfirmationStore.set(context.sessionId, { kind, ...prepared }, now());
+    }
+  }
 
   return { toolCallId: toolCall.id, result: serializeDispatchResult(result) };
 }
