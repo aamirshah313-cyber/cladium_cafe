@@ -20,8 +20,8 @@ import { notFound } from 'next/navigation';
 import { chromeText, type ChromeKey } from '../../../lib/i18n/chrome';
 import { isSupportedLocale, type Locale } from '../../../lib/i18n/locale';
 import { formatPkr } from '../../../lib/business/money';
+import { buildWhatsAppUrl } from '../../../lib/business/whatsapp-link';
 import type { AvailabilityStatus } from '../../../lib/schemas/common';
-import { WHATSAPP_URL } from '../../../modules/business/facts';
 import { filterMenuCategories, getPublishedMenuView } from '../../../modules/menu/menu-view';
 
 function availabilityChromeKey(status: AvailabilityStatus): ChromeKey {
@@ -58,9 +58,11 @@ export default async function MenuPage({ params, searchParams }: MenuPageProps) 
         <p>{chromeText('menuUnpublishedHeading', locale)}</p>
         <p>{chromeText('menuUnpublishedBody', locale)}</p>
         <p>
-          <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer">
+          <a href={buildWhatsAppUrl(locale)} target="_blank" rel="noopener noreferrer">
             {chromeText('whatsappCtaLabel', locale)}
           </a>
+          <br />
+          <small>{chromeText('whatsappExternalNoticeText', locale)}</small>
         </p>
         <p>
           <a href={`/${locale}/visit`}>{chromeText('navVisitLabel', locale)}</a>

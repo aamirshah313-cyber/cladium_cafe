@@ -35,11 +35,17 @@
  * execute-vapi-tool-calls.ts` can recognize the identical draft-tool result
  * shape for voice calls — re-exported here unchanged so nothing importing
  * `PendingConfirmation`/`PendingConfirmationKind` from this module breaks.
+ *
+ * `fallbackReply`/`escalationReply` (Step 35) resolve their copy from
+ * `lib/i18n/chrome.ts` for `input.locale` — this text/voice concierge is
+ * bilingual end to end, so the safe staff/WhatsApp handoff must be too, not
+ * just the model's own tool-grounded prose.
  */
 
 import { err, ok, type Result } from '../../lib/result';
 import { rateLimited, validationFailed, type AppError } from '../../lib/errors';
 import type { Logger } from '../../lib/logging';
+import { chromeText } from '../../lib/i18n/chrome';
 import type { Locale } from '../../lib/i18n/locale';
 import type { RateLimitRule, RateLimiter } from '../../lib/security/rate-limit';
 import type { ChatClient, ChatContentBlock, ChatMessage } from '../integrations/anthropic-client';
@@ -63,8 +69,20 @@ export const MAX_TOTAL_TOKENS_PER_TURN = 8000;
 export const TURN_TIMEOUT_MS = 20_000;
 export const RATE_LIMIT_RULE: RateLimitRule = { windowMs: 60_000, max: 10 };
 
-const FALLBACK_REPLY = `Sorry, I couldn't finish that. Please try again, or reach us directly on WhatsApp (${WHATSAPP_DISPLAY}).`;
-const ESCALATION_REPLY = `That needs more than I can help with right now — please reach us on WhatsApp (${WHATSAPP_DISPLAY}) and our team will help directly.`;
+/**
+ * Step 35: bilingual staff-escalation copy, sourced from `lib/i18n/chrome.ts`
+ * so a Roman-script fallback never reaches an Urdu voice/text session — the
+ * same reasoning that already routes every other reply through the caller's
+ * `locale`. `{whatsapp}` is `chrome.ts`'s one reserved interpolation token
+ * for the approved, locale-invariant `WHATSAPP_DISPLAY` number.
+ */
+function fallbackReply(locale: Locale): string {
+  return chromeText('conciergeFallbackReply', locale).replace('{whatsapp}', WHATSAPP_DISPLAY);
+}
+
+function escalationReply(locale: Locale): string {
+  return chromeText('conciergeEscalationReply', locale).replace('{whatsapp}', WHATSAPP_DISPLAY);
+}
 
 export interface OrchestratorDeps {
   readonly chatClient: ChatClient;
@@ -125,19 +143,19 @@ export async function orchestrateTurn(
   const deadlineMs = now().getTime() + TURN_TIMEOUT_MS;
   let toolCallCount = 0;
   let totalTokens = 0;
-  let reply = FALLBACK_REPLY;
+  let reply = fallbackReply(input.locale);
   let escalate = false;
   let pendingConfirmation: PendingConfirmation | undefined;
 
   try {
     while (true) {
       if (now().getTime() > deadlineMs) {
-        reply = ESCALATION_REPLY;
+        reply = escalationReply(input.locale);
         escalate = true;
         break;
       }
       if (totalTokens > MAX_TOTAL_TOKENS_PER_TURN) {
-        reply = ESCALATION_REPLY;
+        reply = escalationReply(input.locale);
         escalate = true;
         break;
       }
@@ -156,13 +174,13 @@ export async function orchestrateTurn(
       );
 
       if (response.stopReason !== 'tool_use' || toolUseBlocks.length === 0) {
-        reply = textOf(response.content) || FALLBACK_REPLY;
+        reply = textOf(response.content) || fallbackReply(input.locale);
         break;
       }
 
       toolCallCount += toolUseBlocks.length;
       if (toolCallCount > MAX_TOOL_CALLS_PER_TURN) {
-        reply = ESCALATION_REPLY;
+        reply = escalationReply(input.locale);
         escalate = true;
         break;
       }
@@ -201,7 +219,7 @@ export async function orchestrateTurn(
       toolCalls: toolCallCount,
       errorType: error instanceof Error ? error.constructor.name : typeof error,
     });
-    return ok({ reply: FALLBACK_REPLY, escalate: true, pendingConfirmation });
+    return ok({ reply: fallbackReply(input.locale), escalate: true, pendingConfirmation });
   }
 
   const occurredAt = now().toISOString();

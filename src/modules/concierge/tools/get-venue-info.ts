@@ -7,10 +7,14 @@
  * `resolveLocalizedText` exactly as that page does, so the concierge can
  * never say something the guest-facing site itself wouldn't show. `HOURS`
  * additionally reports live open/closed status (`lib/business/hours.ts`),
- * timezone-aware, the same computation `SiteFooter` uses.
+ * timezone-aware, the same computation `SiteFooter` uses. `CONTACT`'s
+ * `whatsappUrl` is the same Step 35 hardened link the guest-facing pages
+ * use (`lib/business/whatsapp-link.ts`'s `buildWhatsAppUrl`) — a minimal,
+ * non-sensitive, reviewed bilingual prefilled message, never guest data.
  */
 
 import { isOpenAt } from '../../../lib/business/hours';
+import { buildWhatsAppUrl } from '../../../lib/business/whatsapp-link';
 import { resolveLocalizedText } from '../../../lib/i18n/localized-text';
 import type { Locale } from '../../../lib/i18n/locale';
 import {
@@ -24,7 +28,6 @@ import {
   OUTSIDE_FOOD_POLICY_TEXT,
   SEATING_POLICY_TEXT,
   WHATSAPP_DISPLAY,
-  WHATSAPP_URL,
 } from '../../business/facts';
 import type { GetVenueInfoInput } from '../schemas';
 
@@ -59,7 +62,11 @@ export function getVenueInfo(
         mapUrl: GOOGLE_MAPS_URL,
       };
     case 'CONTACT':
-      return { topic: 'CONTACT', whatsappNumber: WHATSAPP_DISPLAY, whatsappUrl: WHATSAPP_URL };
+      return {
+        topic: 'CONTACT',
+        whatsappNumber: WHATSAPP_DISPLAY,
+        whatsappUrl: buildWhatsAppUrl(locale),
+      };
     case 'SEATING':
       return { topic: 'SEATING', policy: resolveLocalizedText(SEATING_POLICY_TEXT, locale) };
     case 'DELIVERY':

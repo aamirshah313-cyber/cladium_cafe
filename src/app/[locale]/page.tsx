@@ -7,7 +7,10 @@
  * yet (`.continuum/PROJECT_STATE.md` production blockers), so this stays
  * truthful and text-only rather than filling either gap with a placeholder.
  * The WhatsApp link uses `target="_blank" rel="noopener noreferrer"`, same
- * reasoning as `visit/page.tsx`.
+ * reasoning as `visit/page.tsx`. Step 35 hardens it via
+ * `lib/business/whatsapp-link.ts`'s `buildWhatsAppUrl` (a minimal,
+ * non-sensitive, reviewed bilingual prefilled message — never guest data)
+ * plus a visible external-navigation notice.
  *
  * The CTAs match CLAUDE.md's request-accurate CTA list and site-map.md's
  * "Action: Order, book, or continue the conversation" — "Request Treehouse
@@ -19,7 +22,7 @@
 import { notFound } from 'next/navigation';
 import { BRAND_NAME, TAGLINE, chromeText } from '../../lib/i18n/chrome';
 import { isSupportedLocale } from '../../lib/i18n/locale';
-import { WHATSAPP_URL } from '../../modules/business/facts';
+import { buildWhatsAppUrl } from '../../lib/business/whatsapp-link';
 
 export default async function LocaleHomePage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale: rawLocale } = await params;
@@ -49,9 +52,11 @@ export default async function LocaleHomePage({ params }: { params: Promise<{ loc
         <a href={`/${locale}/concierge`}>{chromeText('navConciergeLabel', locale)}</a>
       </p>
       <p>
-        <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer">
+        <a href={buildWhatsAppUrl(locale)} target="_blank" rel="noopener noreferrer">
           {chromeText('whatsappCtaLabel', locale)}
         </a>
+        <br />
+        <small>{chromeText('whatsappExternalNoticeText', locale)}</small>
       </p>
     </>
   );

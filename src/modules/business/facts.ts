@@ -34,6 +34,10 @@ export const GOOGLE_MAPS_URL = 'https://maps.app.goo.gl/rHvGG5a82LGkTLLY6?g_st=i
 
 export const WHATSAPP_DISPLAY = '+92 312 3978889';
 export const WHATSAPP_URL = 'https://wa.me/923123978889';
+// Guest-facing click-to-WhatsApp links use `lib/business/whatsapp-link.ts`'s
+// `buildWhatsAppUrl(locale)` (Step 35), which appends a minimal, reviewed,
+// non-sensitive prefilled `?text=` message to this same verified URL —
+// never this bare constant directly.
 
 /** approved-operations-knowledge.md: "Where are you located?" */
 export const DIRECTIONS_TEXT: LocalizedText = canonicalLocalizedText(

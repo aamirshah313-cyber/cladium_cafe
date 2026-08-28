@@ -182,6 +182,39 @@ export const chrome = {
     en: "Voice isn't available in this language yet — you can still type to the concierge.",
     ur: 'اس زبان میں آواز ابھی دستیاب نہیں ہے — آپ اب بھی قونصیرج کو لکھ سکتے ہیں۔',
   },
+  /**
+   * Step 35 (click-to-WhatsApp handoff hardening). Static, guest-neutral,
+   * non-sensitive — never a template with a placeholder for guest-supplied
+   * data. `lib/business/whatsapp-link.ts` is the only place this is read;
+   * it is the entire prefilled `?text=` content, so it structurally cannot
+   * carry PII (`release-gates-v2.md` Gate 8: "avoids exposing customer data
+   * in a prefilled URL unless the guest explicitly chooses it" — this
+   * function accepts no guest input at all, so there is nothing to expose).
+   */
+  whatsappPrefilledMessage: {
+    en: 'Hello! I have a question for Cladium Café & Resort.',
+    ur: 'السلام علیکم! میرا Cladium Café & Resort سے متعلق ایک سوال ہے۔',
+  },
+  /** Step 35: "clear consent" — visible notice that the link leaves the site. */
+  whatsappExternalNoticeText: {
+    en: "Opens WhatsApp in a new tab. You'll leave this website to send your message.",
+    ur: 'یہ واٹس ایپ کو ایک نئے ٹیب میں کھولتا ہے۔ اپنا پیغام بھیجنے کے لیے آپ اس ویب سائٹ سے باہر جائیں گے۔',
+  },
+  /**
+   * Step 35: bilingual staff-escalation copy for the text/voice concierge's
+   * safe fallback (`orchestrator.ts`'s `fallbackReply`/`escalationReply`).
+   * `{whatsapp}` is a literal placeholder replaced with the approved
+   * `WHATSAPP_DISPLAY` number at call time — the only interpolation this
+   * file uses, reserved for this one locale-invariant business fact.
+   */
+  conciergeFallbackReply: {
+    en: "Sorry, I couldn't finish that. Please try again, or reach us directly on WhatsApp ({whatsapp}).",
+    ur: 'معذرت، میں یہ مکمل نہیں کر سکا۔ براہ کرم دوبارہ کوشش کریں، یا ہم سے براہ راست واٹس ایپ ({whatsapp}) پر رابطہ کریں۔',
+  },
+  conciergeEscalationReply: {
+    en: 'That needs more than I can help with right now — please reach us on WhatsApp ({whatsapp}) and our team will help directly.',
+    ur: 'اس کے لیے ابھی میری مدد کافی نہیں ہے — براہ کرم واٹس ایپ ({whatsapp}) پر ہم سے رابطہ کریں، ہماری ٹیم براہ راست آپ کی مدد کرے گی۔',
+  },
 } as const satisfies Record<string, ChromeCopy>;
 
 export type ChromeKey = keyof typeof chrome;

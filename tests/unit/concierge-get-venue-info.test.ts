@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { getVenueInfo } from '../../src/modules/concierge/tools/get-venue-info';
+import { buildWhatsAppUrl } from '../../src/lib/business/whatsapp-link';
 import { resolveLocalizedText } from '../../src/lib/i18n/localized-text';
 import {
   ADDRESS_DISPLAY,
@@ -12,7 +13,6 @@ import {
   OUTSIDE_FOOD_POLICY_TEXT,
   SEATING_POLICY_TEXT,
   WHATSAPP_DISPLAY,
-  WHATSAPP_URL,
 } from '../../src/modules/business/facts';
 
 // A Tuesday inside 12pm-12am Asia/Karachi.
@@ -48,11 +48,16 @@ describe('getVenueInfo — DIRECTIONS', () => {
 });
 
 describe('getVenueInfo — CONTACT', () => {
-  it('returns the official WhatsApp number and link', () => {
+  it('returns the official WhatsApp number and the Step 35 hardened link, per locale', () => {
     expect(getVenueInfo({ topic: 'CONTACT' }, 'en')).toEqual({
       topic: 'CONTACT',
       whatsappNumber: WHATSAPP_DISPLAY,
-      whatsappUrl: WHATSAPP_URL,
+      whatsappUrl: buildWhatsAppUrl('en'),
+    });
+    expect(getVenueInfo({ topic: 'CONTACT' }, 'ur')).toEqual({
+      topic: 'CONTACT',
+      whatsappNumber: WHATSAPP_DISPLAY,
+      whatsappUrl: buildWhatsAppUrl('ur'),
     });
   });
 });

@@ -11,11 +11,17 @@ import { GOOGLE_MAPS_URL, WHATSAPP_URL } from '../../src/modules/business/facts'
  * catches the specific, easy-to-drop mistake: an external `target="_blank"`
  * link missing `rel="noopener noreferrer"`, which lets the destination page
  * reach back into this tab via `window.opener` (reverse tabnabbing).
+ *
+ * Step 35 extends coverage to all three pages that carry a click-to-
+ * WhatsApp link (home, visit, menu-unpublished) and asserts each now
+ * routes through the hardened `buildWhatsAppUrl` link builder rather than
+ * the bare `WHATSAPP_URL` constant.
  */
 
 const FILES_WITH_EXTERNAL_LINKS = [
   resolve(__dirname, '../../src/app/[locale]/visit/page.tsx'),
   resolve(__dirname, '../../src/app/[locale]/page.tsx'),
+  resolve(__dirname, '../../src/app/[locale]/menu/page.tsx'),
 ];
 
 function readSource(path: string): string {
@@ -37,13 +43,30 @@ describe('external links carry noopener noreferrer', () => {
 });
 
 describe('external links point at the approved destinations', () => {
-  it('the visit page links to the confirmed Google Maps URL and WhatsApp URL', () => {
+  it('the visit page links to the confirmed Google Maps URL', () => {
     const source = readSource(resolve(__dirname, '../../src/app/[locale]/visit/page.tsx'));
     expect(source).toContain('GOOGLE_MAPS_URL');
-    expect(source).toContain('WHATSAPP_URL');
-    // Re-asserts the constants themselves haven't drifted from the
-    // confirmed values (business-facts.test.ts owns the primary check).
+    // Re-asserts the constant itself hasn't drifted from the confirmed
+    // value (business-facts.test.ts owns the primary check).
     expect(GOOGLE_MAPS_URL).toMatch(/^https:\/\/maps\.app\.goo\.gl\//);
-    expect(WHATSAPP_URL).toMatch(/^https:\/\/wa\.me\//);
   });
+
+  it.each(FILES_WITH_EXTERNAL_LINKS)(
+    'the click-to-WhatsApp link in %s uses the hardened buildWhatsAppUrl, not the bare constant',
+    (path) => {
+      const source = readSource(path);
+      expect(source).toContain('buildWhatsAppUrl');
+      expect(source).not.toMatch(/href=\{WHATSAPP_URL\}/);
+      // Re-asserts the underlying business fact hasn't drifted.
+      expect(WHATSAPP_URL).toMatch(/^https:\/\/wa\.me\//);
+    },
+  );
+
+  it.each(FILES_WITH_EXTERNAL_LINKS)(
+    'the click-to-WhatsApp link in %s carries a visible external-navigation notice',
+    (path) => {
+      const source = readSource(path);
+      expect(source).toContain('whatsappExternalNoticeText');
+    },
+  );
 });

@@ -9,6 +9,8 @@ import {
 import { CONCIERGE_SYSTEM_POLICY } from '../../src/modules/concierge/policy';
 import { createInMemoryConversationStore } from '../../src/modules/concierge/conversation-store';
 import { createInMemoryRateLimiter } from '../../src/lib/security/rate-limit';
+import { chromeText } from '../../src/lib/i18n/chrome';
+import { WHATSAPP_DISPLAY } from '../../src/modules/business/facts';
 import type {
   ChatClient,
   SendMessageInput,
@@ -225,6 +227,67 @@ describe('orchestrateTurn — safe errors', () => {
     const loggedText = JSON.stringify(logger.calls);
     expect(loggedText).not.toContain('secret-looking-token-abc123');
     expect(loggedText).not.toContain('10.0.0.5');
+  });
+});
+
+describe('orchestrateTurn — Step 35 bilingual fallback/escalation copy', () => {
+  it('a thrown chat-client error resolves to the Urdu fallback reply for an Urdu session', async () => {
+    const { deps } = harness(() => {
+      throw new Error('network timeout');
+    });
+
+    const result = await orchestrateTurn(deps, {
+      sessionId: 'session-ur',
+      locale: 'ur',
+      userMessage: 'aap ka time kya hai?',
+      correlationId: 'corr-ur-1',
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.reply).toBe(
+      chromeText('conciergeFallbackReply', 'ur').replace('{whatsapp}', WHATSAPP_DISPLAY),
+    );
+    expect(result.value.reply).toContain(WHATSAPP_DISPLAY);
+  });
+
+  it('exceeding MAX_TOOL_CALLS_PER_TURN resolves to the Urdu escalation reply for an Urdu session', async () => {
+    const { deps } = harness((_input, callIndex) =>
+      toolUseResult('getVenueInfo', { topic: 'HOURS' }, `tu_${callIndex}`),
+    );
+
+    const result = await orchestrateTurn(deps, {
+      sessionId: 'session-ur-2',
+      locale: 'ur',
+      userMessage: 'Cladium Special Sandwich kya hai?',
+      correlationId: 'corr-ur-2',
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.escalate).toBe(true);
+    expect(result.value.reply).toBe(
+      chromeText('conciergeEscalationReply', 'ur').replace('{whatsapp}', WHATSAPP_DISPLAY),
+    );
+  });
+
+  it('the English fallback/escalation replies still carry the approved WhatsApp number', async () => {
+    const { deps } = harness(() => {
+      throw new Error('boom');
+    });
+
+    const result = await orchestrateTurn(deps, {
+      sessionId: 'session-en',
+      locale: 'en',
+      userMessage: 'Are you open?',
+      correlationId: 'corr-en-1',
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.reply).toBe(
+      chromeText('conciergeFallbackReply', 'en').replace('{whatsapp}', WHATSAPP_DISPLAY),
+    );
   });
 });
 
