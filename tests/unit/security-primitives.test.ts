@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createCsrfToken, guardMutation } from '../../src/lib/security/csrf';
-import { securityHeaders } from '../../src/lib/security/headers';
+import { buildContentSecurityPolicy, securityHeaders } from '../../src/lib/security/headers';
 import { trustedOriginConfig } from '../../src/lib/security/origin';
 import { createInMemoryRateLimiter } from '../../src/lib/security/rate-limit';
 import { isSafeRedirectTarget, safeRedirectTarget } from '../../src/lib/security/redirect';
@@ -160,6 +160,38 @@ describe('headers and redaction', () => {
     expect(headers['X-Frame-Options']).toBe('DENY');
     expect(headers['X-Content-Type-Options']).toBe('nosniff');
     expect(headers['Permissions-Policy']).toContain('camera=()');
+  });
+
+  // Runbook Step 40: this module was found fully built and tested (Step
+  // 12) but never actually applied to a response — `next.config.ts`
+  // shipped no `headers()` at all. These cases cover the no-nonce
+  // fallback `next.config.ts` now actually depends on.
+  it("falls back to unsafe-inline for script/style when no nonce is supplied — the honest baseline Next.js's own inline hydration scripts need without a per-request nonce", () => {
+    const csp = buildContentSecurityPolicy();
+    expect(csp).toContain("script-src 'self' 'unsafe-inline'");
+    expect(csp).toContain("style-src 'self' 'unsafe-inline'");
+    expect(csp).not.toContain('unsafe-eval');
+  });
+
+  it('drops the unsafe-inline fallback once a real nonce is supplied', () => {
+    const csp = buildContentSecurityPolicy({ nonce: 'abc123' });
+    expect(csp).toContain("script-src 'self' 'nonce-abc123'");
+    expect(csp).not.toContain('unsafe-inline');
+  });
+
+  it('adds unsafe-eval only when allowEval is explicitly set (dev-only)', () => {
+    expect(buildContentSecurityPolicy({ allowEval: true })).toContain('unsafe-eval');
+    expect(buildContentSecurityPolicy()).not.toContain('unsafe-eval');
+    expect(buildContentSecurityPolicy({ allowEval: false })).not.toContain('unsafe-eval');
+  });
+
+  it('never allows framing and always upgrades insecure requests, with or without a nonce', () => {
+    for (const options of [{}, { nonce: 'x' }, { allowEval: true }]) {
+      const csp = buildContentSecurityPolicy(options);
+      expect(csp).toContain("frame-ancestors 'none'");
+      expect(csp).toContain('upgrade-insecure-requests');
+      expect(csp).toContain("object-src 'none'");
+    }
   });
 
   it('removes PII, authorization, chat content, and webhook signatures from logs', () => {

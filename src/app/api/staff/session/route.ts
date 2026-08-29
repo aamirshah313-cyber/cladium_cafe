@@ -13,12 +13,16 @@ import type { NextRequest } from 'next/server';
 import { respondResult } from '../../../../lib/http/respond';
 import { checkBodySize, checkContentType } from '../../../../lib/security/request-limits';
 import { checkRequestOrigin, trustedOriginConfig } from '../../../../lib/security/origin';
+import {
+  guestRouteRateLimiter,
+  STAFF_SIGNIN_RATE_LIMIT_RULE,
+} from '../../../../lib/http/route-rate-limits';
 import { parseAppUrl } from '../../../../lib/env';
 import { parseSessionSecret } from '../../../../lib/env.server';
 import { correlationIdFrom } from '../../../../lib/correlation';
 import { parseAtBoundary } from '../../../../lib/schemas/parse';
 import { err, ok } from '../../../../lib/result';
-import { forbidden, internalError, unauthorized } from '../../../../lib/errors';
+import { forbidden, internalError, rateLimited, unauthorized } from '../../../../lib/errors';
 import { resolveStaffActor } from '../../../../lib/http/staff-session-route';
 import { issueStaffSessionCookie, clearStaffSessionCookie } from '../../../../lib/staff-session';
 import { verifyDevStaffCredentials } from '../../../../modules/staff/dev-credentials';
@@ -74,6 +78,15 @@ export async function POST(request: NextRequest) {
   }
   const bodyResult = parseAtBoundary(staffSignInBodySchema, parsedJson, correlationId);
   if (!bodyResult.ok) return respondResult(bodyResult);
+
+  // Step 40: keyed by the *attempted* staffId, not client IP — see
+  // `route-rate-limits.ts#STAFF_SIGNIN_RATE_LIMIT_RULE`'s doc comment for
+  // why an unverified proxy header would be a false sense of protection.
+  const rateDecision = await guestRouteRateLimiter.consume(
+    `staff-signin:${bodyResult.value.staffId}`,
+    STAFF_SIGNIN_RATE_LIMIT_RULE,
+  );
+  if (!rateDecision.allowed) return respondResult(err(rateLimited(correlationId)));
 
   const staffId = verifyDevStaffCredentials(
     devAccounts,

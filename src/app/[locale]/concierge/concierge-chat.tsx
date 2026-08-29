@@ -14,6 +14,18 @@
  * endpoints the manual `/book`/`/event` forms use, with the same
  * confirmation-token/idempotency-key contract — "manual/text workflows
  * produce equivalent records," not a second write path.
+ *
+ * Step 40: `csrfToken` is now an *optional* prop with two callers.
+ * `concierge-mode-toggle.tsx` (voice available) resolves it once itself
+ * and passes it down — this component then does no fetching of its own,
+ * closing a real, reproduced cross-component session race with the
+ * sibling `VoicePanel` (see that file's doc comment). `page.tsx` (voice
+ * unavailable — no sibling exists to race with) still renders this
+ * component standalone with no `csrfToken` prop at all, in which case it
+ * falls back to its original self-managed `GET /api/session/csrf` fetch —
+ * `providedCsrfToken === undefined` is exactly how it tells the two
+ * callers apart (a parent-controlled `null`, while still loading, is a
+ * defined value and does not fall back).
  */
 
 import { useEffect, useState } from 'react';
@@ -27,6 +39,7 @@ import {
 
 interface ConciergeChatProps {
   readonly locale: Locale;
+  readonly csrfToken?: string | null;
 }
 
 interface ChatTurn {
@@ -49,8 +62,10 @@ async function parseApiError(response: Response): Promise<string> {
   }
 }
 
-export function ConciergeChat({ locale }: ConciergeChatProps) {
-  const [csrfToken, setCsrfToken] = useState<string | null>(null);
+export function ConciergeChat({ locale, csrfToken: providedCsrfToken }: ConciergeChatProps) {
+  const isControlled = providedCsrfToken !== undefined;
+  const [ownCsrfToken, setOwnCsrfToken] = useState<string | null>(null);
+  const csrfToken = isControlled ? providedCsrfToken : ownCsrfToken;
   const [turns, setTurns] = useState<readonly ChatTurn[]>([]);
   const [input, setInput] = useState('');
   const [pending, setPending] = useState<PendingConfirmationView | null>(null);
@@ -58,12 +73,17 @@ export function ConciergeChat({ locale }: ConciergeChatProps) {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  // Standalone use only (`page.tsx` when voice is unavailable — no sibling
+  // component exists on that page to race a session mint with). Skipped
+  // entirely when a parent already resolved `csrfToken` — see the module
+  // doc comment.
   useEffect(() => {
+    if (isControlled) return;
     let cancelled = false;
     fetch('/api/session/csrf')
       .then((response) => response.json())
       .then((body: { csrfToken?: string }) => {
-        if (!cancelled && body.csrfToken) setCsrfToken(body.csrfToken);
+        if (!cancelled && body.csrfToken) setOwnCsrfToken(body.csrfToken);
       })
       .catch(() => {
         if (!cancelled) setError('Could not start a session. Please reload the page.');
@@ -71,7 +91,7 @@ export function ConciergeChat({ locale }: ConciergeChatProps) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [isControlled]);
 
   async function handleSend(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();

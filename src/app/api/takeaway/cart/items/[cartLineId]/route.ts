@@ -10,6 +10,10 @@
 import type { NextRequest } from 'next/server';
 import { respondResult } from '../../../../../../lib/http/respond';
 import { parseMutatingRequest } from '../../../../../../lib/http/mutating-route';
+import {
+  guestRouteRateLimiter,
+  CART_MUTATION_RATE_LIMIT_RULE,
+} from '../../../../../../lib/http/route-rate-limits';
 import { modifyItem, removeItem } from '../../../../../../modules/takeaway/http';
 import { takeawayDeps } from '../../../../../../modules/takeaway/deps';
 import {
@@ -21,9 +25,17 @@ interface RouteParams {
   readonly params: Promise<{ cartLineId: string }>;
 }
 
+const cartLineRateLimit = {
+  limiter: guestRouteRateLimiter,
+  rule: CART_MUTATION_RATE_LIMIT_RULE,
+  keyPrefix: 'cart-item',
+};
+
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   const { cartLineId } = await params;
-  const { result, setCookieHeader } = await parseMutatingRequest(request, modifyItemBodySchema);
+  const { result, setCookieHeader } = await parseMutatingRequest(request, modifyItemBodySchema, {
+    rateLimit: cartLineRateLimit,
+  });
   if (!result.ok) return respondResult(result, { setCookieHeader });
 
   const { sessionId, body } = result.value;
@@ -36,7 +48,9 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   const { cartLineId } = await params;
-  const { result, setCookieHeader } = await parseMutatingRequest(request, removeItemBodySchema);
+  const { result, setCookieHeader } = await parseMutatingRequest(request, removeItemBodySchema, {
+    rateLimit: cartLineRateLimit,
+  });
   if (!result.ok) return respondResult(result, { setCookieHeader });
 
   const { sessionId } = result.value;

@@ -12,12 +12,22 @@
 import type { NextRequest } from 'next/server';
 import { respondResult } from '../../../../lib/http/respond';
 import { parseMutatingRequest } from '../../../../lib/http/mutating-route';
+import {
+  guestRouteRateLimiter,
+  REQUEST_REVIEW_RATE_LIMIT_RULE,
+} from '../../../../lib/http/route-rate-limits';
 import { eventDeps } from '../../../../modules/events/deps';
 import { eventReviewBodySchema } from '../../../../modules/events/schemas';
 import { prepareEventRequest } from '../../../../modules/events/submission-service';
 
 export async function POST(request: NextRequest) {
-  const { result, setCookieHeader } = await parseMutatingRequest(request, eventReviewBodySchema);
+  const { result, setCookieHeader } = await parseMutatingRequest(request, eventReviewBodySchema, {
+    rateLimit: {
+      limiter: guestRouteRateLimiter,
+      rule: REQUEST_REVIEW_RATE_LIMIT_RULE,
+      keyPrefix: 'req-review',
+    },
+  });
   if (!result.ok) return respondResult(result, { setCookieHeader });
 
   const { sessionId, body } = result.value;

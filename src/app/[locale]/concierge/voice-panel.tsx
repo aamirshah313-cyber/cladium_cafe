@@ -23,12 +23,19 @@
  * transcript doesn't flicker through every partial recognition update.
  *
  * Step 36: a call cannot start without MICROPHONE consent. This panel
- * fetches the current grant on mount and shows an inline "Allow
- * microphone access" prompt instead of the Start Call button when it
- * isn't granted yet — but the real enforcement is server-side
- * (`issue-vapi-token.ts` rejects `POST /api/vapi/token` with
+ * shows an inline "Allow microphone access" prompt instead of the Start
+ * Call button when it isn't granted yet — but the real enforcement is
+ * server-side (`issue-vapi-token.ts` rejects `POST /api/vapi/token` with
  * `CONSENT_REQUIRED` regardless of what this client believes), so a stale
  * or bypassed client state can never actually reach a live call.
+ *
+ * Step 40: `csrfToken`/`microphoneConsent` are now props, resolved once by
+ * the parent `ConciergeModeToggle` (`onGrantMicrophoneConsent` likewise) —
+ * this component no longer fetches its own `GET /api/consent` on mount.
+ * See `concierge-mode-toggle.tsx`'s doc comment for the real, reproduced
+ * cross-component session race this closes (this file's own Step 39 fix
+ * closed the *within-component* version of the same race; this is the
+ * *cross-component* version, between this panel and `concierge-chat.tsx`).
  */
 
 import { useEffect, useRef, useState } from 'react';
@@ -56,6 +63,9 @@ import {
 
 interface VoicePanelProps {
   readonly locale: Locale;
+  readonly csrfToken: string | null;
+  readonly microphoneConsent: boolean | null;
+  readonly onGrantMicrophoneConsent: () => void;
 }
 
 const POLL_INTERVAL_MS = 3000;
@@ -90,11 +100,6 @@ interface PendingConfirmationResponseBody {
   readonly pendingConfirmation: PendingConfirmationView | null;
 }
 
-interface ConsentGetResponseBody {
-  readonly consent: Readonly<Record<'MICROPHONE', { readonly granted: boolean }>>;
-  readonly csrfToken: string;
-}
-
 async function parseApiError(response: Response): Promise<string> {
   try {
     const body = (await response.json()) as { error?: { message?: string } };
@@ -124,10 +129,13 @@ function transcriptEntryFrom(
   return { role, text: candidate.transcript };
 }
 
-export function VoicePanel({ locale }: VoicePanelProps) {
+export function VoicePanel({
+  locale,
+  csrfToken,
+  microphoneConsent,
+  onGrantMicrophoneConsent,
+}: VoicePanelProps) {
   const [state, setState] = useState(INITIAL_VOICE_CALL_STATE);
-  const [csrfToken, setCsrfToken] = useState<string | null>(null);
-  const [microphoneConsent, setMicrophoneConsent] = useState<boolean | null>(null);
   const [pending, setPending] = useState<PendingConfirmationView | null>(null);
   const [confirmedKind, setConfirmedKind] = useState<'BOOKING' | 'EVENT' | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -137,59 +145,6 @@ export function VoicePanel({ locale }: VoicePanelProps) {
 
   function dispatch(event: VoiceCallEvent) {
     setState((prior) => voiceCallReducer(prior, event));
-  }
-
-  // One request, not two independent ones: `GET /api/consent` already
-  // returns both the current MICROPHONE grant *and* a `csrfToken` for the
-  // same resolved session (Step 36). Two separate parallel fetches here —
-  // this one plus a `GET /api/session/csrf` — each mint their own fresh
-  // session when no cookie exists yet (a guest's very first render, which
-  // every fresh browser context/test run is), and whichever response's
-  // `Set-Cookie` lands last silently wins; the CSRF token from the other,
-  // now-abandoned session would then fail verification on the next
-  // mutating request. A real, reproduced bug (Step 39's E2E suite caught
-  // it as an intermittent "Start voice call never appears" failure) —
-  // fixed by deriving both values from the one request.
-  useEffect(() => {
-    let cancelled = false;
-    fetch('/api/consent')
-      .then((response) => {
-        if (!response.ok) throw new Error('consent fetch failed');
-        return response.json();
-      })
-      .then((body: ConsentGetResponseBody) => {
-        if (cancelled) return;
-        setMicrophoneConsent(body.consent.MICROPHONE.granted);
-        setCsrfToken(body.csrfToken);
-      })
-      .catch(() => {
-        if (cancelled) return;
-        // Fail closed: an unknown consent state is treated as not granted.
-        setMicrophoneConsent(false);
-        setError('Could not start a session. Please reload the page.');
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  async function handleGrantMicrophoneConsent() {
-    if (!csrfToken) return;
-    try {
-      const response = await fetch('/api/consent', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          category: 'MICROPHONE',
-          granted: true,
-          source: 'voice_panel',
-          csrfToken,
-        }),
-      });
-      if (response.ok) setMicrophoneConsent(true);
-    } catch {
-      // Leave microphoneConsent as-is; the Allow button remains available to retry.
-    }
   }
 
   // Ends any live call if the guest navigates away mid-call.
@@ -323,11 +278,7 @@ export function VoicePanel({ locale }: VoicePanelProps) {
       {canStart && microphoneConsent === false ? (
         <div>
           <p>{chromeText('voiceMicrophoneConsentPrompt', locale)}</p>
-          <button
-            type="button"
-            onClick={() => void handleGrantMicrophoneConsent()}
-            disabled={!csrfToken}
-          >
+          <button type="button" onClick={onGrantMicrophoneConsent} disabled={!csrfToken}>
             {chromeText('voiceMicrophoneConsentAllowLabel', locale)}
           </button>
         </div>

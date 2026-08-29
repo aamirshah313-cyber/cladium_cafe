@@ -11,6 +11,10 @@
 import type { NextRequest } from 'next/server';
 import { respondResult } from '../../../../lib/http/respond';
 import { parseMutatingRequest } from '../../../../lib/http/mutating-route';
+import {
+  guestRouteRateLimiter,
+  REQUEST_SUBMIT_RATE_LIMIT_RULE,
+} from '../../../../lib/http/route-rate-limits';
 import { bookingDeps } from '../../../../modules/bookings/deps';
 import { bookingSubmitBodySchema } from '../../../../modules/bookings/schemas';
 import { submitBookingRequest } from '../../../../modules/bookings/submission-service';
@@ -18,7 +22,13 @@ import { metaEventsDeps } from '../../../../modules/integrations/meta-deps';
 import { trackMetaEvent } from '../../../../modules/integrations/meta-events';
 
 export async function POST(request: NextRequest) {
-  const { result, setCookieHeader } = await parseMutatingRequest(request, bookingSubmitBodySchema);
+  const { result, setCookieHeader } = await parseMutatingRequest(request, bookingSubmitBodySchema, {
+    rateLimit: {
+      limiter: guestRouteRateLimiter,
+      rule: REQUEST_SUBMIT_RATE_LIMIT_RULE,
+      keyPrefix: 'req-submit',
+    },
+  });
   if (!result.ok) return respondResult(result, { setCookieHeader });
 
   const { sessionId, correlationId, body } = result.value;

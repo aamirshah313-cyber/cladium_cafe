@@ -13,13 +13,27 @@
 import type { NextRequest } from 'next/server';
 import { respondResult } from '../../../../lib/http/respond';
 import { parseMutatingRequest } from '../../../../lib/http/mutating-route';
+import {
+  guestRouteRateLimiter,
+  META_TRACK_RATE_LIMIT_RULE,
+} from '../../../../lib/http/route-rate-limits';
 import { ok } from '../../../../lib/result';
 import { metaEventsDeps } from '../../../../modules/integrations/meta-deps';
 import { trackMetaEvent } from '../../../../modules/integrations/meta-events';
 import { trackMetaEventBodySchema } from '../../../../modules/integrations/meta-schemas';
 
 export async function POST(request: NextRequest) {
-  const { result, setCookieHeader } = await parseMutatingRequest(request, trackMetaEventBodySchema);
+  const { result, setCookieHeader } = await parseMutatingRequest(
+    request,
+    trackMetaEventBodySchema,
+    {
+      rateLimit: {
+        limiter: guestRouteRateLimiter,
+        rule: META_TRACK_RATE_LIMIT_RULE,
+        keyPrefix: 'meta-track',
+      },
+    },
+  );
   if (!result.ok) return respondResult(result, { setCookieHeader });
 
   const { sessionId, correlationId, body } = result.value;

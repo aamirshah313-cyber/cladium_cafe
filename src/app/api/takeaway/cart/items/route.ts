@@ -16,6 +16,10 @@
 import type { NextRequest } from 'next/server';
 import { respondResult } from '../../../../../lib/http/respond';
 import { parseMutatingRequest } from '../../../../../lib/http/mutating-route';
+import {
+  guestRouteRateLimiter,
+  CART_MUTATION_RATE_LIMIT_RULE,
+} from '../../../../../lib/http/route-rate-limits';
 import { addItem } from '../../../../../modules/takeaway/http';
 import { takeawayDeps } from '../../../../../modules/takeaway/deps';
 import { addItemBodySchema } from '../../../../../modules/takeaway/schemas';
@@ -23,7 +27,13 @@ import { metaEventsDeps } from '../../../../../modules/integrations/meta-deps';
 import { trackMetaEvent } from '../../../../../modules/integrations/meta-events';
 
 export async function POST(request: NextRequest) {
-  const { result, setCookieHeader } = await parseMutatingRequest(request, addItemBodySchema);
+  const { result, setCookieHeader } = await parseMutatingRequest(request, addItemBodySchema, {
+    rateLimit: {
+      limiter: guestRouteRateLimiter,
+      rule: CART_MUTATION_RATE_LIMIT_RULE,
+      keyPrefix: 'cart-item',
+    },
+  });
   if (!result.ok) return respondResult(result, { setCookieHeader });
 
   const { sessionId, correlationId, body } = result.value;

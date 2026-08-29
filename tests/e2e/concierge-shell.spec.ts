@@ -71,8 +71,13 @@ test.describe('concierge — Talk mode', () => {
     const startButton = page.getByRole('button', { name: 'Start voice call', exact: true });
     // A generous timeout: the consent grant is a real POST /api/consent
     // round trip, and `next dev`'s on-demand route compilation can make
-    // this route's first hit in a session slow.
-    await expect(startButton).toBeVisible({ timeout: 15_000 });
+    // this route's first hit in a session slow. Raised from 15s to 25s
+    // (Step 40): reproduced twice in a full 249-test run under full-suite
+    // CPU/IO contention (video/trace recording across all specs) despite
+    // passing reliably — 3-6s — in isolation every time; environment
+    // timing, not an app defect (Step 40's own two code changes never
+    // touch this route or this page at all).
+    await expect(startButton).toBeVisible({ timeout: 25_000 });
     await startButton.click();
 
     // No live VAPI_* credentials exist in this test environment, so this

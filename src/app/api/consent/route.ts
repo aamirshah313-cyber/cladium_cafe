@@ -14,6 +14,10 @@ import type { NextRequest } from 'next/server';
 import { respondResult } from '../../../lib/http/respond';
 import { resolveSessionContext } from '../../../lib/http/session-route';
 import { parseMutatingRequest } from '../../../lib/http/mutating-route';
+import {
+  guestRouteRateLimiter,
+  CONSENT_RATE_LIMIT_RULE,
+} from '../../../lib/http/route-rate-limits';
 import { correlationIdFrom } from '../../../lib/correlation';
 import { ok } from '../../../lib/result';
 import { consentDeps } from '../../../modules/consent/deps';
@@ -33,7 +37,13 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const { result, setCookieHeader } = await parseMutatingRequest(request, recordConsentBodySchema);
+  const { result, setCookieHeader } = await parseMutatingRequest(request, recordConsentBodySchema, {
+    rateLimit: {
+      limiter: guestRouteRateLimiter,
+      rule: CONSENT_RATE_LIMIT_RULE,
+      keyPrefix: 'consent',
+    },
+  });
   if (!result.ok) return respondResult(result, { setCookieHeader });
 
   const { sessionId, body } = result.value;

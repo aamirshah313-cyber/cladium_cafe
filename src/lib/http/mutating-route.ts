@@ -4,7 +4,10 @@
  *
  * In spec order (request-limits before parsing, session before CSRF, since
  * CSRF verification needs the session ID): content-type/body-size check,
- * session resolution (minting a cookie if needed), JSON parse, schema
+ * session resolution (minting a cookie if needed), an optional rate-limit
+ * check (Step 40 — cheap-first, same "reject before spending effort"
+ * reasoning as the content-type/body-size checks above it; keyed off the
+ * session ID, so it must run after session resolution), JSON parse, schema
  * validation, then the CSRF/origin guard. `setCookieHeader` is always
  * returned, on both the success and failure path, so a route can still
  * attach a freshly minted session cookie even when the request itself is
@@ -16,10 +19,11 @@
 import type { NextRequest } from 'next/server';
 import type { z } from 'zod';
 import { err, ok, type Result } from '../result';
-import { validationFailed, type AppError } from '../errors';
+import { rateLimited, validationFailed, type AppError } from '../errors';
 import { correlationIdFrom } from '../correlation';
 import { parseAtBoundary } from '../schemas/parse';
 import { checkBodySize, checkContentType } from '../security/request-limits';
+import type { RateLimiter, RateLimitRule } from '../security/rate-limit';
 import { guardStateChangingRequest, resolveSessionContext } from './session-route';
 
 export interface ParsedMutatingRequest<T> {
@@ -33,9 +37,18 @@ export interface MutatingRequestOutcome<T> {
   readonly result: Result<ParsedMutatingRequest<T>, AppError>;
 }
 
+/** Opt-in per-route throttle — see `lib/http/route-rate-limits.ts` for the shared limiter/rules callers should pass here. */
+export interface MutatingRateLimitOptions {
+  readonly limiter: RateLimiter;
+  readonly rule: RateLimitRule;
+  /** Distinguishes this route's limit bucket from another sharing the same session ID against the same limiter. */
+  readonly keyPrefix: string;
+}
+
 export async function parseMutatingRequest<T extends { csrfToken: string }>(
   request: NextRequest,
   schema: z.ZodType<T>,
+  options?: { readonly rateLimit?: MutatingRateLimitOptions },
 ): Promise<MutatingRequestOutcome<T>> {
   const correlationId = correlationIdFrom(request.headers);
   const fail = (
@@ -63,6 +76,12 @@ export async function parseMutatingRequest<T extends { csrfToken: string }>(
   });
   if (!sessionResult.ok) return fail(sessionResult.error);
   const { sessionId, setCookieHeader } = sessionResult.value;
+
+  if (options?.rateLimit) {
+    const { limiter, rule, keyPrefix } = options.rateLimit;
+    const decision = await limiter.consume(`${keyPrefix}:${sessionId}`, rule);
+    if (!decision.allowed) return fail(rateLimited(correlationId), setCookieHeader);
+  }
 
   let parsedJson: unknown;
   try {
