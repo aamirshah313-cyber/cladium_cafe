@@ -14,6 +14,8 @@ import { parseMutatingRequest } from '../../../../lib/http/mutating-route';
 import { bookingDeps } from '../../../../modules/bookings/deps';
 import { bookingSubmitBodySchema } from '../../../../modules/bookings/schemas';
 import { submitBookingRequest } from '../../../../modules/bookings/submission-service';
+import { metaEventsDeps } from '../../../../modules/integrations/meta-deps';
+import { trackMetaEvent } from '../../../../modules/integrations/meta-events';
 
 export async function POST(request: NextRequest) {
   const { result, setCookieHeader } = await parseMutatingRequest(request, bookingSubmitBodySchema);
@@ -34,5 +36,14 @@ export async function POST(request: NextRequest) {
     idempotencyKey: body.idempotencyKey,
     correlationId,
   });
+  // Step 37: "submit_booking_request" — never "booking_confirmed"; a
+  // requested time is not availability (data-model-v2.md §5).
+  if (submitResult.ok) {
+    await trackMetaEvent(metaEventsDeps, {
+      eventName: 'submit_booking_request',
+      sessionId,
+      correlationId,
+    });
+  }
   return respondResult(submitResult, { setCookieHeader });
 }

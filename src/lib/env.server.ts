@@ -149,6 +149,43 @@ export function parseVapiWebhookSecret(source: EnvSource = process.env): string 
   return vapiWebhookSecretSchema.safeParse(source).data?.VAPI_WEBHOOK_HMAC_SECRET;
 }
 
+const metaCredentialsSchema = serverEnvSchema
+  .pick({
+    META_PIXEL_ID: true,
+    META_DATASET_ID: true,
+    META_CONVERSIONS_API_TOKEN: true,
+  })
+  .extend({
+    META_PIXEL_ID: z.string().min(1),
+    META_DATASET_ID: z.string().min(1),
+    META_CONVERSIONS_API_TOKEN: z.string().min(1),
+  });
+
+export interface MetaCredentials {
+  readonly pixelId: string;
+  readonly datasetId: string;
+  readonly conversionsApiToken: string;
+}
+
+/**
+ * Runbook Step 37 — same "returns `undefined` rather than throwing" shape
+ * as `parseVapiWebhookSecret`: all three of `META_PIXEL_ID`/
+ * `META_DATASET_ID`/`META_CONVERSIONS_API_TOKEN` must be present, or the
+ * Meta adapter must fail closed (send nothing) rather than 500 — the same
+ * reasoning that keeps `META_MARKETING` disabled by default. None are set
+ * in `.env.example`, so this returns `undefined` until the business
+ * supplies real credentials and the release gate is separately approved.
+ */
+export function parseMetaCredentials(source: EnvSource = process.env): MetaCredentials | undefined {
+  const parsed = metaCredentialsSchema.safeParse(source);
+  if (!parsed.success) return undefined;
+  return {
+    pixelId: parsed.data.META_PIXEL_ID,
+    datasetId: parsed.data.META_DATASET_ID,
+    conversionsApiToken: parsed.data.META_CONVERSIONS_API_TOKEN,
+  };
+}
+
 /** Narrow boolean view of a flag, for readable call sites. */
 export function isFeatureEnabled(
   flag: keyof FeatureFlagEnv,

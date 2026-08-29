@@ -29,6 +29,25 @@ export const consentCategorySchema = z.enum([
 ]);
 export type ConsentCategory = z.infer<typeof consentCategorySchema>;
 
+/**
+ * Runbook Step 37 (`production-architecture-v2.md` §11's "allowed event
+ * semantics" list, verbatim). Deliberately a closed set of our own
+ * request-semantic names — never Meta's own `Purchase`/`Schedule` standard
+ * events, which would risk implying a completed transaction. `never emit
+ * purchase or booking_confirmed from a guest submission` (§11) is a
+ * structural guarantee here: neither string exists in this enum at all.
+ */
+export const metaEventNameSchema = z.enum([
+  'view_menu',
+  'add_to_cart',
+  'submit_order_request',
+  'submit_booking_request',
+  'submit_event_request',
+  'contact',
+  'lead',
+]);
+export type MetaEventName = z.infer<typeof metaEventNameSchema>;
+
 /** Money is integer PKR everywhere — never a float (data-model-v2.md §1). */
 export const integerPkrSchema = z
   .number()

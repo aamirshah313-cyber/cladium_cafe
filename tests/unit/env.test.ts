@@ -4,6 +4,7 @@ import {
   isFeatureEnabled,
   parseCronSecret,
   parseFeatureFlags,
+  parseMetaCredentials,
   parseServerEnv,
   parseStaffDevAccounts,
 } from '../../src/lib/env.server';
@@ -112,5 +113,38 @@ describe('parseCronSecret', () => {
 
   it('does not require any other server env var to be set', () => {
     expect(parseCronSecret({ CRON_SECRET: 'a-cron-secret' })).toBe('a-cron-secret');
+  });
+});
+
+describe('parseMetaCredentials — Runbook Step 37', () => {
+  it('returns undefined, not a throw, when unset — matches .env.example', () => {
+    expect(parseMetaCredentials({})).toBeUndefined();
+  });
+
+  it('returns undefined when only some of the three vars are configured', () => {
+    expect(parseMetaCredentials({ META_PIXEL_ID: 'pixel-1' })).toBeUndefined();
+    expect(
+      parseMetaCredentials({ META_PIXEL_ID: 'pixel-1', META_DATASET_ID: 'dataset-1' }),
+    ).toBeUndefined();
+  });
+
+  it('returns the parsed credentials once all three are configured', () => {
+    expect(
+      parseMetaCredentials({
+        META_PIXEL_ID: 'pixel-1',
+        META_DATASET_ID: 'dataset-1',
+        META_CONVERSIONS_API_TOKEN: 'token-1',
+      }),
+    ).toEqual({ pixelId: 'pixel-1', datasetId: 'dataset-1', conversionsApiToken: 'token-1' });
+  });
+
+  it('does not require any other server env var to be set', () => {
+    expect(
+      parseMetaCredentials({
+        META_PIXEL_ID: 'pixel-1',
+        META_DATASET_ID: 'dataset-1',
+        META_CONVERSIONS_API_TOKEN: 'token-1',
+      }),
+    ).toBeDefined();
   });
 });

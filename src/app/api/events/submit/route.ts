@@ -15,6 +15,8 @@ import { parseMutatingRequest } from '../../../../lib/http/mutating-route';
 import { eventDeps } from '../../../../modules/events/deps';
 import { eventSubmitBodySchema } from '../../../../modules/events/schemas';
 import { submitEventRequest } from '../../../../modules/events/submission-service';
+import { metaEventsDeps } from '../../../../modules/integrations/meta-deps';
+import { trackMetaEvent } from '../../../../modules/integrations/meta-events';
 
 export async function POST(request: NextRequest) {
   const { result, setCookieHeader } = await parseMutatingRequest(request, eventSubmitBodySchema);
@@ -36,5 +38,14 @@ export async function POST(request: NextRequest) {
     idempotencyKey: body.idempotencyKey,
     correlationId,
   });
+  // Step 37: "submit_event_request" — never a quote or confirmation; only
+  // a staff QUOTED/CONFIRMED transition sets those (state-machine.ts).
+  if (submitResult.ok) {
+    await trackMetaEvent(metaEventsDeps, {
+      eventName: 'submit_event_request',
+      sessionId,
+      correlationId,
+    });
+  }
   return respondResult(submitResult, { setCookieHeader });
 }

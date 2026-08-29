@@ -14,6 +14,10 @@
  * Search/category filtering is a plain `<form method="GET">` reading
  * `searchParams` server-side — full functionality with no JavaScript at
  * all, not a no-JS fallback for a JS-first design.
+ *
+ * Step 37: `MenuViewTracker` fires the consent/flag-gated `view_menu` Meta
+ * event once per visit, in both branches — visiting the route is the
+ * signal, regardless of publish state.
  */
 
 import { notFound } from 'next/navigation';
@@ -23,6 +27,7 @@ import { formatPkr } from '../../../lib/business/money';
 import { buildWhatsAppUrl } from '../../../lib/business/whatsapp-link';
 import type { AvailabilityStatus } from '../../../lib/schemas/common';
 import { filterMenuCategories, getPublishedMenuView } from '../../../modules/menu/menu-view';
+import { MenuViewTracker } from './menu-view-tracker';
 
 function availabilityChromeKey(status: AvailabilityStatus): ChromeKey {
   switch (status) {
@@ -54,6 +59,7 @@ export default async function MenuPage({ params, searchParams }: MenuPageProps) 
   if (view.status === 'UNPUBLISHED') {
     return (
       <div>
+        <MenuViewTracker path={`/${locale}/menu`} />
         <h1>{chromeText('navMenuLabel', locale)}</h1>
         <p>{chromeText('menuUnpublishedHeading', locale)}</p>
         <p>{chromeText('menuUnpublishedBody', locale)}</p>
@@ -78,6 +84,7 @@ export default async function MenuPage({ params, searchParams }: MenuPageProps) 
 
   return (
     <div>
+      <MenuViewTracker path={`/${locale}/menu`} />
       <h1>{chromeText('navMenuLabel', locale)}</h1>
 
       <form method="GET">

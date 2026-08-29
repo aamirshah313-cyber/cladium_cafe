@@ -6,6 +6,7 @@ import {
   idempotencyKeySchema,
   integerPkrSchema,
   localeSchema,
+  metaEventNameSchema,
   notesSchema,
   phoneSchema,
   preferencesSchema,
@@ -34,6 +35,23 @@ describe('primitive schemas', () => {
     }
     expect(consentCategorySchema.safeParse('MARKETING').success).toBe(false);
     expect(consentCategorySchema.safeParse('essential_preferences').success).toBe(false);
+  });
+
+  it('accepts exactly the seven allowed Meta event names and rejects purchase/booking_confirmed (Step 37)', () => {
+    for (const eventName of [
+      'view_menu',
+      'add_to_cart',
+      'submit_order_request',
+      'submit_booking_request',
+      'submit_event_request',
+      'contact',
+      'lead',
+    ]) {
+      expect(metaEventNameSchema.safeParse(eventName).success).toBe(true);
+    }
+    expect(metaEventNameSchema.safeParse('purchase').success).toBe(false);
+    expect(metaEventNameSchema.safeParse('booking_confirmed').success).toBe(false);
+    expect(metaEventNameSchema.safeParse('Purchase').success).toBe(false);
   });
 
   it('bounds quantities to a sane range', () => {
