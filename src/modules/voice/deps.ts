@@ -13,6 +13,8 @@ import { createInMemoryRateLimiter } from '../../lib/security/rate-limit';
 import { createInMemoryReplayStore } from '../../lib/security/webhook';
 import { createInMemoryIdempotencyStore } from '../../lib/domain/idempotency';
 import { createLogger } from '../../lib/logging';
+import { hasConsent } from '../consent/consent-service';
+import { consentDeps } from '../consent/deps';
 import { createInMemoryPendingConfirmationStore } from './pending-confirmation-store';
 import type { IssueVapiTokenDeps } from './token/issue-vapi-token';
 import type { ExecuteVapiToolCallsDeps } from './tools/execute-vapi-tool-calls';
@@ -21,6 +23,7 @@ export const voiceTokenDeps: IssueVapiTokenDeps = {
   issuer: createVapiTokenIssuer(),
   rateLimiter: createInMemoryRateLimiter(),
   logger: createLogger(),
+  hasMicrophoneConsent: (sessionId) => hasConsent(consentDeps, sessionId, 'MICROPHONE'),
 };
 
 /** Shared by both `/api/vapi/tools` (replay dedupe on the raw signed payload) and, in future, any other Vapi webhook needing the same guarantee. */

@@ -19,6 +19,7 @@ export const ERROR_CODES = [
   'IDEMPOTENCY_CONFLICT',
   'RATE_LIMITED',
   'FEATURE_DISABLED',
+  'CONSENT_REQUIRED',
   'UNSUPPORTED_MEDIA_TYPE',
   'PAYLOAD_TOO_LARGE',
   'INTERNAL',
@@ -36,6 +37,7 @@ const STATUS_BY_CODE: Record<ErrorCode, number> = {
   IDEMPOTENCY_CONFLICT: 409,
   RATE_LIMITED: 429,
   FEATURE_DISABLED: 404,
+  CONSENT_REQUIRED: 403,
   UNSUPPORTED_MEDIA_TYPE: 415,
   PAYLOAD_TOO_LARGE: 413,
   INTERNAL: 500,
@@ -131,6 +133,15 @@ export const rateLimited = (correlationId?: string): AppError =>
 /** A disabled feature must not confirm it exists — hence 404, not 403. */
 export const featureDisabled = (correlationId?: string): AppError =>
   appError('FEATURE_DISABLED', 'That is not available.', { correlationId });
+
+/**
+ * The action exists and the caller may be allowed to do it, but a required
+ * consent category (Runbook Step 36) has not been granted for this session
+ * yet — distinct from `forbidden`, whose generic wording gives a client no
+ * way to know a consent prompt, not a permission error, is what's needed.
+ */
+export const consentRequired = (correlationId?: string): AppError =>
+  appError('CONSENT_REQUIRED', 'This needs your consent first.', { correlationId });
 
 export const unsupportedMediaType = (correlationId?: string): AppError =>
   appError('UNSUPPORTED_MEDIA_TYPE', 'Unsupported content type.', { correlationId });

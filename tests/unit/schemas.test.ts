@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import {
+  consentCategorySchema,
   guestNameSchema,
   idempotencyKeySchema,
   integerPkrSchema,
@@ -25,6 +26,14 @@ describe('primitive schemas', () => {
     expect(integerPkrSchema.safeParse(0).success).toBe(true);
     expect(integerPkrSchema.safeParse(1399.5).success).toBe(false);
     expect(integerPkrSchema.safeParse(-1).success).toBe(false);
+  });
+
+  it('accepts exactly the four distinct consent categories and rejects any other value (Step 36)', () => {
+    for (const category of ['ESSENTIAL_PREFERENCES', 'META_MARKETING', 'MICROPHONE', 'RECORDING']) {
+      expect(consentCategorySchema.safeParse(category).success).toBe(true);
+    }
+    expect(consentCategorySchema.safeParse('MARKETING').success).toBe(false);
+    expect(consentCategorySchema.safeParse('essential_preferences').success).toBe(false);
   });
 
   it('bounds quantities to a sane range', () => {

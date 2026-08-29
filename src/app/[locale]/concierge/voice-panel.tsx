@@ -21,6 +21,14 @@
  * Recording is never enabled — `vapi-web-client.ts`'s doc comment. Only
  * `transcriptType === 'final'` transcript messages are kept, so the live
  * transcript doesn't flicker through every partial recognition update.
+ *
+ * Step 36: a call cannot start without MICROPHONE consent. This panel
+ * fetches the current grant on mount and shows an inline "Allow
+ * microphone access" prompt instead of the Start Call button when it
+ * isn't granted yet — but the real enforcement is server-side
+ * (`issue-vapi-token.ts` rejects `POST /api/vapi/token` with
+ * `CONSENT_REQUIRED` regardless of what this client believes), so a stale
+ * or bypassed client state can never actually reach a live call.
  */
 
 import { useEffect, useRef, useState } from 'react';
@@ -82,6 +90,10 @@ interface PendingConfirmationResponseBody {
   readonly pendingConfirmation: PendingConfirmationView | null;
 }
 
+interface ConsentGetResponseBody {
+  readonly consent: Readonly<Record<'MICROPHONE', { readonly granted: boolean }>>;
+}
+
 async function parseApiError(response: Response): Promise<string> {
   try {
     const body = (await response.json()) as { error?: { message?: string } };
@@ -114,6 +126,7 @@ function transcriptEntryFrom(
 export function VoicePanel({ locale }: VoicePanelProps) {
   const [state, setState] = useState(INITIAL_VOICE_CALL_STATE);
   const [csrfToken, setCsrfToken] = useState<string | null>(null);
+  const [microphoneConsent, setMicrophoneConsent] = useState<boolean | null>(null);
   const [pending, setPending] = useState<PendingConfirmationView | null>(null);
   const [confirmedKind, setConfirmedKind] = useState<'BOOKING' | 'EVENT' | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -139,6 +152,44 @@ export function VoicePanel({ locale }: VoicePanelProps) {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/consent')
+      .then((response) => {
+        if (!response.ok) throw new Error('consent fetch failed');
+        return response.json();
+      })
+      .then((body: ConsentGetResponseBody) => {
+        if (!cancelled) setMicrophoneConsent(body.consent.MICROPHONE.granted);
+      })
+      .catch(() => {
+        // Fail closed: an unknown consent state is treated as not granted.
+        if (!cancelled) setMicrophoneConsent(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  async function handleGrantMicrophoneConsent() {
+    if (!csrfToken) return;
+    try {
+      const response = await fetch('/api/consent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          category: 'MICROPHONE',
+          granted: true,
+          source: 'voice_panel',
+          csrfToken,
+        }),
+      });
+      if (response.ok) setMicrophoneConsent(true);
+    } catch {
+      // Leave microphoneConsent as-is; the Allow button remains available to retry.
+    }
+  }
 
   // Ends any live call if the guest navigates away mid-call.
   useEffect(() => {
@@ -175,7 +226,7 @@ export function VoicePanel({ locale }: VoicePanelProps) {
   }, [state.status]);
 
   async function handleStart() {
-    if (!csrfToken) return;
+    if (!csrfToken || microphoneConsent !== true) return;
     setError(null);
     setConfirmedKind(null);
     dispatch({ type: 'START_REQUESTED' });
@@ -268,7 +319,19 @@ export function VoicePanel({ locale }: VoicePanelProps) {
         </p>
       ) : null}
 
-      {canStart ? (
+      {canStart && microphoneConsent === false ? (
+        <div>
+          <p>{chromeText('voiceMicrophoneConsentPrompt', locale)}</p>
+          <button
+            type="button"
+            onClick={() => void handleGrantMicrophoneConsent()}
+            disabled={!csrfToken}
+          >
+            {chromeText('voiceMicrophoneConsentAllowLabel', locale)}
+          </button>
+        </div>
+      ) : null}
+      {canStart && microphoneConsent === true ? (
         <button type="button" onClick={() => void handleStart()} disabled={!csrfToken}>
           {chromeText('voiceStartCallButtonLabel', locale)}
         </button>

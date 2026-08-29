@@ -59,6 +59,7 @@ function buildDeps(overrides: Partial<IssueVapiTokenDeps> = {}): IssueVapiTokenD
     logger: fakeLogger(),
     now: () => NOW,
     envSource: { ...launchFeatureFlags, FEATURE_VOICE_EN: 'true', FEATURE_VOICE_UR: 'true' },
+    hasMicrophoneConsent: async () => true,
     ...overrides,
   };
 }
@@ -157,6 +158,51 @@ describe('issueVapiToken', () => {
 
     const secondAllowed = await issueVapiToken(deps, second);
     expect(secondAllowed.ok).toBe(true);
+  });
+
+  it('rejects with CONSENT_REQUIRED when MICROPHONE consent is not granted, without calling the issuer or the rate limiter', async () => {
+    const issuer = fakeIssuer(SUCCESSFUL_TOKEN);
+    const deps = buildDeps({ issuer, hasMicrophoneConsent: async () => false });
+    const input = {
+      sessionId: 'session-1',
+      locale: 'en' as const,
+      origin: 'https://cladium.example',
+      correlationId: 'corr-1',
+    };
+
+    const result = await issueVapiToken(deps, input);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.code).toBe('CONSENT_REQUIRED');
+    expect(issuer.calls).toHaveLength(0);
+
+    // The rate limiter must not have been consumed either — a consent
+    // check that itself burned rate-limit budget would let a guest who
+    // simply hasn't consented yet get rate-limited before ever granting it.
+    const secondAttempt = await issueVapiToken(
+      buildDeps({ hasMicrophoneConsent: async () => true }),
+      input,
+    );
+    expect(secondAttempt.ok).toBe(true);
+  });
+
+  it('a feature-flag rejection is checked before consent — no consent check runs for a disabled locale', async () => {
+    let consentChecked = false;
+    const deps = buildDeps({
+      envSource: launchFeatureFlags, // both voice flags false
+      hasMicrophoneConsent: async () => {
+        consentChecked = true;
+        return false;
+      },
+    });
+    const result = await issueVapiToken(deps, {
+      sessionId: 'session-1',
+      locale: 'en',
+      origin: 'https://cladium.example',
+      correlationId: 'corr-1',
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.code).toBe('FEATURE_DISABLED');
+    expect(consentChecked).toBe(false);
   });
 
   it('returns a safe INTERNAL error and logs only a type name, never the raw error, when the issuer throws', async () => {

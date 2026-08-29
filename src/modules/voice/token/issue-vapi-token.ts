@@ -3,15 +3,21 @@
  *
  * Session/CSRF/origin are already verified by the route's
  * `parseMutatingRequest` call before this runs (Step 20's guard, reused
- * unchanged); this function adds the two checks that guard belongs to
- * *this* route specifically: the requested locale's feature flag
+ * unchanged); this function adds the checks that guard belongs to *this*
+ * route specifically: the requested locale's feature flag
  * (`FEATURE_VOICE_EN`/`FEATURE_VOICE_UR` — the first route in this codebase
  * to actually read one, tracked as a gap since Step 24 for the guest
- * takeaway/booking/event routes) and a dedicated rate limit, tighter than
- * the text concierge's (minting a voice-call credential is a heavier
- * action than one chat turn). A thrown error (a real Vapi credential
- * missing/malformed) never reaches the client with its own message — same
- * "safe fallback, no leaked detail" shape `orchestrateTurn` (Step 27) uses.
+ * takeaway/booking/event routes), the session's MICROPHONE consent (Step
+ * 36 — `production-architecture-v2.md` §12 lists "microphone access" as
+ * its own required consent category; checked *here*, not only hidden
+ * behind a client-side control, so a guest can never reach a live Vapi
+ * call — and the browser's own native microphone permission prompt —
+ * without first granting app-level consent), and a dedicated rate limit,
+ * tighter than the text concierge's (minting a voice-call credential is a
+ * heavier action than one chat turn). A thrown error (a real Vapi
+ * credential missing/malformed) never reaches the client with its own
+ * message — same "safe fallback, no leaked detail" shape `orchestrateTurn`
+ * (Step 27) uses.
  *
  * Step 33 addition: the response also echoes back `sessionId`. The guest
  * session cookie is `HttpOnly` (`security/session.ts`) — client JS cannot
@@ -26,7 +32,13 @@
  */
 
 import { err, ok, type Result } from '../../../lib/result';
-import { featureDisabled, internalError, rateLimited, type AppError } from '../../../lib/errors';
+import {
+  consentRequired,
+  featureDisabled,
+  internalError,
+  rateLimited,
+  type AppError,
+} from '../../../lib/errors';
 import { isFeatureEnabled, type FeatureFlagEnv } from '../../../lib/env.server';
 import type { Logger } from '../../../lib/logging';
 import type { Locale } from '../../../lib/i18n/locale';
@@ -42,6 +54,8 @@ export interface IssueVapiTokenDeps {
   readonly issuer: VapiTokenIssuer;
   readonly rateLimiter: RateLimiter;
   readonly logger: Logger;
+  /** Step 36: `modules/consent/deps.ts`'s `hasConsent`, bound to `MICROPHONE`. */
+  readonly hasMicrophoneConsent: (sessionId: string) => Promise<boolean>;
   readonly now?: () => Date;
   /** Defaults to `process.env` at every real call site — injectable so tests never mutate global env state. */
   readonly envSource?: EnvSource;
@@ -72,6 +86,11 @@ export async function issueVapiToken(
 
   if (!isFeatureEnabled(FLAG_BY_LOCALE[input.locale], deps.envSource)) {
     return err(featureDisabled(input.correlationId));
+  }
+
+  const microphoneConsent = await deps.hasMicrophoneConsent(input.sessionId);
+  if (!microphoneConsent) {
+    return err(consentRequired(input.correlationId));
   }
 
   const rateDecision = await deps.rateLimiter.consume(

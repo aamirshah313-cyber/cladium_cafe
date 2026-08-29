@@ -215,6 +215,59 @@ export const chrome = {
     en: 'That needs more than I can help with right now — please reach us on WhatsApp ({whatsapp}) and our team will help directly.',
     ur: 'اس کے لیے ابھی میری مدد کافی نہیں ہے — براہ کرم واٹس ایپ ({whatsapp}) پر ہم سے رابطہ کریں، ہماری ٹیم براہ راست آپ کی مدد کرے گی۔',
   },
+  /** Step 36 (consent and privacy controls). */
+  navPrivacyLabel: { en: 'Privacy', ur: 'رازداری' },
+  privacyPageHeading: { en: 'Privacy and consent', ur: 'رازداری اور رضامندی' },
+  privacyNoticeUnavailableHeading: {
+    en: "Our full privacy notice isn't published yet",
+    ur: 'ہماری مکمل رازداری کی پالیسی ابھی شائع نہیں ہوئی',
+  },
+  privacyNoticeUnavailableBody: {
+    en: 'The complete privacy notice and data-retention schedule are being reviewed by the business owner before publication. For any privacy question in the meantime, please contact us on WhatsApp.',
+    ur: 'مکمل رازداری کی پالیسی اور ڈیٹا رکھنے کا شیڈول اشاعت سے پہلے کاروبار کے مالک کے زیرِ جائزہ ہے۔ اس دوران کسی بھی رازداری سے متعلق سوال کے لیے، براہ کرم ہم سے واٹس ایپ پر رابطہ کریں۔',
+  },
+  consentPreferencesHeading: { en: 'Your consent preferences', ur: 'آپ کی رضامندی کی ترجیحات' },
+  consentPreferencesIntro: {
+    en: 'Essential preferences, Meta marketing, microphone access, and recording are tracked separately. You can change any of them here at any time.',
+    ur: 'بنیادی ترجیحات، Meta مارکیٹنگ، مائیکروفون تک رسائی، اور ریکارڈنگ کو الگ الگ ٹریک کیا جاتا ہے۔ آپ ان میں سے کسی کو بھی کسی بھی وقت یہاں تبدیل کر سکتے ہیں۔',
+  },
+  consentEssentialLabel: { en: 'Essential preferences', ur: 'بنیادی ترجیحات' },
+  consentEssentialDescription: {
+    en: 'Remembers your language and Day/Night theme choice. Required for the site to work, so this is always on.',
+    ur: 'آپ کی زبان اور ڈے/نائٹ تھیم کا انتخاب یاد رکھتا ہے۔ سائٹ کے کام کرنے کے لیے ضروری ہے، اس لیے یہ ہمیشہ فعال رہتا ہے۔',
+  },
+  consentMetaMarketingLabel: { en: 'Meta marketing', ur: 'Meta مارکیٹنگ' },
+  consentMetaMarketingDescription: {
+    en: 'Lets us measure how guests use the site for Meta advertising. Off by default; currently not in use.',
+    ur: 'ہمیں Meta اشتہارات کے لیے یہ ناپنے دیتا ہے کہ مہمان سائٹ کو کیسے استعمال کرتے ہیں۔ بطور ڈیفالٹ بند ہے؛ فی الحال استعمال میں نہیں۔',
+  },
+  consentMicrophoneLabel: { en: 'Microphone access', ur: 'مائیکروفون تک رسائی' },
+  consentMicrophoneDescription: {
+    en: 'Required before starting a voice call with the concierge. Off by default.',
+    ur: 'قونصیرج کے ساتھ صوتی کال شروع کرنے سے پہلے درکار ہے۔ بطور ڈیفالٹ بند ہے۔',
+  },
+  consentRecordingLabel: { en: 'Call recording', ur: 'کال ریکارڈنگ' },
+  consentRecordingDescription: {
+    en: 'Voice calls are not recorded today. This stays off unless recording is enabled in the future, with its own separate notice.',
+    ur: 'صوتی کالیں آج ریکارڈ نہیں کی جاتیں۔ یہ بند رہے گا جب تک مستقبل میں ریکارڈنگ کو اپنے الگ نوٹس کے ساتھ فعال نہ کیا جائے۔',
+  },
+  consentAlwaysOnLabel: { en: 'Always on', ur: 'ہمیشہ فعال' },
+  consentGrantedStatusLabel: { en: 'Allowed', ur: 'اجازت شدہ' },
+  consentNotGrantedStatusLabel: { en: 'Not allowed', ur: 'اجازت نہیں' },
+  consentGrantButtonLabel: { en: 'Allow', ur: 'اجازت دیں' },
+  consentRevokeButtonLabel: { en: 'Turn off', ur: 'بند کریں' },
+  consentStaleNotice: {
+    en: 'Our policy for this changed since you last chose. Please review it again.',
+    ur: 'آپ کے آخری انتخاب کے بعد سے اس کی پالیسی تبدیل ہو گئی ہے۔ براہ کرم دوبارہ جائزہ لیں۔',
+  },
+  voiceMicrophoneConsentPrompt: {
+    en: 'Starting a voice call needs your consent to use the microphone.',
+    ur: 'صوتی کال شروع کرنے کے لیے مائیکروفون استعمال کرنے کی آپ کی رضامندی درکار ہے۔',
+  },
+  voiceMicrophoneConsentAllowLabel: {
+    en: 'Allow microphone access',
+    ur: 'مائیکروفون تک رسائی کی اجازت دیں',
+  },
 } as const satisfies Record<string, ChromeCopy>;
 
 export type ChromeKey = keyof typeof chrome;

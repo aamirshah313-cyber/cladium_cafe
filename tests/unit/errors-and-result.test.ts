@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   appError,
+  consentRequired,
   featureDisabled,
   httpStatusFor,
   internalError,
@@ -62,6 +63,13 @@ describe('AppError', () => {
   it('reports a disabled feature as 404 so it does not advertise itself', () => {
     expect(featureDisabled().status).toBe(404);
     expect(httpStatusFor('FEATURE_DISABLED')).toBe(404);
+  });
+
+  it('reports a missing consent grant as 403, distinct from a generic FORBIDDEN', () => {
+    expect(consentRequired().status).toBe(403);
+    expect(httpStatusFor('CONSENT_REQUIRED')).toBe(403);
+    expect(consentRequired().code).toBe('CONSENT_REQUIRED');
+    expect(consentRequired().message).toMatch(/consent/i);
   });
 
   it('uses a guest-appropriate message for a stale review', () => {

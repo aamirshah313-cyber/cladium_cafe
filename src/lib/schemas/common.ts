@@ -15,6 +15,20 @@ export type Locale = z.infer<typeof localeSchema>;
 export const themeSchema = z.enum(['day', 'night']);
 export type Theme = z.infer<typeof themeSchema>;
 
+/**
+ * Runbook Step 36 (`data-model-v2.md`'s `consent_events.category`, matching
+ * the database `consent_category` enum exactly, migration `20260824130004`).
+ * "Categories are distinct: essential preferences, Meta marketing,
+ * microphone, and recording" — never bundled into one grant/revoke.
+ */
+export const consentCategorySchema = z.enum([
+  'ESSENTIAL_PREFERENCES',
+  'META_MARKETING',
+  'MICROPHONE',
+  'RECORDING',
+]);
+export type ConsentCategory = z.infer<typeof consentCategorySchema>;
+
 /** Money is integer PKR everywhere — never a float (data-model-v2.md §1). */
 export const integerPkrSchema = z
   .number()
