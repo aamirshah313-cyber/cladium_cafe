@@ -73,6 +73,27 @@ describe('parseFeatureFlags', () => {
       expect(isFeatureEnabled(flag, launchFeatureFlags)).toBe(false);
     }
   });
+
+  it('Step 39: never throws when an unrelated flag is missing — checks only its own key', () => {
+    // The full batch (parseFeatureFlags) still throws here...
+    expect(() => parseFeatureFlags({ FEATURE_VOICE_EN: 'true' })).toThrow();
+    // ...but isFeatureEnabled for one specific, present flag must not,
+    // regardless of every other flag's configuration state. This is the
+    // real, verified failure Step 39's E2E/accessibility run found:
+    // /concierge crashed with every flag unset instead of rendering its
+    // flag-off state.
+    expect(isFeatureEnabled('FEATURE_VOICE_EN', { FEATURE_VOICE_EN: 'true' })).toBe(true);
+    expect(isFeatureEnabled('FEATURE_VOICE_UR', { FEATURE_VOICE_EN: 'true' })).toBe(false);
+  });
+
+  it('Step 39: degrades to false (never throws) when the source is completely empty', () => {
+    expect(isFeatureEnabled('FEATURE_TEXT_CONCIERGE', {})).toBe(false);
+    expect(isFeatureEnabled('FEATURE_VOICE_EN', {})).toBe(false);
+  });
+
+  it("Step 39: degrades to false for a malformed (non-'true'/'false') value, never throws", () => {
+    expect(isFeatureEnabled('FEATURE_PUBLIC_SITE', { FEATURE_PUBLIC_SITE: 'yes' })).toBe(false);
+  });
 });
 
 describe('parseStaffDevAccounts', () => {

@@ -34,15 +34,17 @@ export default function RootNotFound() {
               {chrome.notFoundBody.ur}
             </span>
           </p>
-          <ul>
-            {LOCALES.map((locale) => (
-              <li key={locale}>
-                <a href={`/${locale}`} lang={locale} dir={localeDirection(locale)}>
-                  {chrome.navHomeLabel[locale]}
-                </a>
-              </li>
-            ))}
-          </ul>
+          <nav aria-label="Home / ہوم">
+            <ul>
+              {LOCALES.map((locale) => (
+                <li key={locale}>
+                  <a href={`/${locale}`} lang={locale} dir={localeDirection(locale)}>
+                    {chrome.navHomeLabel[locale]}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </nav>
         </div>
       </body>
     </html>

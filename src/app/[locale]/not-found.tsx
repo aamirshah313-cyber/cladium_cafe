@@ -28,15 +28,17 @@ export default function LocaleNotFound() {
           {chrome.notFoundBody.ur}
         </span>
       </p>
-      <ul>
-        {LOCALES.map((locale) => (
-          <li key={locale}>
-            <Link href={`/${locale}`} lang={locale} dir={localeDirection(locale)}>
-              {chrome.navHomeLabel[locale]}
-            </Link>
-          </li>
-        ))}
-      </ul>
+      <nav aria-label="Home / ہوم">
+        <ul>
+          {LOCALES.map((locale) => (
+            <li key={locale}>
+              <Link href={`/${locale}`} lang={locale} dir={localeDirection(locale)}>
+                {chrome.navHomeLabel[locale]}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </nav>
     </div>
   );
 }

@@ -92,6 +92,7 @@ interface PendingConfirmationResponseBody {
 
 interface ConsentGetResponseBody {
   readonly consent: Readonly<Record<'MICROPHONE', { readonly granted: boolean }>>;
+  readonly csrfToken: string;
 }
 
 async function parseApiError(response: Response): Promise<string> {
@@ -138,21 +139,17 @@ export function VoicePanel({ locale }: VoicePanelProps) {
     setState((prior) => voiceCallReducer(prior, event));
   }
 
-  useEffect(() => {
-    let cancelled = false;
-    fetch('/api/session/csrf')
-      .then((response) => response.json())
-      .then((body: { csrfToken?: string }) => {
-        if (!cancelled && body.csrfToken) setCsrfToken(body.csrfToken);
-      })
-      .catch(() => {
-        if (!cancelled) setError('Could not start a session. Please reload the page.');
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
+  // One request, not two independent ones: `GET /api/consent` already
+  // returns both the current MICROPHONE grant *and* a `csrfToken` for the
+  // same resolved session (Step 36). Two separate parallel fetches here —
+  // this one plus a `GET /api/session/csrf` — each mint their own fresh
+  // session when no cookie exists yet (a guest's very first render, which
+  // every fresh browser context/test run is), and whichever response's
+  // `Set-Cookie` lands last silently wins; the CSRF token from the other,
+  // now-abandoned session would then fail verification on the next
+  // mutating request. A real, reproduced bug (Step 39's E2E suite caught
+  // it as an intermittent "Start voice call never appears" failure) —
+  // fixed by deriving both values from the one request.
   useEffect(() => {
     let cancelled = false;
     fetch('/api/consent')
@@ -161,11 +158,15 @@ export function VoicePanel({ locale }: VoicePanelProps) {
         return response.json();
       })
       .then((body: ConsentGetResponseBody) => {
-        if (!cancelled) setMicrophoneConsent(body.consent.MICROPHONE.granted);
+        if (cancelled) return;
+        setMicrophoneConsent(body.consent.MICROPHONE.granted);
+        setCsrfToken(body.csrfToken);
       })
       .catch(() => {
+        if (cancelled) return;
         // Fail closed: an unknown consent state is treated as not granted.
-        if (!cancelled) setMicrophoneConsent(false);
+        setMicrophoneConsent(false);
+        setError('Could not start a session. Please reload the page.');
       });
     return () => {
       cancelled = true;

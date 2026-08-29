@@ -253,12 +253,29 @@ export function parseWhatsAppWebhookVerifyToken(
   return whatsAppWebhookVerifyTokenSchema.safeParse(source).data?.WHATSAPP_WEBHOOK_VERIFY_TOKEN;
 }
 
-/** Narrow boolean view of a flag, for readable call sites. */
+/**
+ * Narrow, per-flag view of a launch flag — the same "don't require every
+ * unrelated var to be configured" reasoning as `parseSessionSecret`/
+ * `parseCronSecret`/`parseAnthropicApiKey` above, now applied to feature
+ * flags: this checks only `flag`'s own raw value against `booleanString`,
+ * never routing through `parseFeatureFlags`'s full-batch validation.
+ * `parseFeatureFlags` itself is unchanged and still throws if *any* flag
+ * is missing — a legitimate deploy-time "did we configure everything"
+ * check for a caller that wants the whole set — but no per-request
+ * runtime caller should ever have one unrelated missing flag turn "is
+ * voice enabled?" into a 500 instead of a clean "disabled." Found as a
+ * real, verified failure during Step 39's E2E/accessibility matrix run:
+ * `/concierge` crashed in this all-flags-unset sandbox instead of
+ * rendering its flag-off state, blocking coverage of "chat, voice shell"
+ * entirely — the same standing gap `/api/whatsapp/webhook` (Step 38)
+ * already worked around locally; this fixes it at the source so every
+ * caller benefits, not just one route.
+ */
 export function isFeatureEnabled(
   flag: keyof FeatureFlagEnv,
   source: EnvSource = process.env,
 ): boolean {
-  return parseFeatureFlags(source)[flag] === 'true';
+  return booleanString.safeParse(source[flag]).data === 'true';
 }
 
 /**

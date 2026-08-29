@@ -7,6 +7,12 @@
  * only and unlocalized: this is an internal operational tool, not the
  * bilingual guest-facing experience CLAUDE.md's language requirements
  * describe, and it is explicitly excluded from search indexing.
+ *
+ * `<main>` wraps every page here, matching `[locale]/layout.tsx`'s own
+ * shared landmark — found missing during Step 39's accessibility scan
+ * (zero `<main>`/`role="main"` existed anywhere under `app/staff/`, an
+ * axe `landmark-one-main` violation) and fixed here, once, for every
+ * staff page at once.
  */
 
 import type { Metadata } from 'next';
@@ -21,7 +27,9 @@ export const metadata: Metadata = {
 export default function StaffLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
-      <body data-theme="day">{children}</body>
+      <body data-theme="day">
+        <main>{children}</main>
+      </body>
     </html>
   );
 }

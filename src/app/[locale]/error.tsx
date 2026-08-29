@@ -34,7 +34,9 @@ export default function LocaleError({ error, reset }: { error: Error; reset: () 
       <button type="button" onClick={() => reset()}>
         {chromeText('errorRetry', locale)}
       </button>
-      <Link href={`/${locale}`}>{chromeText('errorHomeLink', locale)}</Link>
+      <nav aria-label={chromeText('errorHomeLink', locale)}>
+        <Link href={`/${locale}`}>{chromeText('errorHomeLink', locale)}</Link>
+      </nav>
     </div>
   );
 }

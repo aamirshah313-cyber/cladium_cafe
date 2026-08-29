@@ -83,6 +83,24 @@ a {
   color: var(--action-primary);
 }
 
+/*
+ * WCAG 2.2 AA 2.5.8 (Target Size Minimum) — Runbook Step 39. Found by a
+ * real axe `target-size` violation on the primary nav and language
+ * switcher: plain inline text links render a clickable box smaller than
+ * the required 24×24 CSS px, and/or sit too close to an adjacent link's
+ * box for the "sufficient spacing" alternative. Scoped to `nav a` only —
+ * link/nav lists are standalone controls, not "inline within a sentence"
+ * (WCAG's own exemption for prose links like the WhatsApp handoff text,
+ * left untouched). No offsetting negative margin here deliberately — an
+ * earlier attempt at one caused the enlarged boxes to overlap adjacent
+ * links (a real, axe-confirmed regression), so the small increase in
+ * visible spacing between nav items is accepted rather than clawed back.
+ */
+nav a {
+  display: inline-block;
+  padding: 0.375rem 0.5rem;
+}
+
 button {
   font: inherit;
   color: var(--text-primary);

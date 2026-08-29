@@ -16,17 +16,10 @@
  * first (tracked in the readiness report, not forgotten). No production
  * message can ever be sent by this route — it only ever receives.
  *
- * `isWhatsAppCloudEnabled` wraps `isFeatureEnabled` in a try/catch rather
- * than calling it directly: `parseFeatureFlags` (Step 6) requires *every*
- * declared `FEATURE_*` var to be set and throws if even one unrelated
- * flag is missing — a real, already-tracked gap (`.continuum/TASKS.md`,
- * found during Step 36's live check) that would otherwise turn "this one
- * flag is off" into an uncaught 500 here whenever some *other* flag is
- * unconfigured. This route's own correctness doesn't depend on every
- * other flag being set, so it degrades to the same safe "disabled" 404
- * either way — a narrow, local fix scoped to this file only, not a
- * change to `isFeatureEnabled`/`parseFeatureFlags` themselves, which the
- * tracked item correctly notes needs its own separate review.
+ * Step 38's first draft wrapped `isFeatureEnabled` in a local try/catch
+ * here, since it used to throw whenever any *unrelated* `FEATURE_*` var
+ * was unset. Step 39 fixed that at the source (`isFeatureEnabled` now
+ * checks only its own flag), so this route calls it directly again.
  */
 
 import type { NextRequest } from 'next/server';
@@ -47,18 +40,10 @@ import {
 
 const logger = createLogger();
 
-function isWhatsAppCloudEnabled(): boolean {
-  try {
-    return isFeatureEnabled('FEATURE_WHATSAPP_CLOUD');
-  } catch {
-    return false;
-  }
-}
-
 export async function GET(request: NextRequest) {
   const correlationId = correlationIdFrom(request.headers);
 
-  if (!isWhatsAppCloudEnabled()) {
+  if (!isFeatureEnabled('FEATURE_WHATSAPP_CLOUD')) {
     const disabled = featureDisabled(correlationId);
     return NextResponse.json({ error: toPublicError(disabled) }, { status: disabled.status });
   }
@@ -86,7 +71,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const correlationId = correlationIdFrom(request.headers);
 
-  if (!isWhatsAppCloudEnabled()) {
+  if (!isFeatureEnabled('FEATURE_WHATSAPP_CLOUD')) {
     const disabled = featureDisabled(correlationId);
     return NextResponse.json({ error: toPublicError(disabled) }, { status: disabled.status });
   }

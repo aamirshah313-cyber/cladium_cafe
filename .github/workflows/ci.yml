@@ -73,3 +73,42 @@ jobs:
       # that must never be inlined into browser JavaScript.
       - name: Assert no server secrets in build output
         run: npm run scan:build-output
+
+  # Runbook Step 39 — cross-product E2E and accessibility (Playwright/axe).
+  # A separate job from `verify`: it starts a real dev server
+  # (`playwright.config.ts`'s `webServer`) and downloads a Chromium binary,
+  # both real friction `verify`'s fast local checks deliberately avoid.
+  # `webServer.env` supplies only local-only, non-secret test values
+  # (arbitrary SESSION_SECRET/CRON_SECRET strings, feature flags, dev-only
+  # STAFF_DEV_ACCOUNTS) — no repository secret, consistent with this file's
+  # own standing rule.
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Playwright E2E/accessibility matrix
+        run: npx playwright test
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14
