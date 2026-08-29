@@ -186,6 +186,73 @@ export function parseMetaCredentials(source: EnvSource = process.env): MetaCrede
   };
 }
 
+const whatsAppCredentialsSchema = serverEnvSchema
+  .pick({
+    WHATSAPP_PHONE_NUMBER_ID: true,
+    WHATSAPP_BUSINESS_ACCOUNT_ID: true,
+    WHATSAPP_ACCESS_TOKEN: true,
+  })
+  .extend({
+    WHATSAPP_PHONE_NUMBER_ID: z.string().min(1),
+    WHATSAPP_BUSINESS_ACCOUNT_ID: z.string().min(1),
+    WHATSAPP_ACCESS_TOKEN: z.string().min(1),
+  });
+
+export interface WhatsAppCredentials {
+  readonly phoneNumberId: string;
+  readonly businessAccountId: string;
+  readonly accessToken: string;
+}
+
+/**
+ * Runbook Step 38 — same "returns `undefined` rather than throwing" shape
+ * as `parseMetaCredentials`: all three of `WHATSAPP_PHONE_NUMBER_ID`/
+ * `WHATSAPP_BUSINESS_ACCOUNT_ID`/`WHATSAPP_ACCESS_TOKEN` must be present,
+ * or `whatsapp-client.ts#sendTemplateMessage` must fail closed rather than
+ * 500. None are set in `.env.example` — `cladium-research/operations/
+ * whatsapp-cloud-readiness.md`'s prerequisites must pass and the owner
+ * must approve before any environment ever configures these.
+ */
+export function parseWhatsAppCredentials(
+  source: EnvSource = process.env,
+): WhatsAppCredentials | undefined {
+  const parsed = whatsAppCredentialsSchema.safeParse(source);
+  if (!parsed.success) return undefined;
+  return {
+    phoneNumberId: parsed.data.WHATSAPP_PHONE_NUMBER_ID,
+    businessAccountId: parsed.data.WHATSAPP_BUSINESS_ACCOUNT_ID,
+    accessToken: parsed.data.WHATSAPP_ACCESS_TOKEN,
+  };
+}
+
+const whatsAppWebhookSecretSchema = serverEnvSchema.pick({ WHATSAPP_APP_SECRET: true });
+
+/**
+ * Narrow accessor for just `WHATSAPP_APP_SECRET` — the key behind Meta's
+ * `X-Hub-Signature-256` webhook signature (`whatsapp-webhook-auth.ts`).
+ * Same fail-closed-to-`undefined` shape as `parseVapiWebhookSecret`: an
+ * unconfigured secret must make every inbound `/api/whatsapp/webhook`
+ * `POST` fail closed, not 500.
+ */
+export function parseWhatsAppWebhookSecret(source: EnvSource = process.env): string | undefined {
+  return whatsAppWebhookSecretSchema.safeParse(source).data?.WHATSAPP_APP_SECRET;
+}
+
+const whatsAppWebhookVerifyTokenSchema = serverEnvSchema.pick({
+  WHATSAPP_WEBHOOK_VERIFY_TOKEN: true,
+});
+
+/**
+ * Narrow accessor for just `WHATSAPP_WEBHOOK_VERIFY_TOKEN` — a distinct
+ * secret from `WHATSAPP_APP_SECRET`, used only for Meta's one-time `GET`
+ * subscription handshake (`hub.verify_token`), never for signing.
+ */
+export function parseWhatsAppWebhookVerifyToken(
+  source: EnvSource = process.env,
+): string | undefined {
+  return whatsAppWebhookVerifyTokenSchema.safeParse(source).data?.WHATSAPP_WEBHOOK_VERIFY_TOKEN;
+}
+
 /** Narrow boolean view of a flag, for readable call sites. */
 export function isFeatureEnabled(
   flag: keyof FeatureFlagEnv,

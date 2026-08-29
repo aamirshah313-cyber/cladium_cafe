@@ -7,6 +7,9 @@ import {
   parseMetaCredentials,
   parseServerEnv,
   parseStaffDevAccounts,
+  parseWhatsAppCredentials,
+  parseWhatsAppWebhookSecret,
+  parseWhatsAppWebhookVerifyToken,
 } from '../../src/lib/env.server';
 import { launchFeatureFlags, validClientEnv, validServerEnv } from '../fixtures/env';
 
@@ -146,5 +149,41 @@ describe('parseMetaCredentials — Runbook Step 37', () => {
         META_CONVERSIONS_API_TOKEN: 'token-1',
       }),
     ).toBeDefined();
+  });
+});
+
+describe('parseWhatsAppCredentials — Runbook Step 38', () => {
+  it('returns undefined, not a throw, when unset — matches .env.example', () => {
+    expect(parseWhatsAppCredentials({})).toBeUndefined();
+  });
+
+  it('returns undefined when only some of the three vars are configured', () => {
+    expect(parseWhatsAppCredentials({ WHATSAPP_PHONE_NUMBER_ID: 'phone-1' })).toBeUndefined();
+  });
+
+  it('returns the parsed credentials once all three are configured', () => {
+    expect(
+      parseWhatsAppCredentials({
+        WHATSAPP_PHONE_NUMBER_ID: 'phone-1',
+        WHATSAPP_BUSINESS_ACCOUNT_ID: 'waba-1',
+        WHATSAPP_ACCESS_TOKEN: 'token-1',
+      }),
+    ).toEqual({ phoneNumberId: 'phone-1', businessAccountId: 'waba-1', accessToken: 'token-1' });
+  });
+});
+
+describe('parseWhatsAppWebhookSecret / parseWhatsAppWebhookVerifyToken — Runbook Step 38', () => {
+  it('return undefined, not a throw, when unset', () => {
+    expect(parseWhatsAppWebhookSecret({})).toBeUndefined();
+    expect(parseWhatsAppWebhookVerifyToken({})).toBeUndefined();
+  });
+
+  it('return the configured value, independently of each other and of WHATSAPP_ACCESS_TOKEN', () => {
+    expect(parseWhatsAppWebhookSecret({ WHATSAPP_APP_SECRET: 'app-secret-1' })).toBe(
+      'app-secret-1',
+    );
+    expect(
+      parseWhatsAppWebhookVerifyToken({ WHATSAPP_WEBHOOK_VERIFY_TOKEN: 'verify-token-1' }),
+    ).toBe('verify-token-1');
   });
 });
