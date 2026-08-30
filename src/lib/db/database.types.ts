@@ -1596,7 +1596,22 @@ export type Database = {
       }
     }
     Functions: {
-      [_ in never]: never
+      current_customer_session_id: { Args: never; Returns: string }
+      current_staff_id: { Args: never; Returns: string }
+      is_owner_or_manager: { Args: never; Returns: boolean }
+      is_published_menu_version: {
+        Args: { version_id: string }
+        Returns: boolean
+      }
+      is_staff: { Args: never; Returns: boolean }
+      purge_expired_consent_events: {
+        Args: { retention_days: number }
+        Returns: number
+      }
+      staff_has_role: {
+        Args: { required: Database["public"]["Enums"]["staff_role"][] }
+        Returns: boolean
+      }
     }
     Enums: {
       actor_type: "GUEST" | "STAFF" | "SYSTEM"
