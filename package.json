@@ -17,6 +17,7 @@
     "test:e2e:report": "playwright show-report",
     "validate:sources": "node scripts/validate/run-all.mjs",
     "scan:secrets": "node scripts/security/scan-secrets.mjs",
+    "scan:dependencies": "npm audit --audit-level=high",
     "scan:build-output": "node scripts/security/scan-build-output.mjs",
     "check:db-config": "node scripts/db/check-db-config.mjs",
     "db:start": "npx supabase start",
@@ -30,7 +31,7 @@
     "db:test:schema": "docker exec -i supabase_db_cladium-cafe-resort psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < scripts/db/schema-tests.sql",
     "db:test:rls": "docker exec -i supabase_db_cladium-cafe-resort psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < scripts/db/rls-tests.sql",
     "db:test": "npm run db:test:schema && npm run db:test:rls",
-    "verify": "npm run format && npm run lint && npm run typecheck && npm test && npm run validate:sources && npm run test:scripts && npm run check:db-config && npm run scan:secrets && npm run build && npm run scan:build-output"
+    "verify": "npm run format && npm run lint && npm run typecheck && npm test && npm run validate:sources && npm run test:scripts && npm run check:db-config && npm run scan:secrets && npm run scan:dependencies && npm run build && npm run scan:build-output"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.121.0",

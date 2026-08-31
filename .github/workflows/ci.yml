@@ -65,6 +65,14 @@ jobs:
       - name: Secret scan
         run: npm run scan:secrets
 
+      # Step 45 (D-051): this used to be a one-time manual check (Step 40)
+      # never repeated since — a real dependency-scanning gap against
+      # release-gates-v2.md Gate 8/9. `--audit-level=high` fails the build
+      # on high/critical advisories; low/moderate stay visible in the job
+      # log without blocking merges on noise.
+      - name: Dependency vulnerability scan
+        run: npm run scan:dependencies
+
       - name: Production build
         run: npm run build
 

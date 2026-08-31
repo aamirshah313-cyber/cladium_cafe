@@ -22,6 +22,7 @@ Read `CLAUDE.md` first — its non-negotiable operating rules (no delivery, requ
 | `npm run test:scripts`      | Node built-in tests for `scripts/**` tooling                                        |
 | `npm run validate:sources`  | Deterministic business/menu/asset validators + owner sign-off report                |
 | `npm run scan:secrets`      | Secret scan over the working tree                                                   |
+| `npm run scan:dependencies` | `npm audit --audit-level=high` — fails on high/critical advisories                  |
 | `npm run scan:build-output` | Assert no server-only values reached the client bundle (run after `build`)          |
 | `npm run check:db-config`   | Database connection-routing invariants (needs no Docker or CLI)                     |
 | `npm run verify`            | Everything above, in CI order — run this before opening a PR                        |
