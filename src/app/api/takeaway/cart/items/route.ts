@@ -28,6 +28,7 @@ import { trackMetaEvent } from '../../../../../modules/integrations/meta-events'
 
 export async function POST(request: NextRequest) {
   const { result, setCookieHeader } = await parseMutatingRequest(request, addItemBodySchema, {
+    featureFlag: 'FEATURE_TAKEAWAY_REQUESTS',
     rateLimit: {
       limiter: guestRouteRateLimiter,
       rule: CART_MUTATION_RATE_LIMIT_RULE,

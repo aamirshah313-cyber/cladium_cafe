@@ -22,6 +22,7 @@ import { prepareEventRequest } from '../../../../modules/events/submission-servi
 
 export async function POST(request: NextRequest) {
   const { result, setCookieHeader } = await parseMutatingRequest(request, eventReviewBodySchema, {
+    featureFlag: 'FEATURE_EVENT_REQUESTS',
     rateLimit: {
       limiter: guestRouteRateLimiter,
       rule: REQUEST_REVIEW_RATE_LIMIT_RULE,

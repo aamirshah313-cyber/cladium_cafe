@@ -22,6 +22,7 @@ import { prepareBookingRequest } from '../../../../modules/bookings/submission-s
 
 export async function POST(request: NextRequest) {
   const { result, setCookieHeader } = await parseMutatingRequest(request, bookingReviewBodySchema, {
+    featureFlag: 'FEATURE_BOOKING_REQUESTS',
     rateLimit: {
       limiter: guestRouteRateLimiter,
       rule: REQUEST_REVIEW_RATE_LIMIT_RULE,

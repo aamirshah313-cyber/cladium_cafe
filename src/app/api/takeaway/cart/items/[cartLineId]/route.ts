@@ -34,6 +34,7 @@ const cartLineRateLimit = {
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   const { cartLineId } = await params;
   const { result, setCookieHeader } = await parseMutatingRequest(request, modifyItemBodySchema, {
+    featureFlag: 'FEATURE_TAKEAWAY_REQUESTS',
     rateLimit: cartLineRateLimit,
   });
   if (!result.ok) return respondResult(result, { setCookieHeader });
@@ -49,6 +50,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   const { cartLineId } = await params;
   const { result, setCookieHeader } = await parseMutatingRequest(request, removeItemBodySchema, {
+    featureFlag: 'FEATURE_TAKEAWAY_REQUESTS',
     rateLimit: cartLineRateLimit,
   });
   if (!result.ok) return respondResult(result, { setCookieHeader });

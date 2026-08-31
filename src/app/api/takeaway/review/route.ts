@@ -20,6 +20,7 @@ import { reviewBodySchema } from '../../../../modules/takeaway/schemas';
 
 export async function POST(request: NextRequest) {
   const { result, setCookieHeader } = await parseMutatingRequest(request, reviewBodySchema, {
+    featureFlag: 'FEATURE_TAKEAWAY_REQUESTS',
     rateLimit: {
       limiter: guestRouteRateLimiter,
       rule: REQUEST_REVIEW_RATE_LIMIT_RULE,

@@ -2,27 +2,30 @@
  * Shared boilerplate for a mutating (`POST`/`PATCH`/`DELETE`) JSON API route
  * — Runbook Step 20.
  *
- * In spec order (request-limits before parsing, session before CSRF, since
- * CSRF verification needs the session ID): content-type/body-size check,
- * session resolution (minting a cookie if needed), an optional rate-limit
- * check (Step 40 — cheap-first, same "reject before spending effort"
- * reasoning as the content-type/body-size checks above it; keyed off the
- * session ID, so it must run after session resolution), JSON parse, schema
- * validation, then the CSRF/origin guard. `setCookieHeader` is always
- * returned, on both the success and failure path, so a route can still
- * attach a freshly minted session cookie even when the request itself is
- * rejected (e.g. a client that posts before ever calling `GET
- * /api/takeaway/cart` gets a session — and can retry with its CSRF token —
- * even though this specific call fails).
+ * In spec order (cheapest/most-revealing-nothing checks first): an optional
+ * feature-flag check (Step 45, D-051 — a disabled feature must not confirm
+ * it exists, `errors.ts#featureDisabled`'s own doc comment, so this runs
+ * before anything else, including whether the body even parses),
+ * content-type/body-size check, session resolution (minting a cookie if
+ * needed), an optional rate-limit check (Step 40 — cheap-first, same
+ * "reject before spending effort" reasoning; keyed off the session ID, so
+ * it must run after session resolution), JSON parse, schema validation,
+ * then the CSRF/origin guard. `setCookieHeader` is always returned, on
+ * both the success and failure path, so a route can still attach a freshly
+ * minted session cookie even when the request itself is rejected (e.g. a
+ * client that posts before ever calling `GET /api/takeaway/cart` gets a
+ * session — and can retry with its CSRF token — even though this specific
+ * call fails).
  */
 
 import type { NextRequest } from 'next/server';
 import type { z } from 'zod';
 import { err, ok, type Result } from '../result';
-import { rateLimited, validationFailed, type AppError } from '../errors';
+import { featureDisabled, rateLimited, validationFailed, type AppError } from '../errors';
 import { correlationIdFrom } from '../correlation';
 import { parseAtBoundary } from '../schemas/parse';
 import { checkBodySize, checkContentType } from '../security/request-limits';
+import { isFeatureEnabled, type FeatureFlagEnv } from '../env.server';
 import type { RateLimiter, RateLimitRule } from '../security/rate-limit';
 import { guardStateChangingRequest, resolveSessionContext } from './session-route';
 
@@ -48,7 +51,11 @@ export interface MutatingRateLimitOptions {
 export async function parseMutatingRequest<T extends { csrfToken: string }>(
   request: NextRequest,
   schema: z.ZodType<T>,
-  options?: { readonly rateLimit?: MutatingRateLimitOptions },
+  options?: {
+    readonly rateLimit?: MutatingRateLimitOptions;
+    /** A disabled flag fails closed to `FEATURE_DISABLED` (404) before any other check runs — see the module doc comment. */
+    readonly featureFlag?: keyof FeatureFlagEnv;
+  },
 ): Promise<MutatingRequestOutcome<T>> {
   const correlationId = correlationIdFrom(request.headers);
   const fail = (
@@ -58,6 +65,10 @@ export async function parseMutatingRequest<T extends { csrfToken: string }>(
     setCookieHeader,
     result: err(error),
   });
+
+  if (options?.featureFlag && !isFeatureEnabled(options.featureFlag)) {
+    return fail(featureDisabled(correlationId));
+  }
 
   const contentTypeCheck = checkContentType(
     request.headers.get('content-type'),
