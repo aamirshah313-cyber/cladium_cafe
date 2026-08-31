@@ -12,7 +12,8 @@ import { toPublicError, type AppError } from '../errors';
 import type { Result } from '../result';
 
 export interface RespondOptions {
-  readonly setCookieHeader?: string | null;
+  /** A single cookie, or several (e.g. Step 45's "issue the real staff session, clear the pending-MFA one" case) — each is appended as its own `Set-Cookie` header, never merged into one. */
+  readonly setCookieHeader?: string | readonly string[] | null;
   readonly status?: number;
 }
 
@@ -24,8 +25,11 @@ export function respondResult<T>(
     ? NextResponse.json(result.value, { status: options.status ?? 200 })
     : NextResponse.json({ error: toPublicError(result.error) }, { status: result.error.status });
 
-  if (options.setCookieHeader) {
-    response.headers.append('Set-Cookie', options.setCookieHeader);
+  const cookies = options.setCookieHeader;
+  if (cookies) {
+    for (const cookie of Array.isArray(cookies) ? cookies : [cookies]) {
+      response.headers.append('Set-Cookie', cookie);
+    }
   }
   return response;
 }

@@ -24,6 +24,43 @@ export const staffSignInBodySchema = strictObject({
   devPassword: z.string().min(1).max(256),
 });
 
+/**
+ * Real sign-in — Step 45 (D-049). `mode` selects the request shape
+ * explicitly rather than being inferred from server config: a `password`
+ * body always attempts a real Supabase sign-in, an `mfa` body always
+ * attempts to complete a pending challenge/enrollment against whatever the
+ * signed `cladium_staff_mfa_pending` cookie says — in an environment with
+ * no Supabase project configured, that attempt simply fails closed
+ * (`modules/staff/supabase-directory.ts`'s own fail-closed contract), it is
+ * never a way to bypass anything.
+ */
+export const staffSignInPasswordBodySchema = strictObject({
+  mode: z.literal('password'),
+  email: z.string().trim().email().max(320),
+  password: z.string().min(1).max(256),
+});
+
+export const staffSignInMfaBodySchema = strictObject({
+  mode: z.literal('mfa'),
+  code: z
+    .string()
+    .trim()
+    .regex(/^\d{6}$/, 'Enter the 6-digit code from your authenticator app.'),
+});
+
+export const staffSignInRealBodySchema = z.discriminatedUnion('mode', [
+  staffSignInPasswordBodySchema,
+  staffSignInMfaBodySchema,
+]);
+
+/** `POST /api/staff/mfa/enroll/verify` — `/enroll/start` needs no body, the pending cookie already carries everything. */
+export const staffMfaEnrollVerifyBodySchema = strictObject({
+  code: z
+    .string()
+    .trim()
+    .regex(/^\d{6}$/, 'Enter the 6-digit code from your authenticator app.'),
+});
+
 export const takeawayTransitionBodySchema = strictObject({
   expectedVersion: z.number().int().min(1),
   newState: z.enum(['ACCEPTED', 'PREPARING', 'READY', 'COLLECTED', 'REJECTED', 'CANCELLED']),

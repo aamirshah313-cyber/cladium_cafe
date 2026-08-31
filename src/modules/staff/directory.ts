@@ -10,11 +10,17 @@
  * give (Step 10's `is_staff`/`staff_has_role` helpers), and the reason a
  * `StaffDirectory` interface exists at all rather than trusting the token.
  *
- * `createDevStaffDirectory` is the only implementation today, backed by the
- * `STAFF_DEV_ACCOUNTS` fixture (`lib/env.server.ts`) — never real staff
- * data. A real adapter queries `staff_profiles`/role-membership tables
- * instead, once a live Supabase project exists (D-017), without any caller
- * of this interface changing.
+ * `createDevStaffDirectory` (backed by the `STAFF_DEV_ACCOUNTS` fixture,
+ * `lib/env.server.ts`) and `createSupabaseStaffDirectory` (real
+ * `staff_profiles`/role-membership data, `modules/staff/
+ * supabase-directory.ts` — built Step 45, D-049, closing the gap this
+ * comment used to describe as future work) are the two implementations.
+ * `createCompositeStaffDirectory` lets `modules/staff/deps.ts` offer both
+ * at once without any caller of this interface changing: dev accounts keep
+ * working in every environment that sets `STAFF_DEV_ACCOUNTS` (local
+ * dev/CI/E2E — never production, unchanged rule), real accounts work
+ * wherever they exist, and the two id spaces never collide (dev ids are
+ * short human strings; real ids are `staff_profiles` UUIDs).
  */
 
 import { assertServerOnly } from '../../lib/server-only';
@@ -40,6 +46,21 @@ export function createDevStaffDirectory(accounts: readonly StaffDevAccount[]): S
       const account = byId.get(staffId);
       if (!account) return null;
       return { staffId: account.staffId, displayName: account.displayName, roles: account.roles };
+    },
+  };
+}
+
+/** Tries each directory in order, returning the first match — `null` only if none has this `staffId`. */
+export function createCompositeStaffDirectory(
+  directories: readonly StaffDirectory[],
+): StaffDirectory {
+  return {
+    async findAccount(staffId) {
+      for (const directory of directories) {
+        const account = await directory.findAccount(staffId);
+        if (account) return account;
+      }
+      return null;
     },
   };
 }

@@ -29,7 +29,13 @@ describe('server-only guard', () => {
 describe('env module separation', () => {
   it('the client module exports no server schema symbols at all', () => {
     const exported = Object.keys(clientEnvModule).sort();
-    expect(exported).toEqual(['clientEnvSchema', 'parseAppUrl', 'parseClientEnv']);
+    expect(exported).toEqual([
+      'clientEnvSchema',
+      'isSupabasePublicCredentialsConfigured',
+      'parseAppUrl',
+      'parseClientEnv',
+      'parseSupabasePublicCredentials',
+    ]);
 
     for (const forbidden of [
       'serverEnvSchema',

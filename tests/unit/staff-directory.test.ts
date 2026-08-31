@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { createDevStaffDirectory } from '../../src/modules/staff/directory';
+import {
+  createCompositeStaffDirectory,
+  createDevStaffDirectory,
+  type StaffDirectory,
+} from '../../src/modules/staff/directory';
 import { verifyDevStaffCredentials } from '../../src/modules/staff/dev-credentials';
 import type { StaffDevAccount } from '../../src/lib/env.server';
 
@@ -30,6 +34,46 @@ describe('createDevStaffDirectory', () => {
   it('returns null for every lookup when the account list is empty — the production default', async () => {
     const directory = createDevStaffDirectory([]);
     expect(await directory.findAccount('staff-1')).toBeNull();
+  });
+});
+
+describe('createCompositeStaffDirectory', () => {
+  const first: StaffDirectory = createDevStaffDirectory(ACCOUNTS);
+  const second: StaffDirectory = {
+    async findAccount(staffId) {
+      return staffId === 'real-uuid-1'
+        ? { staffId: 'real-uuid-1', displayName: 'Real Owner', roles: ['OWNER'] }
+        : null;
+    },
+  };
+
+  it('finds an account from the first directory without ever asking the second', async () => {
+    let secondAsked = false;
+    const trackedSecond: StaffDirectory = {
+      async findAccount(staffId) {
+        secondAsked = true;
+        return second.findAccount(staffId);
+      },
+    };
+    const composite = createCompositeStaffDirectory([first, trackedSecond]);
+    const account = await composite.findAccount('staff-1');
+    expect(account).toEqual({ staffId: 'staff-1', displayName: 'Aamir', roles: ['OWNER'] });
+    expect(secondAsked).toBe(false);
+  });
+
+  it('falls back to the second directory when the first has no match', async () => {
+    const composite = createCompositeStaffDirectory([first, second]);
+    const account = await composite.findAccount('real-uuid-1');
+    expect(account).toEqual({
+      staffId: 'real-uuid-1',
+      displayName: 'Real Owner',
+      roles: ['OWNER'],
+    });
+  });
+
+  it('returns null when no directory has a match', async () => {
+    const composite = createCompositeStaffDirectory([first, second]);
+    expect(await composite.findAccount('nobody')).toBeNull();
   });
 });
 

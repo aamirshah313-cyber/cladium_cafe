@@ -112,6 +112,21 @@ export function parseAnthropicApiKey(source: EnvSource = process.env): string {
   return anthropicApiKeySchema.parse(source).ANTHROPIC_API_KEY;
 }
 
+const supabaseServiceRoleKeySchema = serverEnvSchema.pick({ SUPABASE_SERVICE_ROLE_KEY: true });
+
+/**
+ * Narrow accessor for just `SUPABASE_SERVICE_ROLE_KEY` — same reasoning as
+ * `parseSessionSecret`/`parseAnthropicApiKey`: `modules/integrations/
+ * supabase-admin-client.ts` must not require every other unrelated secret
+ * (Vapi, WhatsApp, Anthropic) to be configured first. This key bypasses RLS
+ * by design (`supabase/migrations/20260824140003_grants.sql`) — it is used
+ * only for the one trusted, server-only staff-directory lookup real staff
+ * auth needs, never handed to a browser.
+ */
+export function parseSupabaseServiceRoleKey(source: EnvSource = process.env): string {
+  return supabaseServiceRoleKeySchema.parse(source).SUPABASE_SERVICE_ROLE_KEY;
+}
+
 const vapiCredentialsSchema = serverEnvSchema.pick({
   VAPI_ORG_ID: true,
   VAPI_PRIVATE_KEY: true,

@@ -49,3 +49,30 @@ const appUrlSchema = clientEnvSchema.pick({ NEXT_PUBLIC_APP_URL: true });
 export function parseAppUrl(source: EnvSource = process.env): string {
   return appUrlSchema.parse(source).NEXT_PUBLIC_APP_URL;
 }
+
+const supabasePublicCredentialsSchema = clientEnvSchema.pick({
+  NEXT_PUBLIC_SUPABASE_URL: true,
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: true,
+});
+
+export type SupabasePublicCredentials = z.infer<typeof supabasePublicCredentialsSchema>;
+
+/**
+ * Narrow accessor for just the Supabase URL/anon key —
+ * `modules/integrations/supabase-auth-client.ts` needs these (never the
+ * service-role key, which stays server-only, `env.server.ts`) without
+ * requiring `NEXT_PUBLIC_APP_URL` to be set first. The anon key is safe to
+ * read from either client or server code (it is shipped to the browser
+ * either way); this accessor lives here, not `env.server.ts`, for that
+ * reason.
+ */
+export function parseSupabasePublicCredentials(
+  source: EnvSource = process.env,
+): SupabasePublicCredentials {
+  return supabasePublicCredentialsSchema.parse(source);
+}
+
+/** `undefined` (never throws) when either value is missing — used only to *detect* whether real Supabase auth is configured, not to read it for use. */
+export function isSupabasePublicCredentialsConfigured(source: EnvSource = process.env): boolean {
+  return supabasePublicCredentialsSchema.safeParse(source).success;
+}
