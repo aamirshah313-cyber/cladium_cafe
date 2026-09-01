@@ -32,13 +32,40 @@ import { parseSupabasePublicCredentials } from '../../../lib/env';
 type PageState = 'checking' | 'ready' | 'invalid' | 'success';
 
 export default function ResetPasswordPage() {
+  // Both start SSR-safe/identical on server and client — this page is
+  // statically prerendered, and `window` doesn't exist at prerender time.
+  // Deriving either from `window.location.hash` here (even via a lazy
+  // useState initializer) would render different text on the server than
+  // on the client's first pass and trip a real hydration mismatch (React
+  // error #418) — confirmed live against a production build, not assumed.
   const [state, setState] = useState<PageState>('checking');
+  const [invalidReason, setInvalidReason] = useState<string | null>(null);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
+    // Supabase itself appends `#error=...&error_code=...&error_description=...`
+    // directly to this page's URL when the recovery link was already dead —
+    // expired, or already used (a single-use token; a prior visit to
+    // /auth/v1/verify, even one that redirected somewhere dead before this
+    // page existed, already consumed it). Checking this first gives the
+    // real, Supabase-reported reason instead of only ever falling back to
+    // the blind timeout guess below. `window.location.hash` genuinely
+    // cannot be known before this effect runs (see the state comment
+    // above), so setting state synchronously here — rather than only ever
+    // inside a later async callback — is the deliberate, correct exception
+    // to react-hooks/set-state-in-effect, not an oversight.
+    const hashParams = new URLSearchParams(window.location.hash.slice(1));
+    const hashErrorDescription = hashParams.get('error_description');
+    if (hashErrorDescription) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- see comment above
+      setInvalidReason(hashErrorDescription);
+      setState('invalid');
+      return;
+    }
+
     const { NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY } =
       parseSupabasePublicCredentials();
     const supabase = createClient(NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY);
@@ -118,8 +145,9 @@ export default function ResetPasswordPage() {
       <div>
         <h1>Reset your password</h1>
         <p>
-          This reset link is invalid or has expired. Ask whoever manages staff access to send a new
-          one, or set your password directly from the Supabase dashboard.
+          {(invalidReason ?? 'This reset link is invalid or has expired').replace(/\.?$/, '.')} Ask
+          whoever manages staff access to send a new one, or set your password directly from the
+          Supabase dashboard.
         </p>
         <p>
           <Link href="/staff">Back to staff sign-in</Link>
