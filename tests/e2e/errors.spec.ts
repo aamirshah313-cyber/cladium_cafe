@@ -14,23 +14,27 @@ test.describe('errors', () => {
     await expect(page.getByText(/page not found|not found/i)).toBeVisible();
   });
 
-  test('a nonexistent path under a valid locale renders the correct localized not-found content, not a raw stack trace', async ({
+  test('a nonexistent path under a valid locale 404s with the correct localized not-found content', async ({
     page,
   }) => {
-    // Verified finding, not fixed in this step: this specific path (a
-    // catch-all segment's `notFound()`, with `[locale]/loading.tsx`
-    // providing a Suspense boundary somewhere in the tree) returns HTTP
-    // 200, not 404 — a well-documented Next.js App Router limitation
-    // (streaming has already started with a 200 status before the
-    // boundary swap happens; the Next.js team's own suggested fix is a
-    // proxy/middleware-level check before rendering begins). Tracked in
-    // `.continuum/TASKS.md`, not silently accepted — what *is* verified
-    // and correct here is the actual guest-visible behavior: the right
-    // localized shell and not-found content render, never a crash.
-    await page.goto('/en/this-page-does-not-exist');
+    // Fixed Step 45 (D-058): a catch-all segment's `notFound()`, with
+    // `[locale]/loading.tsx` providing a Suspense boundary somewhere in the
+    // tree, used to return HTTP 200 instead of 404 — a documented Next.js
+    // App Router limitation (streaming starts with a 200 status before the
+    // boundary swap happens). Fixed at the proxy layer, before any
+    // rendering starts (`src/proxy.ts`'s `KNOWN_LOCALE_PAGES` check) — the
+    // guest-visible content was already correct before this fix; now the
+    // status code is too.
+    const response = await page.goto('/en/this-page-does-not-exist');
+    expect(response?.status()).toBe(404);
     await expect(mainLandmark(page)).toBeVisible();
     await expect(page.getByText(/page not found|not found/i)).toBeVisible();
     await expectNoSeriousA11yViolations(page, '/en/this-page-does-not-exist (404 content)');
+  });
+
+  test('an extra path segment under a known locale page also 404s', async ({ page }) => {
+    const response = await page.goto('/en/menu/extra-segment');
+    expect(response?.status()).toBe(404);
   });
 
   test('a nonexistent staff entity 404s', async ({ page }) => {
