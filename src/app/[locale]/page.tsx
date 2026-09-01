@@ -23,6 +23,7 @@ import { notFound } from 'next/navigation';
 import { BRAND_NAME, TAGLINE, chromeText } from '../../lib/i18n/chrome';
 import { isSupportedLocale } from '../../lib/i18n/locale';
 import { buildWhatsAppUrl } from '../../lib/business/whatsapp-link';
+import { TrackedWhatsAppLink } from './tracked-whatsapp-link';
 
 export default async function LocaleHomePage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale: rawLocale } = await params;
@@ -52,9 +53,9 @@ export default async function LocaleHomePage({ params }: { params: Promise<{ loc
         <a href={`/${locale}/concierge`}>{chromeText('navConciergeLabel', locale)}</a>
       </p>
       <p>
-        <a href={buildWhatsAppUrl(locale)} target="_blank" rel="noopener noreferrer">
+        <TrackedWhatsAppLink href={buildWhatsAppUrl(locale)} eventSourceUrl={`/${locale}`}>
           {chromeText('whatsappCtaLabel', locale)}
-        </a>
+        </TrackedWhatsAppLink>
         <br />
         <small>{chromeText('whatsappExternalNoticeText', locale)}</small>
       </p>

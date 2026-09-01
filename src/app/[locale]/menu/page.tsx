@@ -28,6 +28,7 @@ import { buildWhatsAppUrl } from '../../../lib/business/whatsapp-link';
 import type { AvailabilityStatus } from '../../../lib/schemas/common';
 import { filterMenuCategories, getPublishedMenuView } from '../../../modules/menu/menu-view';
 import { MenuViewTracker } from './menu-view-tracker';
+import { TrackedWhatsAppLink } from '../tracked-whatsapp-link';
 
 function availabilityChromeKey(status: AvailabilityStatus): ChromeKey {
   switch (status) {
@@ -64,9 +65,9 @@ export default async function MenuPage({ params, searchParams }: MenuPageProps) 
         <p>{chromeText('menuUnpublishedHeading', locale)}</p>
         <p>{chromeText('menuUnpublishedBody', locale)}</p>
         <p>
-          <a href={buildWhatsAppUrl(locale)} target="_blank" rel="noopener noreferrer">
+          <TrackedWhatsAppLink href={buildWhatsAppUrl(locale)} eventSourceUrl={`/${locale}/menu`}>
             {chromeText('whatsappCtaLabel', locale)}
-          </a>
+          </TrackedWhatsAppLink>
           <br />
           <small>{chromeText('whatsappExternalNoticeText', locale)}</small>
         </p>

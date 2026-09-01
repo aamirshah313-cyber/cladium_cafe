@@ -26,6 +26,7 @@ import { isSupportedLocale } from '../../../lib/i18n/locale';
 import { resolveLocalizedText } from '../../../lib/i18n/localized-text';
 import { isOpenAt } from '../../../lib/business/hours';
 import { buildWhatsAppUrl } from '../../../lib/business/whatsapp-link';
+import { TrackedWhatsAppLink } from '../tracked-whatsapp-link';
 import {
   ADDRESS_DISPLAY,
   BIRTHDAY_POLICY_TEXT,
@@ -84,9 +85,9 @@ export default async function VisitPage({ params }: { params: Promise<{ locale: 
       <section aria-labelledby="contact-heading">
         <h2 id="contact-heading">{chromeText('contactHeading', locale)}</h2>
         <p>
-          <a href={buildWhatsAppUrl(locale)} target="_blank" rel="noopener noreferrer">
+          <TrackedWhatsAppLink href={buildWhatsAppUrl(locale)} eventSourceUrl={`/${locale}/visit`}>
             {chromeText('whatsappCtaLabel', locale)}
-          </a>
+          </TrackedWhatsAppLink>
           <span> ({WHATSAPP_DISPLAY})</span>
         </p>
         <p>

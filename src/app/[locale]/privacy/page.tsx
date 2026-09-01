@@ -21,6 +21,7 @@ import { chromeText } from '../../../lib/i18n/chrome';
 import { isSupportedLocale } from '../../../lib/i18n/locale';
 import { buildWhatsAppUrl } from '../../../lib/business/whatsapp-link';
 import { ConsentPreferences } from './consent-preferences';
+import { TrackedWhatsAppLink } from '../tracked-whatsapp-link';
 
 export default async function PrivacyPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale: rawLocale } = await params;
@@ -35,9 +36,12 @@ export default async function PrivacyPage({ params }: { params: Promise<{ locale
         <h2 id="privacy-notice-heading">{chromeText('privacyNoticeUnavailableHeading', locale)}</h2>
         <p>{chromeText('privacyNoticeUnavailableBody', locale)}</p>
         <p>
-          <a href={buildWhatsAppUrl(locale)} target="_blank" rel="noopener noreferrer">
+          <TrackedWhatsAppLink
+            href={buildWhatsAppUrl(locale)}
+            eventSourceUrl={`/${locale}/privacy`}
+          >
             {chromeText('whatsappCtaLabel', locale)}
-          </a>
+          </TrackedWhatsAppLink>
           <br />
           <small>{chromeText('whatsappExternalNoticeText', locale)}</small>
         </p>
