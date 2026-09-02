@@ -1,5 +1,9 @@
 import type { NextConfig } from 'next';
 import { securityHeaders } from './src/lib/security/headers';
+import {
+  isSupabasePublicCredentialsConfigured,
+  parseSupabasePublicCredentials,
+} from './src/lib/env';
 
 /**
  * Runbook Step 40 (security and abuse verification) found `lib/security/
@@ -26,14 +30,35 @@ import { securityHeaders } from './src/lib/security/headers';
  * exercises these headers — Step 43 (staging release) is the next point
  * a real deployed environment can verify them end to end; tracked in
  * `.continuum/TASKS.md`.
+ *
+ * D-059 follow-up: `connect-src` now also allows the configured Supabase
+ * project's own origin. `headers.ts`'s own doc comment already flagged this
+ * as needed "before... a live Supabase browser client" existed — D-059
+ * wired one in (`staff/reset-password{,/confirm}/page.tsx`, the first
+ * browser code in this app to ever call Supabase directly; every earlier
+ * use was server-side, which CSP does not restrict) without updating this
+ * file, and the gap went undetected until a real recovery session hit it
+ * live: `fetch('.../auth/v1/user')` silently blocked by `connect-src
+ * 'self'`, which the Supabase client swallows into "no session detected" —
+ * indistinguishable from an expired link without checking the browser
+ * console directly, which is what actually caught this. Derived from
+ * `NEXT_PUBLIC_SUPABASE_URL` rather than a hardcoded project ref, so this
+ * stays correct across environments; omitted entirely (falls back to
+ * `'self'` only, unchanged from before) when Supabase isn't configured —
+ * this sandbox and CI included — so an unconfigured environment still
+ * builds cleanly.
  */
+function supabaseConnectSrc(): string[] {
+  if (!isSupabasePublicCredentialsConfigured()) return [];
+  return [new URL(parseSupabasePublicCredentials().NEXT_PUBLIC_SUPABASE_URL).origin];
+}
 const isDev = process.env.NODE_ENV === 'development';
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   async headers() {
     if (isDev) return [];
-    const headers = securityHeaders();
+    const headers = securityHeaders({ connectSrc: supabaseConnectSrc() });
     return [
       {
         source: '/:path*',

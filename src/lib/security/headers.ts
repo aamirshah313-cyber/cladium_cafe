@@ -39,7 +39,7 @@ assertServerOnly('src/lib/security/headers.ts');
 export interface SecurityHeadersOptions {
   /** Per-request CSP nonce, if the caller renders an inline `<script>` or `<style>` tag. Omitting it falls back to `'unsafe-inline'` — see the module doc comment for why that is the current, deliberate, honest baseline. */
   readonly nonce?: string;
-  /** Additional trusted API origins beyond `'self'` (e.g. Supabase, Anthropic, Vapi endpoints actually called from the browser). Empty today — no browser code calls any of those yet (Vapi's web SDK and a live Supabase browser client are both still unwired); populate this before enabling `FEATURE_VOICE_EN`/`FEATURE_VOICE_UR` in any real environment, confirmed against Vapi's current required origins first. */
+  /** Additional trusted API origins beyond `'self'` (e.g. Supabase, Anthropic, Vapi endpoints actually called from the browser). `next.config.ts` now populates this with the configured Supabase project's origin (D-059 follow-up — `staff/reset-password{,/confirm}/page.tsx` is real browser code that calls Supabase's Auth API directly; found live when CSP silently blocked that call). Vapi's web SDK is still unwired here; populate this further before enabling `FEATURE_VOICE_EN`/`FEATURE_VOICE_UR` in any real environment, confirmed against Vapi's current required origins first. */
   readonly connectSrc?: readonly string[];
   /** Dev-only: adds `'unsafe-eval'` to `script-src` for React's dev-mode error-stack reconstruction. Never set in production. */
   readonly allowEval?: boolean;
