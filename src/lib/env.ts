@@ -31,11 +31,40 @@ export type ClientEnv = z.infer<typeof clientEnvSchema>;
 type EnvSource = Record<string, string | undefined>;
 
 /**
+ * Real, previously-unexercised bug found live (D-059 follow-up,
+ * `staff/reset-password/page.tsx` — the first-ever client-side caller of
+ * any accessor in this file): Next.js only inlines a `NEXT_PUBLIC_*` value
+ * into the browser bundle when it sees a *literal*, statically-written
+ * `process.env.NEXT_PUBLIC_X` member expression in the source. Passing the
+ * whole `process.env` object by reference as a default parameter — the
+ * previous shape of every accessor below — is invisible to that build-time
+ * replacement: Zod then reads keys off it dynamically, which works fine
+ * server-side (real `process.env` at runtime there) but leaves every
+ * `NEXT_PUBLIC_*` key undefined in the browser forever, regardless of what
+ * is actually configured, because no literal text anywhere ever gave the
+ * compiler something to replace. Confirmed live: fetched the deployed
+ * client chunk directly and found zero occurrences of the Supabase URL or
+ * either variable name — the build-time substitution never had anything to
+ * substitute. Each accessor's default below is now a literal object built
+ * from direct `process.env.NEXT_PUBLIC_X` expressions so the compiler can
+ * actually find and replace them; this still evaluates fresh per call
+ * (a JS default parameter, not a module-load-time constant), so server-side
+ * behavior (reading the real runtime environment) is unchanged.
+ */
+function defaultClientEnvSource(): EnvSource {
+  return {
+    NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
+    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  };
+}
+
+/**
  * Parses and validates the client-safe environment. Never runs automatically
  * on import, so a missing value fails at the call site rather than silently
  * during module load or the production build.
  */
-export function parseClientEnv(source: EnvSource = process.env): ClientEnv {
+export function parseClientEnv(source: EnvSource = defaultClientEnvSource()): ClientEnv {
   return clientEnvSchema.parse(source);
 }
 
@@ -46,7 +75,7 @@ const appUrlSchema = clientEnvSchema.pick({ NEXT_PUBLIC_APP_URL: true });
  * checks — `lib/http/session-route.ts`) that need the app's own origin but
  * must not require unrelated config (Supabase URL/anon key) to be set first.
  */
-export function parseAppUrl(source: EnvSource = process.env): string {
+export function parseAppUrl(source: EnvSource = defaultClientEnvSource()): string {
   return appUrlSchema.parse(source).NEXT_PUBLIC_APP_URL;
 }
 
@@ -67,12 +96,14 @@ export type SupabasePublicCredentials = z.infer<typeof supabasePublicCredentials
  * reason.
  */
 export function parseSupabasePublicCredentials(
-  source: EnvSource = process.env,
+  source: EnvSource = defaultClientEnvSource(),
 ): SupabasePublicCredentials {
   return supabasePublicCredentialsSchema.parse(source);
 }
 
 /** `undefined` (never throws) when either value is missing — used only to *detect* whether real Supabase auth is configured, not to read it for use. */
-export function isSupabasePublicCredentialsConfigured(source: EnvSource = process.env): boolean {
+export function isSupabasePublicCredentialsConfigured(
+  source: EnvSource = defaultClientEnvSource(),
+): boolean {
   return supabasePublicCredentialsSchema.safeParse(source).success;
 }
