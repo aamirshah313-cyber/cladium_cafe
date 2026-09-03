@@ -28,7 +28,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { assertServerOnly } from '../../lib/server-only';
 import { parseSupabasePublicCredentials } from '../../lib/env';
-import { createLogger } from '../../lib/logging';
 
 assertServerOnly('src/modules/integrations/supabase-auth-client.ts');
 
@@ -90,14 +89,6 @@ function toStaffAuthSession(session: {
   };
 }
 
-// TEMPORARY — D-059 follow-up diagnostic (see supabase-directory.ts's
-// matching comment for the full context and removal plan). Logs only
-// Supabase's own safe, non-secret error metadata (`code`/`status`/
-// `message`, which never embed the actual credential) — never the email,
-// password, token, or any header value; `lib/logging.ts`'s redaction
-// would additionally strip any of those even if accidentally included.
-const diagnosticLogger = createLogger();
-
 /** Never throws at construction — see module doc comment. */
 export function createSupabaseStaffAuthClient(): StaffAuthClient {
   function newClient() {
@@ -125,17 +116,7 @@ export function createSupabaseStaffAuthClient(): StaffAuthClient {
     async signInWithPassword(email, password) {
       const client = newClient();
       const { data, error } = await client.auth.signInWithPassword({ email, password });
-      if (error || !data.session || !data.user) {
-        diagnosticLogger.warn('staff.auth.signin_step1_failed', {
-          hasSession: Boolean(data?.session),
-          hasUser: Boolean(data?.user),
-          errorCode: error?.code,
-          errorStatus: error?.status,
-          internalMessage: error?.message,
-        });
-        return null;
-      }
-      diagnosticLogger.info('staff.auth.signin_step1_succeeded', {});
+      if (error || !data.session || !data.user) return null;
       return toStaffAuthSession({ ...data.session, user: data.user });
     },
 

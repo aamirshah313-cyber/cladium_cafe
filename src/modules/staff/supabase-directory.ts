@@ -19,7 +19,6 @@ import { assertServerOnly } from '../../lib/server-only';
 import type { StaffRole } from '../../lib/domain/actor';
 import { createSupabaseAdminClient } from '../integrations/supabase-admin-client';
 import { type StaffAccount, type StaffDirectory } from './directory';
-import { createLogger } from '../../lib/logging';
 
 assertServerOnly('src/modules/staff/supabase-directory.ts');
 
@@ -37,22 +36,19 @@ function toStaffAccount(row: StaffProfileRow): StaffAccount {
   };
 }
 
-const STAFF_PROFILE_SELECT = 'id, display_name, staff_role_memberships(role)';
-
-// TEMPORARY — D-059 follow-up diagnostic, added to instrument the exact
-// failure point in a real production sign-in that kept reporting "Invalid
-// email or password" after the password check itself was independently
-// confirmed succeeding (Supabase's own `last_sign_in_at` updating on each
-// attempt). Logs only Supabase's own safe, non-secret error metadata
-// (`code`/`status`/`message` on a Postgrest/Auth error never embeds the
-// actual credential value) plus booleans — never the service-role key, the
-// queried user id's associated email, or any header/token value;
-// `lib/logging.ts`'s redaction would additionally strip any of those even
-// if accidentally included. Remove this comment and the two `logger.*`
-// calls in `queryStaffProfile` (revert to the version in git history)
-// once the real branch is confirmed and, if it's the fix itself, folded
-// into a permanent decision rather than left as ad hoc diagnostic noise.
-const diagnosticLogger = createLogger();
+// `!staff_profile_id` disambiguates the embed: `staff_role_memberships` has
+// TWO foreign keys into `staff_profiles` (`staff_profile_id`, the one we
+// want, and `granted_by` — who granted the role, also a `staff_profiles`
+// reference). Without a hint, PostgREST can't pick automatically and
+// rejects the whole query with `PGRST201` ("more than one relationship was
+// found"), which this app's own fail-closed error handling then reports
+// identically to "no matching row" — a real, previously-undiscovered bug,
+// confirmed live via a real production sign-in attempt and Vercel's own
+// function logs (D-059 follow-up): the query was never reachable before,
+// masked first by mismatched Vercel credentials, so this ambiguity had
+// never actually been exercised against the real hosted PostgREST until
+// now.
+const STAFF_PROFILE_SELECT = 'id, display_name, staff_role_memberships!staff_profile_id(role)';
 
 /**
  * Every query below fails closed to `null` on *any* error — including
@@ -69,39 +65,17 @@ async function queryStaffProfile(
   column: 'id' | 'user_id',
   value: string,
 ): Promise<StaffAccount | null> {
-  let admin: ReturnType<typeof createSupabaseAdminClient>;
   try {
-    admin = createSupabaseAdminClient();
-  } catch (constructError) {
-    diagnosticLogger.error('staff.directory.admin_client_construction_failed', {
-      column,
-      errorName: constructError instanceof Error ? constructError.name : typeof constructError,
-      internalMessage:
-        constructError instanceof Error ? constructError.message : String(constructError),
-    });
-    return null;
-  }
-  try {
+    const admin = createSupabaseAdminClient();
     const { data, error } = await admin
       .from('staff_profiles')
       .select(STAFF_PROFILE_SELECT)
       .eq(column, value)
       .eq('status', 'ACTIVE')
       .maybeSingle<StaffProfileRow>();
-    diagnosticLogger.info('staff.directory.query_result', {
-      column,
-      hasData: Boolean(data),
-      errorCode: error?.code,
-      internalMessage: error?.message,
-    });
     if (error || !data) return null;
     return toStaffAccount(data);
-  } catch (queryError) {
-    diagnosticLogger.error('staff.directory.query_threw', {
-      column,
-      errorName: queryError instanceof Error ? queryError.name : typeof queryError,
-      internalMessage: queryError instanceof Error ? queryError.message : String(queryError),
-    });
+  } catch {
     return null;
   }
 }
