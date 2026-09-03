@@ -24,11 +24,16 @@ import type { StaffAuthClient } from '../integrations/supabase-auth-client';
 import { findStaffAccountByAuthUserId as findStaffAccountByAuthUserIdReal } from './supabase-directory';
 import type { StaffAccount } from './directory';
 import { issuePendingMfaCookie, type PendingMfaState } from './mfa-session';
+import { createLogger } from '../../lib/logging';
 
 assertServerOnly('src/modules/staff/supabase-credentials.ts');
 
 const MFA_ROLES = new Set(['OWNER', 'MANAGER']);
 const TOTP_FRIENDLY_NAME = 'Cladium Staff';
+
+// TEMPORARY — D-059 follow-up diagnostic (see supabase-directory.ts's
+// matching comment for the full context and removal plan).
+const diagnosticLogger = createLogger();
 
 export type StaffSignInOutcome =
   | { readonly kind: 'SIGNED_IN'; readonly account: StaffAccount }
@@ -53,24 +58,37 @@ export async function signInWithSupabasePassword(
   options: { secure: boolean; now?: Date },
 ): Promise<StaffSignInOutcome> {
   const session = await deps.authClient.signInWithPassword(email, password);
-  if (!session) return { kind: 'FAILED' };
+  if (!session) {
+    diagnosticLogger.info('staff.signin.outcome', { branch: 'FAILED_AT_SIGNIN' });
+    return { kind: 'FAILED' };
+  }
 
   const account = await lookupFor(deps)(session.userId);
-  if (!account) return { kind: 'FAILED' };
+  if (!account) {
+    diagnosticLogger.info('staff.signin.outcome', { branch: 'FAILED_AT_LOOKUP' });
+    return { kind: 'FAILED' };
+  }
 
   const assurance = await deps.authClient.getAssuranceLevel(session);
 
   if (assurance.currentLevel === 'aal2') {
     // Already elevated (defensive — a fresh password sign-in normally starts at aal1).
+    diagnosticLogger.info('staff.signin.outcome', { branch: 'SIGNED_IN_ALREADY_AAL2' });
     return { kind: 'SIGNED_IN', account };
   }
 
   if (assurance.nextLevel === 'aal2') {
     // A verified factor exists — challenge it, regardless of role.
     const factor = await deps.authClient.findVerifiedTotpFactor(session);
-    if (!factor) return { kind: 'FAILED' };
+    if (!factor) {
+      diagnosticLogger.info('staff.signin.outcome', { branch: 'FAILED_AT_MFA_FACTOR_MISSING' });
+      return { kind: 'FAILED' };
+    }
     const challenge = await deps.authClient.challengeTotp(session, factor.factorId);
-    if (!challenge) return { kind: 'FAILED' };
+    if (!challenge) {
+      diagnosticLogger.info('staff.signin.outcome', { branch: 'FAILED_AT_MFA_CHALLENGE' });
+      return { kind: 'FAILED' };
+    }
 
     const pendingMfaCookie = issuePendingMfaCookie(
       {
@@ -81,6 +99,7 @@ export async function signInWithSupabasePassword(
       },
       { secure: options.secure, now: options.now },
     );
+    diagnosticLogger.info('staff.signin.outcome', { branch: 'MFA_REQUIRED' });
     return { kind: 'MFA_REQUIRED', pendingMfaCookie };
   }
 
@@ -90,9 +109,11 @@ export async function signInWithSupabasePassword(
       { purpose: 'ENROLL_WINDOW', session },
       { secure: options.secure, now: options.now },
     );
+    diagnosticLogger.info('staff.signin.outcome', { branch: 'MFA_ENROLLMENT_REQUIRED' });
     return { kind: 'MFA_ENROLLMENT_REQUIRED', pendingMfaCookie };
   }
 
+  diagnosticLogger.info('staff.signin.outcome', { branch: 'SIGNED_IN' });
   return { kind: 'SIGNED_IN', account };
 }
 
