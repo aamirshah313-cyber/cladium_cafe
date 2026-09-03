@@ -118,3 +118,51 @@ button[aria-pressed='true'] {
   outline: 2px solid var(--accent-gold);
   outline-offset: 2px;
 }
+
+/*
+ * Menu carousel media stage (`FeatureMediaStage`, Step 18 preparation,
+ * D-022 follow-up) — `design/menu-carousel-reference.md`'s "airy sage/mist
+ * image stage." Reuses the existing `--surface-atmosphere`/`--accent-gold`/
+ * `--border-subtle` tokens (theme-mode.md) rather than the reference doc's
+ * own speculative `--cladium-menu-canvas`/`--cladium-menu-panel` names —
+ * theme-mode.md is the later, actually-implemented source of truth, and
+ * introducing a second, parallel token set for the same roles would be a
+ * real drift risk. Correct in both Day and Night automatically, since the
+ * underlying tokens already vary — no new theme-conditional block needed
+ * here.
+ */
+.menu-media-stage {
+  position: relative;
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+  border-radius: 0.5rem;
+  background: var(--surface-atmosphere);
+}
+
+.menu-media-stage-image {
+  object-fit: cover;
+}
+
+.menu-media-stage-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.menu-media-stage-monogram {
+  width: 40%;
+  height: 40%;
+}
+
+.menu-media-stage-monogram-ring {
+  fill: none;
+  stroke: var(--border-subtle);
+  stroke-width: 1.5;
+}
+
+.menu-media-stage-monogram-path {
+  fill: none;
+  stroke: var(--accent-gold);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
