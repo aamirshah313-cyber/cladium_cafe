@@ -158,7 +158,17 @@ export function createSupabaseStaffAuthClient(): StaffAuthClient {
       if (error || !data) return null;
       return {
         factorId: data.id,
-        qrCodeDataUri: `data:image/svg+xml;utf-8,${data.totp.qr_code}`,
+        // `data.totp.qr_code` is raw, un-encoded SVG markup — the shipped
+        // `.d.ts`'s own field-level doc comment confirms this ("convert it
+        // to a URL by prepending data:image/svg+xml;utf-8,"). A real QR SVG
+        // virtually always contains hex-color fills (`fill="#000000"`), and
+        // a literal `#` inside a data: URI is parsed as a URL fragment —
+        // everything after it is discarded, corrupting the image. Found
+        // live: the very first real MFA enrollment this whole project has
+        // ever completed rendered a broken image (D-059 follow-up).
+        // `encodeURIComponent` percent-encodes `#` (and every other
+        // data:-unsafe character) so the full SVG survives intact.
+        qrCodeDataUri: `data:image/svg+xml;utf-8,${encodeURIComponent(data.totp.qr_code)}`,
         secret: data.totp.secret,
       };
     },
