@@ -1,9 +1,55 @@
 # src/lib/db
 
-Database access layer. Currently holds only this note — repositories arrive in
-Step 19, after the schema (Steps 8–9) and RLS (Step 10).
+Database access layer: the generated schema types, and the Postgres
+repository adapters that implement `src/lib/domain`'s storage interfaces.
 
-## `database.types.ts` (generated, not yet present)
+## Repository adapters
+
+Each adapter implements one interface from `src/lib/domain` against real
+Postgres, using the server-only service-role client
+(`modules/integrations/supabase-admin-client.ts`). They are drop-in
+replacements for the in-memory stores, so `src/lib/domain` keeps its
+interfaces and no calling code changes.
+
+| Adapter                                | Implements               | Wired into a domain?                           |
+| -------------------------------------- | ------------------------ | ---------------------------------------------- |
+| `postgres-confirmation-token-store.ts` | `ConfirmationTokenStore` | No — built and tested, not yet used at runtime |
+
+Adapters are added one at a time and are **not** switched on merely by
+existing: a domain keeps using its in-memory store until its `deps.ts` is
+deliberately changed over. See D-023 and D-064 in `.continuum/DECISIONS.md`.
+
+Rules these adapters follow:
+
+- Service-role and server-only. Guest-facing code never reaches them, and
+  no guest-write RLS policy was added to accommodate them.
+- Operations the domain documents as atomic must be a **single**
+  conditional statement (`UPDATE ... WHERE <precondition> RETURNING ...`),
+  never a read followed by a write. Sequential tests cannot tell the
+  difference; concurrent ones can, so they are tested with `Promise.all`.
+- Normalise `timestamptz` back through `new Date(...).toISOString()`.
+  Postgres returns `+00:00` where JavaScript produces `.000Z` — the same
+  instant, a different string, and the domain types these as plain
+  `string`.
+- Throw on database errors. These interfaces have no error channel, and a
+  swallowed write error is indistinguishable from success.
+
+### Testing them
+
+Adapter tests talk to a real database and live in `tests/integration`, so
+they are deliberately excluded from `npm test`, `npm run verify`, and CI:
+
+```sh
+npx supabase start -x realtime,storage-api,imgproxy,studio,edge-runtime,logflare,vector,supavisor,mailpit
+npm run test:integration
+```
+
+The lean service list is not arbitrary — see D-063. They skip themselves
+with an explicit message when `SUPABASE_TEST_URL` /
+`SUPABASE_TEST_SERVICE_ROLE_KEY` are unset, so a run without a database
+reports "skipped" rather than a false pass.
+
+## `database.types.ts` (generated)
 
 ```sh
 npm run db:types
@@ -16,5 +62,4 @@ Regenerates `database.types.ts` from the **local** database. Rules:
   types and schema cannot drift.
 - Generate from local, never from production.
 
-It does not exist yet because there is no schema yet. See
-`docs/database-environments.md` for the full workflow.
+See `docs/database-environments.md` for the full workflow.
