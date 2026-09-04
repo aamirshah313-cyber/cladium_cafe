@@ -56,8 +56,14 @@ export interface PostgresVersionedStoreOptions<T extends VersionedRecord, Row> {
   /** Explicit column list, so a future column cannot silently change what is read. */
   readonly select: string;
   readonly toRecord: (row: Row) => T;
-  /** Full row for `create`, including `id`; `version` is left to the column default. */
-  readonly toInsert: (record: T) => Record<string, unknown>;
+  /**
+   * Full row for `create`, including `id`; `version` is left to the column
+   * default. May be async: `takeaway_requests` has to resolve the domain's
+   * `menuVersionNumber` to a `menu_versions` foreign key, which needs a
+   * query. Mappings with nothing to look up (bookings) simply return an
+   * object and are unaffected.
+   */
+  readonly toInsert: (record: T) => Record<string, unknown> | Promise<Record<string, unknown>>;
   /** Column patch for an update. Must never include `id` or `version`. */
   readonly toPatch: (patch: Partial<Omit<T, 'id' | 'version'>>) => Record<string, unknown>;
 }
@@ -81,7 +87,7 @@ export function createPostgresVersionedStore<T extends VersionedRecord, Row>(
     },
 
     async create(record) {
-      const { error } = await client.from(table).insert(toInsert(record));
+      const { error } = await client.from(table).insert(await toInsert(record));
       if (error) {
         throw new Error(`${table} create failed: ${error.code ?? 'unknown'}`);
       }

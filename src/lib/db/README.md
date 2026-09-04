@@ -20,10 +20,19 @@ interfaces and no calling code changes.
 | `postgres-append-only-sink.ts`         | `AppendOnlySink<T>`                         | No — generic mechanism, needs a per-table mapping |
 | `postgres-event-sinks.ts`              | `AppendOnlySink<StatusEvent \| AuditEvent>` | No — built and tested, not yet used at runtime    |
 | `postgres-outbox-store.ts`             | `OutboxStore`                               | No — built and tested, not yet used at runtime    |
+| `postgres-takeaway-request-store.ts`   | `VersionedStore<TakeawayRequestRecord>`     | No — built and tested, not yet used at runtime    |
 
-That completes the five storage primitives `src/lib/domain` defines. What
-remains before a domain can actually be cut over is the two missing
-`VersionedStore` mappings (takeaway, events) and the cutover itself.
+That completes the five storage primitives `src/lib/domain` defines, plus
+two of the three request mappings. Still missing before a domain can be cut
+over: the `event_requests` mapping, the `takeaway_items` line-snapshot
+sink, and the cutover itself.
+
+`takeaway_items` is not merely unwritten — it is blocked. Its
+`menu_item_id` is a foreign key into `menu_items`, and no menu has been
+imported or published (D-021), so there is nothing for a line snapshot to
+point at. `MenuViewItem.id`, which supplies that value at runtime, has no
+concrete source either: `getPublishedMenuView()` still returns
+`UNPUBLISHED` and is itself the seam a future menu repository fills.
 
 `VersionedStore` is split in two because all three request tables share the
 interface but none maps 1:1 onto its domain record:
