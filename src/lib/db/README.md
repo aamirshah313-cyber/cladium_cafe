@@ -21,11 +21,29 @@ interfaces and no calling code changes.
 | `postgres-event-sinks.ts`              | `AppendOnlySink<StatusEvent \| AuditEvent>` | No — built and tested, not yet used at runtime    |
 | `postgres-outbox-store.ts`             | `OutboxStore`                               | No — built and tested, not yet used at runtime    |
 | `postgres-takeaway-request-store.ts`   | `VersionedStore<TakeawayRequestRecord>`     | No — built and tested, not yet used at runtime    |
+| `postgres-event-request-store.ts`      | `VersionedStore<EventRequestRecord>`        | No — built and tested, not yet used at runtime    |
 
-That completes the five storage primitives `src/lib/domain` defines, plus
-two of the three request mappings. Still missing before a domain can be cut
-over: the `event_requests` mapping, the `takeaway_items` line-snapshot
-sink, and the cutover itself.
+That completes all five storage primitives and all three request mappings.
+Every domain's _request row_ can now be read and written against real
+Postgres. What is still missing before any domain can be cut over:
+
+- The `takeaway_items` line-snapshot sink — genuinely blocked, not
+  unbuilt: its `menu_item_id` is a foreign key into `menu_items`, and no
+  menu has been imported or published (D-021), so a line snapshot has
+  nothing to point at.
+- The cutover itself: wiring a real domain's `deps.ts` to these adapters
+  and proving a full submission → snapshot → status event → outbox event
+  sequence is consistent, not just that each store works in isolation.
+  Bookings has no missing piece and is the only domain unblocked for this
+  today.
+
+`postgres-event-request-store.ts` deliberately **refuses to write a
+non-null `quotedAmountPkr`**: `event_requests_quote_attribution` requires
+`quoted_by`/`quoted_at` alongside it, and `EventRequestRecord` has neither
+field — no service in this codebase produces a quote yet. Reads still
+resolve a real quote written outside this adapter (verified against a real
+GoTrue-provisioned staff fixture, not a raw insert), so the store stays
+honest about data it did not itself write.
 
 `takeaway_items` is not merely unwritten — it is blocked. Its
 `menu_item_id` is a foreign key into `menu_items`, and no menu has been
@@ -37,11 +55,11 @@ concrete source either: `getPublishedMenuView()` still returns
 `VersionedStore` is split in two because all three request tables share the
 interface but none maps 1:1 onto its domain record:
 `postgres-versioned-store.ts` holds the mechanics (compare-and-set, paging,
-the trigger-owned `version`) and each domain supplies its own mapping.
-Takeaway and events are not built yet — takeaway needs `menuVersionNumber`
-resolved to a `menu_versions` foreign key, and events renames several
-fields on top of the same date/time conversion bookings needed. Those are
-real decisions, deliberately not guessed at.
+the trigger-owned `version`) and each domain supplies its own mapping —
+`postgres-booking-request-store.ts`, `postgres-takeaway-request-store.ts`,
+and `postgres-event-request-store.ts` above. Each mapping's own doc comment
+covers its specific gaps (the date/time conversion, the menu-version
+foreign key, the field renames); see D-066/D-069/D-070.
 
 Where a table does not map 1:1 onto its domain record, the adapter's own
 doc comment enumerates every gap and why it was resolved the way it was.
