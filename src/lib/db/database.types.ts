@@ -1638,6 +1638,52 @@ export type Database = {
         Returns: boolean
       }
       is_staff: { Args: never; Returns: boolean }
+      outbox_claim_batch: {
+        Args: { p_limit: number; p_now: string; p_stale_claim_ms: number }
+        Returns: {
+          attempt_count: number
+          claimed_at: string | null
+          correlation_id: string | null
+          created_at: string
+          delivered_at: string | null
+          destination: string
+          entity_id: string
+          entity_type: Database["public"]["Enums"]["entity_type"]
+          event_type: string
+          failed_permanently_at: string | null
+          id: string
+          last_error: string | null
+          next_attempt_at: string
+          payload: Json
+          status: Database["public"]["Enums"]["outbox_status"]
+          updated_at: string
+          version: number
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "outbox_events"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      outbox_mark_retry: {
+        Args: {
+          p_expected_version: number
+          p_id: string
+          p_last_error: string
+          p_next_attempt_at: string
+        }
+        Returns: boolean
+      }
+      outbox_mark_terminal: {
+        Args: {
+          p_expected_version: number
+          p_id: string
+          p_last_error: string
+          p_now: string
+        }
+        Returns: boolean
+      }
       purge_expired_consent_events: {
         Args: { retention_days: number }
         Returns: number

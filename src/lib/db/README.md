@@ -19,6 +19,11 @@ interfaces and no calling code changes.
 | `postgres-booking-request-store.ts`    | `VersionedStore<BookingRequestRecord>`      | No — built and tested, not yet used at runtime    |
 | `postgres-append-only-sink.ts`         | `AppendOnlySink<T>`                         | No — generic mechanism, needs a per-table mapping |
 | `postgres-event-sinks.ts`              | `AppendOnlySink<StatusEvent \| AuditEvent>` | No — built and tested, not yet used at runtime    |
+| `postgres-outbox-store.ts`             | `OutboxStore`                               | No — built and tested, not yet used at runtime    |
+
+That completes the five storage primitives `src/lib/domain` defines. What
+remains before a domain can actually be cut over is the two missing
+`VersionedStore` mappings (takeaway, events) and the cutover itself.
 
 `VersionedStore` is split in two because all three request tables share the
 interface but none maps 1:1 onto its domain record:
@@ -80,6 +85,14 @@ The lean service list is not arbitrary — see D-063. They skip themselves
 with an explicit message when `SUPABASE_TEST_URL` /
 `SUPABASE_TEST_SERVICE_ROLE_KEY` are unset, so a run without a database
 reports "skipped" rather than a false pass.
+
+**Reset before running `npm run db:test` afterwards.** The integration
+tests write to `status_events` and `audit_events`, which are append-only
+and so cannot be cleaned up. `db:test:rls` asserts exact row counts and
+assumes an empty database, so it fails with something like
+`auditor reads audit events: expected 0 row(s), got 8` on a database the
+integration tests have touched. That is leftover fixture data, not a policy
+regression — `npm run db:reset` first, then `npm run db:test`.
 
 ## `database.types.ts` (generated)
 
