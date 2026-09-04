@@ -1,0 +1,33 @@
+# Normalize line endings to LF in the working tree, not just in the repository.
+#
+# Why this exists: Prettier's `endOfLine` default is "lf", and this repo's
+# `npm run format` (`prettier --check .`) is the first step of `npm run verify`.
+# On Windows, `core.autocrlf=true` rewrites files to CRLF on checkout, which
+# makes those files fail `prettier --check` even when their committed content
+# is byte-for-byte correct. That produced a real, confusing failure: two files
+# started failing `verify` immediately after a plain `git checkout --` of them,
+# with an empty `git diff` and identical blob hashes.
+#
+# `eol=lf` overrides `core.autocrlf` for this repository, so checkouts match
+# what Prettier and CI expect on every platform. Binary files are excluded
+# below so git never applies text filtering to them.
+
+* text=auto eol=lf
+
+# Binary assets — never line-ending-filtered, never diffed as text.
+*.jpg binary
+*.jpeg binary
+*.png binary
+*.gif binary
+*.webp binary
+*.avif binary
+*.ico binary
+*.pdf binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+*.mp4 binary
+*.webm binary
+*.mp3 binary
+*.wav binary
