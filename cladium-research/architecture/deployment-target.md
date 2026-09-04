@@ -66,6 +66,19 @@ app/
 
 Use Node.js server runtime for routes that need secrets, database access, or signature verification. Keep approved static media on the Vercel CDN or Supabase Storage. Select the Supabase database region first, then place Vercel functions nearby. Use the Supabase transaction pooler for serverless request traffic; restrict direct/session connections to migration/administrative workflows.
 
+### Function and database regions
+
+Vercel Functions default to `iad1` (Washington, D.C.) for every new project. That default was left in place through the Step 43 staging release while the Supabase project was created in `ap-northeast-1` (Tokyo) — roughly 11,000 km apart, with every sequential database round-trip in a request paying that distance. This violated the co-location rule stated in the paragraph above.
+
+`vercel.json` now pins `"regions": ["hnd1"]`. Vercel's `hnd1` **is** AWS `ap-northeast-1`, so functions execute in the same AWS region as the database. A single region is permitted on every plan including Hobby (Pro allows 5), so this applies now and does not depend on the Pro upgrade.
+
+| Purpose | Vercel code | AWS region |
+| --- | --- | --- |
+| Current database + functions | `hnd1` | `ap-northeast-1` (Tokyo) |
+| Nearest region to Abbottabad | `bom1` | `ap-south-1` (Mumbai) |
+
+Open decision for the owner, deliberately not actioned here: Tokyo is about 6,000 km from Abbottabad, while Mumbai is roughly 1,500–2,000 km. Moving **both** tiers to Mumbai would cut guest-facing latency substantially while keeping function and database co-located. Supabase cannot change an existing project's region in place — it requires creating a new project in `ap-south-1` and restoring, so this is an owner decision, not a config edit. It is far cheaper to do now, while the project holds only staging test data, than after production data exists. If the region is moved, update `vercel.json` to `bom1` in the same change so the two tiers never drift apart again.
+
 ## Deployment gates
 
 Before deployment, verify:
