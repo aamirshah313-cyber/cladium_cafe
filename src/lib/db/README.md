@@ -11,10 +11,21 @@ Postgres, using the server-only service-role client
 replacements for the in-memory stores, so `src/lib/domain` keeps its
 interfaces and no calling code changes.
 
-| Adapter                                | Implements               | Wired into a domain?                           |
-| -------------------------------------- | ------------------------ | ---------------------------------------------- |
-| `postgres-confirmation-token-store.ts` | `ConfirmationTokenStore` | No — built and tested, not yet used at runtime |
-| `postgres-idempotency-store.ts`        | `IdempotencyStore<R>`    | No — built and tested, not yet used at runtime |
+| Adapter                                | Implements                             | Wired into a domain?                              |
+| -------------------------------------- | -------------------------------------- | ------------------------------------------------- |
+| `postgres-confirmation-token-store.ts` | `ConfirmationTokenStore`               | No — built and tested, not yet used at runtime    |
+| `postgres-idempotency-store.ts`        | `IdempotencyStore<R>`                  | No — built and tested, not yet used at runtime    |
+| `postgres-versioned-store.ts`          | `VersionedStore<T>`                    | No — generic mechanism, needs a per-table mapping |
+| `postgres-booking-request-store.ts`    | `VersionedStore<BookingRequestRecord>` | No — built and tested, not yet used at runtime    |
+
+`VersionedStore` is split in two because all three request tables share the
+interface but none maps 1:1 onto its domain record:
+`postgres-versioned-store.ts` holds the mechanics (compare-and-set, paging,
+the trigger-owned `version`) and each domain supplies its own mapping.
+Takeaway and events are not built yet — takeaway needs `menuVersionNumber`
+resolved to a `menu_versions` foreign key, and events renames several
+fields on top of the same date/time conversion bookings needed. Those are
+real decisions, deliberately not guessed at.
 
 Where a table does not map 1:1 onto its domain record, the adapter's own
 doc comment enumerates every gap and why it was resolved the way it was.
