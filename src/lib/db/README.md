@@ -14,6 +14,15 @@ interfaces and no calling code changes.
 | Adapter                                | Implements               | Wired into a domain?                           |
 | -------------------------------------- | ------------------------ | ---------------------------------------------- |
 | `postgres-confirmation-token-store.ts` | `ConfirmationTokenStore` | No — built and tested, not yet used at runtime |
+| `postgres-idempotency-store.ts`        | `IdempotencyStore<R>`    | No — built and tested, not yet used at runtime |
+
+Where a table does not map 1:1 onto its domain record, the adapter's own
+doc comment enumerates every gap and why it was resolved the way it was.
+`postgres-idempotency-store.ts` is the worked example: it hashes the
+fingerprint (which is a raw, still-valid confirmation token) before
+storage, supplies `operation` per store rather than parsing the domain's
+`scope` string, projects the result to an entity reference, and writes but
+never interprets `expires_at`.
 
 Adapters are added one at a time and are **not** switched on merely by
 existing: a domain keeps using its in-memory store until its `deps.ts` is

@@ -1598,6 +1598,37 @@ export type Database = {
     Functions: {
       current_customer_session_id: { Args: never; Returns: string }
       current_staff_id: { Args: never; Returns: string }
+      idempotency_find_or_begin: {
+        Args: {
+          p_actor_key: string
+          p_expires_at: string
+          p_idempotency_key: string
+          p_now: string
+          p_operation: string
+          p_request_fingerprint: string
+        }
+        Returns: {
+          actor_key: string
+          created_at: string
+          expires_at: string
+          id: string
+          idempotency_key: string
+          operation: string
+          request_fingerprint: string
+          result_entity_id: string | null
+          result_entity_type: string | null
+          session_id: string | null
+          status: Database["public"]["Enums"]["idempotency_status"]
+          updated_at: string
+          version: number
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "idempotency_keys"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       is_owner_or_manager: { Args: never; Returns: boolean }
       is_published_menu_version: {
         Args: { version_id: string }
