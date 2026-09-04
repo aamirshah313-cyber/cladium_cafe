@@ -2,6 +2,15 @@
 
 Newest decisions go first. Each entry stays short and points to authoritative evidence.
 
+## D-063 — Local Supabase ports moved to the 553xx block, and the lean-stack service set recorded, after Windows reserved ports blocked `supabase start`
+
+- Decision: `supabase/config.toml` now uses 55320–55329 instead of the CLI's 54320–54329 defaults. Local development only; no hosted environment reads this file.
+- Cause, confirmed by evidence rather than guessed: `supabase start` failed with `ports are not available: ... bind: An attempt was made to access a socket in a way forbidden by its access permissions`. `netsh interface ipv4 show excludedportrange protocol=tcp` showed Windows had dynamically reserved **54299–54398** for Hyper-V/WSL, which swallows the CLI's entire default port block. Nothing outside `config.toml` referenced those ports, so the move is self-contained. These reservations are dynamic and reappear at reboot, which is also why Step 42 could use the defaults successfully and this session could not — no regression, just a different reservation.
+- Second, independent failure found in the same sitting: with all services running, `realtime`, `storage-api`, and `supavisor` never became ready (the pooler additionally hit a supavisor Ecto migration error) on a machine with ~3.8 GB available to Docker. `TASKS.md` already noted full-stack local work wants ~7 GB and that migrations do not need it. The working invocation for database work is therefore `npx supabase start -x realtime,storage-api,imgproxy,studio,edge-runtime,logflare,vector,supavisor,mailpit`, which leaves Postgres, GoTrue, Kong, PostgREST, and postgres-meta — enough for migrations, RLS tests, and PostgREST-based adapter work.
+- **The Supabase CLI prints a fatal JSON error and still exits 0.** Both failures above were reported as `exit code 0` by the surrounding tooling; only reading the actual output revealed them. Treat the CLI's exit status as unreliable and read its output, the same discipline this project already applies to piped `npm run verify`.
+- Evidence: after the change, all 13 migrations applied cleanly and `npm run db:test` passed both halves against real Postgres — schema tests and the full RLS allow/deny matrix (anon, guest A/B, all five roles, service worker), `REAL_EXIT_CODE:0`.
+- Safety note for anyone running these commands: this repo is linked to the **real** staging project (`vxvpxywszskxcugwpsch`). Every command in this work targeted the local stack only; `--linked` was deliberately never used with any destructive command.
+
 ## D-062 — Vercel functions pinned to `hnd1` to co-locate with the Tokyo database, closing the last unblocked engineering item on Step 45's punch list
 
 - Decision: added `vercel.json` with `"regions": ["hnd1"]`. Closes engineering item 5 of `production-readiness-decision.md`'s punch list ("verify/fix the Vercel↔Supabase function-region alignment"), which had been open and untouched since Step 45 — items 1–4 were already closed by D-050/D-051/D-055/D-054, and items 6–8 remain genuinely blocked on owner actions (Pro upgrade, real traffic, a monitoring stack).

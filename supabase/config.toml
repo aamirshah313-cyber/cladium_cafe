@@ -5,27 +5,38 @@
 # separate, human-run step documented in docs/database-environments.md.
 #
 # Schema and migrations are deliberately absent: they arrive in Step 8+.
+#
+# Ports use the 553xx block rather than the Supabase CLI's 543xx defaults.
+# Windows reserves dynamic TCP ranges for Hyper-V/WSL, and on a real dev
+# machine here the reserved range 54299-54398 swallowed the CLI's entire
+# default block (54320-54329), so `supabase start` failed with "ports are
+# not available: ... bind: An attempt was made to access a socket in a way
+# forbidden by its access permissions" while still exiting 0. Confirmed
+# with `netsh interface ipv4 show excludedportrange protocol=tcp`, not
+# guessed. These reservations are dynamic, so the range can appear on any
+# Windows machine at any reboot; 553xx sits outside every reserved range
+# observed. Local development only -- no hosted environment reads this.
 
 project_id = "cladium-cafe-resort"
 
 [api]
 enabled = true
-port = 54321
+port = 55321
 schemas = ["public"]
 extra_search_path = ["public", "extensions"]
 # Bounded so an unfiltered query cannot pull an unbounded result set.
 max_rows = 1000
 
 [db]
-port = 54322
-shadow_port = 54320
+port = 55322
+shadow_port = 55320
 # Must match the hosted project's Postgres major version. Verify against the
 # real project before the first remote migration and correct this if it differs.
 major_version = 17
 
 [db.pooler]
 enabled = true
-port = 54329
+port = 55329
 # Transaction pooling is what serverless application traffic uses
 # (production-architecture-v2.md §13). Migrations must NOT go through it —
 # they use the direct connection instead. See DIRECT_DATABASE_URL.
@@ -35,13 +46,13 @@ max_client_conn = 100
 
 [studio]
 enabled = true
-port = 54323
+port = 55323
 
 # Local mail catcher for auth flows. Never a real mail provider in local dev.
 # (Was [inbucket]; the CLI deprecated that section name in favour of [local_smtp].)
 [local_smtp]
 enabled = true
-port = 54324
+port = 55324
 
 [storage]
 enabled = true
