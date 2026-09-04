@@ -11,12 +11,14 @@ Postgres, using the server-only service-role client
 replacements for the in-memory stores, so `src/lib/domain` keeps its
 interfaces and no calling code changes.
 
-| Adapter                                | Implements                             | Wired into a domain?                              |
-| -------------------------------------- | -------------------------------------- | ------------------------------------------------- |
-| `postgres-confirmation-token-store.ts` | `ConfirmationTokenStore`               | No — built and tested, not yet used at runtime    |
-| `postgres-idempotency-store.ts`        | `IdempotencyStore<R>`                  | No — built and tested, not yet used at runtime    |
-| `postgres-versioned-store.ts`          | `VersionedStore<T>`                    | No — generic mechanism, needs a per-table mapping |
-| `postgres-booking-request-store.ts`    | `VersionedStore<BookingRequestRecord>` | No — built and tested, not yet used at runtime    |
+| Adapter                                | Implements                                  | Wired into a domain?                              |
+| -------------------------------------- | ------------------------------------------- | ------------------------------------------------- |
+| `postgres-confirmation-token-store.ts` | `ConfirmationTokenStore`                    | No — built and tested, not yet used at runtime    |
+| `postgres-idempotency-store.ts`        | `IdempotencyStore<R>`                       | No — built and tested, not yet used at runtime    |
+| `postgres-versioned-store.ts`          | `VersionedStore<T>`                         | No — generic mechanism, needs a per-table mapping |
+| `postgres-booking-request-store.ts`    | `VersionedStore<BookingRequestRecord>`      | No — built and tested, not yet used at runtime    |
+| `postgres-append-only-sink.ts`         | `AppendOnlySink<T>`                         | No — generic mechanism, needs a per-table mapping |
+| `postgres-event-sinks.ts`              | `AppendOnlySink<StatusEvent \| AuditEvent>` | No — built and tested, not yet used at runtime    |
 
 `VersionedStore` is split in two because all three request tables share the
 interface but none maps 1:1 onto its domain record:
@@ -53,6 +55,16 @@ Rules these adapters follow:
   `string`.
 - Throw on database errors. These interfaces have no error channel, and a
   swallowed write error is indistinguishable from success.
+- Page explicitly rather than relying on a single `select`. PostgREST caps
+  a response at `max_rows` (1000 in `supabase/config.toml`), and a silent
+  cap would drop rows off the end of a staff queue or an audit trail with
+  nothing to indicate anything was missing.
+
+`status_events`, `audit_events`, and `consent_events` additionally carry a
+`forbid_row_change()` trigger rejecting every UPDATE and DELETE, including
+for `service_role` — a trigger is not role-scoped. Their integration tests
+therefore cannot clean up after themselves: they tag rows with a unique
+correlation id, find only their own, and never assume an empty table.
 
 ### Testing them
 

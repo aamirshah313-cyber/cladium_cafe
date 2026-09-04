@@ -14,6 +14,7 @@ export type Database = {
           action: string
           actor_id: string | null
           actor_type: Database["public"]["Enums"]["actor_type"]
+          category: Database["public"]["Enums"]["audit_event_category"] | null
           correlation_id: string | null
           created_at: string
           entity_id: string | null
@@ -25,6 +26,7 @@ export type Database = {
           action: string
           actor_id?: string | null
           actor_type: Database["public"]["Enums"]["actor_type"]
+          category?: Database["public"]["Enums"]["audit_event_category"] | null
           correlation_id?: string | null
           created_at?: string
           entity_id?: string | null
@@ -36,6 +38,7 @@ export type Database = {
           action?: string
           actor_id?: string | null
           actor_type?: Database["public"]["Enums"]["actor_type"]
+          category?: Database["public"]["Enums"]["audit_event_category"] | null
           correlation_id?: string | null
           created_at?: string
           entity_id?: string | null
@@ -1646,6 +1649,13 @@ export type Database = {
     }
     Enums: {
       actor_type: "GUEST" | "STAFF" | "SYSTEM"
+      audit_event_category:
+        | "AUTH"
+        | "ADMIN"
+        | "MENU_PUBLISHING"
+        | "FEATURE_CHANGE"
+        | "EXPORT"
+        | "PII_ACCESS"
       availability_status: "AVAILABLE" | "UNAVAILABLE" | "UNKNOWN"
       booking_state:
         | "DRAFT"
@@ -1840,6 +1850,14 @@ export const Constants = {
   public: {
     Enums: {
       actor_type: ["GUEST", "STAFF", "SYSTEM"],
+      audit_event_category: [
+        "AUTH",
+        "ADMIN",
+        "MENU_PUBLISHING",
+        "FEATURE_CHANGE",
+        "EXPORT",
+        "PII_ACCESS",
+      ],
       availability_status: ["AVAILABLE", "UNAVAILABLE", "UNKNOWN"],
       booking_state: [
         "DRAFT",
