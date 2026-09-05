@@ -49,7 +49,7 @@ import { hasConsent } from '../../modules/consent/consent-service';
 import { consentDeps } from '../../modules/consent/deps';
 import { resolveMetaPixelId } from '../../modules/integrations/meta-pixel';
 import { brandLogo } from '../../modules/brand/asset-manifest';
-import { fontVariables } from '../fonts';
+import { fontUrdu, latinFontVariables } from '../fonts';
 import { MetaPixelBootstrap } from './meta-pixel-bootstrap';
 import { SiteFooter } from './site-footer';
 import { SiteHeader } from './site-header';
@@ -143,12 +143,17 @@ export default async function LocaleLayout({
   const theme: Theme | null = isSupportedTheme(rawTheme) ? rawTheme : null;
   const metaPixelId = await resolvePageMetaPixelId(cookieStore);
 
+  // The Nastaliq face is attached only on Urdu pages — see `app/fonts.ts`
+  // for why an English page must not carry it.
+  const fontClassName =
+    locale === 'ur' ? `${latinFontVariables} ${fontUrdu.variable}` : latinFontVariables;
+
   return (
     <html
       lang={locale}
       dir={localeDirection(locale)}
       data-theme={theme ?? undefined}
-      className={fontVariables}
+      className={fontClassName}
     >
       <body>
         {metaPixelId ? <MetaPixelBootstrap pixelId={metaPixelId} /> : null}

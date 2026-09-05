@@ -23,9 +23,14 @@
 
 import { Cormorant_Garamond, Inter, Noto_Nastaliq_Urdu } from 'next/font/google';
 
+/*
+ * Only the weights actually used are requested. Each extra weight is a
+ * separate file the browser downloads, and asking for four when the
+ * stylesheet uses two is pure transfer cost.
+ */
 export const fontSerif = Cormorant_Garamond({
   subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
+  weight: ['400', '600'],
   display: 'swap',
   variable: '--font-serif',
 });
@@ -36,12 +41,25 @@ export const fontSans = Inter({
   variable: '--font-sans',
 });
 
+/**
+ * Nastaliq is a large face — measured at 234KB, more than the hero
+ * photograph — so it is never preloaded and its variable is attached only
+ * on Urdu pages (`layout.tsx`). Before that, every English page paid for a
+ * font it could not render a single glyph with: 319KB of fonts on `/en`,
+ * which under a throttled mobile profile was the difference between the
+ * page being readable and not.
+ *
+ * On Urdu pages it still loads immediately (the stylesheet references it on
+ * `body`), and `display: swap` means the text is legible in a fallback face
+ * from first paint rather than invisible while it arrives.
+ */
 export const fontUrdu = Noto_Nastaliq_Urdu({
   subsets: ['arabic'],
-  weight: ['400', '500', '600', '700'],
+  weight: ['400', '600'],
   display: 'swap',
+  preload: false,
   variable: '--font-urdu',
 });
 
-/** Applied together on `<html>` so every family is available to CSS as a variable. */
-export const fontVariables = `${fontSerif.variable} ${fontSans.variable} ${fontUrdu.variable}`;
+/** The Latin families, needed on every page in both locales. */
+export const latinFontVariables = `${fontSerif.variable} ${fontSans.variable}`;
