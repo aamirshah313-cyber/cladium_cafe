@@ -2,17 +2,18 @@
  * Process-lifetime singleton deps for the booking API routes — Runbook
  * Step 22.
  *
- * **Back to in-memory only, temporarily (D-078)** — D-077's real-Postgres
- * switch was reverted immediately after a real submission against real
- * staging found it broken for every real guest (a `customer_sessions`
- * foreign-key gap in the shared guest-session layer, not in bookings
- * itself). See `resolveBookingDeps`'s own doc comment for the full
- * finding and exactly what needs to happen before this can safely switch
- * back. `createPostgresBookingDeps` below is untouched, still correct,
- * and ready for that. `outbox` stays the Step 25 shared in-memory
- * singleton either way (`modules/notifications/deps.ts`) — `outbox_events`
- * is one table, not one per entity, so one dispatcher drains all three,
- * and switching it is a separate, cross-domain decision belonging to that
+ * **Real Postgres when configured, in-memory otherwise (D-077, re-enabled
+ * D-080)** — briefly switched on (D-077), emergency-reverted minutes
+ * later after a real submission against real staging found a real
+ * `customer_sessions` foreign-key gap in the shared guest-session layer
+ * (D-078), then re-enabled once that gap was actually fixed for every
+ * affected table, not just this one (D-079). See `resolveBookingDeps`'s
+ * own doc comment for exactly how the switch is done safely, and
+ * `createPostgresBookingDeps`'s for why flipping this is never a small,
+ * mechanical step. `outbox` stays the Step 25 shared in-memory singleton
+ * either way (`modules/notifications/deps.ts`) — `outbox_events` is one
+ * table, not one per entity, so one dispatcher drains all three, and
+ * switching it is a separate, cross-domain decision belonging to that
  * module, not this one (see `createPostgresBookingDeps`'s own comment on
  * the real, documented consequence of that).
  */
@@ -30,6 +31,8 @@ import {
   createPostgresStatusEventSink,
   createPostgresAuditEventSink,
 } from '../../lib/db/postgres-event-sinks';
+import { createSupabaseAdminClient } from '../integrations/supabase-admin-client';
+import { createLogger } from '../../lib/logging';
 import { outboxStore } from '../notifications/deps';
 import type { BookingRequestRecord } from './request';
 import type { BookingServiceDeps, SubmitBookingRequestResult } from './submission-service';
@@ -75,40 +78,30 @@ let cachedBookingDeps: BookingServiceDeps | null = null;
  * mitigated, not eliminated, by the `warn` log emitted below — real
  * alerting on that log line is a separate, later task once a monitoring
  * stack exists (same standing gap tracked since Step 41).
- */
-/**
- * **URGENT, TEMPORARY REVERT (D-078)**: forced back to in-memory only,
- * unconditionally, immediately after a real submission against real
- * staging proved the Postgres path is currently broken for every real
- * guest, not just this one: `confirmation_tokens.session_id` has a real
- * foreign key into `customer_sessions` (`20260824130001_staff_and_sessions.sql`),
- * but `lib/customer-session.ts#resolveCustomerSession` — built at Step 20,
- * long before any Postgres adapter existed — only ever mints a bare
- * `randomUUID()` for `sessionId` and signs it into a cookie; it never
- * inserts the matching `customer_sessions` row the schema's own design
- * requires. `tests/integration/bookings-postgres-cutover.test.ts` never
- * caught this because its own fixture (`newSession()`) manually inserts
- * that row directly — masking that the real application never does.
- * Confirmed via Supabase's own Postgres logs: `insert or update on table
- * "confirmation_tokens" violates foreign key constraint
- * "confirmation_tokens_session_id_fkey"`.
  *
- * `createPostgresBookingDeps` below is untouched and still correct — the
- * gap is entirely in the guest-session layer every domain shares, not in
- * the booking adapters. Re-enabling the Postgres path needs
- * `resolveCustomerSession` (or a Postgres-aware variant of it) to
- * actually upsert a `customer_sessions` row keyed by a hash of the raw
- * token, matching `postgres-idempotency-store.ts`'s own precedent of
- * hashing a fingerprint before storage — a real, separate piece of work
- * across the shared session layer, not a one-line fix, and not something
- * to rush back in immediately after just finding it live. When that's
- * done, this function goes back to the D-077 shape: `try { return
- * createPostgresBookingDeps(createSupabaseAdminClient()); } catch { ...
- * warn and fall back ... }`.
+ * **This fallback only catches construction failures — a real, different
+ * runtime bug got through it once already (D-078/D-079):**
+ * `createSupabaseAdminClient()` succeeding says nothing about whether a
+ * later query inside a real request will succeed. D-077's first attempt
+ * crashed live on a foreign-key violation deep inside `save()`, not at
+ * construction, so this `try`/`catch` never had a chance to catch it —
+ * fixed by making the adapters themselves self-sufficient (D-079's
+ * `ensureCustomerSessionRow`), not by widening what this function catches.
+ * Re-enabled only after that fix was proven via real-Postgres integration
+ * tests that no longer pre-seed a session fixture, and confirmed live
+ * against real staging with a genuine booking submission before being
+ * reported as working.
  */
 function resolveBookingDeps(): BookingServiceDeps {
   if (cachedBookingDeps) return cachedBookingDeps;
-  cachedBookingDeps = createBookingDeps();
+  try {
+    cachedBookingDeps = createPostgresBookingDeps(createSupabaseAdminClient());
+  } catch (error) {
+    createLogger().warn('bookings.deps.postgres_unavailable_using_in_memory', {
+      errorType: error instanceof Error ? error.constructor.name : typeof error,
+    });
+    cachedBookingDeps = createBookingDeps();
+  }
   return cachedBookingDeps;
 }
 
