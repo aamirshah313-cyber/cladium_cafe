@@ -41,6 +41,8 @@ export interface SecurityHeadersOptions {
   readonly nonce?: string;
   /** Additional trusted API origins beyond `'self'` (e.g. Supabase, Anthropic, Vapi endpoints actually called from the browser). `next.config.ts` now populates this with the configured Supabase project's origin (D-059 follow-up — `staff/reset-password{,/confirm}/page.tsx` is real browser code that calls Supabase's Auth API directly; found live when CSP silently blocked that call). Vapi's web SDK is still unwired here; populate this further before enabling `FEATURE_VOICE_EN`/`FEATURE_VOICE_UR` in any real environment, confirmed against Vapi's current required origins first. */
   readonly connectSrc?: readonly string[];
+  /** Additional trusted script origins beyond `'self'` (e.g. the Meta Pixel's `connect.facebook.net`, only when `next.config.ts` finds `FEATURE_META_MARKETING` on and `META_PIXEL_ID` configured). */
+  readonly scriptSrc?: readonly string[];
   /** Dev-only: adds `'unsafe-eval'` to `script-src` for React's dev-mode error-stack reconstruction. Never set in production. */
   readonly allowEval?: boolean;
   /** Emits `Content-Security-Policy-Report-Only` instead of the enforcing header, for staged rollout. */
@@ -53,7 +55,10 @@ export function buildContentSecurityPolicy(options: SecurityHeadersOptions = {})
   const evalSource = options.allowEval ? ["'unsafe-eval'"] : [];
   const directives: readonly (readonly [string, readonly string[]])[] = [
     ['default-src', ["'self'"]],
-    ['script-src', ["'self'", ...nonceSource, ...inlineFallback, ...evalSource]],
+    [
+      'script-src',
+      ["'self'", ...nonceSource, ...inlineFallback, ...evalSource, ...(options.scriptSrc ?? [])],
+    ],
     ['style-src', ["'self'", ...nonceSource, ...inlineFallback]],
     ['img-src', ["'self'", 'data:', 'https:']],
     ['font-src', ["'self'", 'data:']],

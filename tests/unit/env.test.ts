@@ -5,6 +5,7 @@ import {
   parseCronSecret,
   parseFeatureFlags,
   parseMetaCredentials,
+  parseMetaPixelId,
   parseServerEnv,
   parseStaffDevAccounts,
   parseWhatsAppCredentials,
@@ -170,6 +171,16 @@ describe('parseMetaCredentials — Runbook Step 37', () => {
         META_CONVERSIONS_API_TOKEN: 'token-1',
       }),
     ).toBeDefined();
+  });
+});
+
+describe('parseMetaPixelId — Step 37 follow-up (browser Pixel bootstrap)', () => {
+  it('returns undefined, not a throw, when unset', () => {
+    expect(parseMetaPixelId({})).toBeUndefined();
+  });
+
+  it('returns the pixel id alone, needing neither of the other two Meta vars', () => {
+    expect(parseMetaPixelId({ META_PIXEL_ID: 'pixel-1' })).toBe('pixel-1');
   });
 });
 

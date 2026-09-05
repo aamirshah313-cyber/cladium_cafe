@@ -4,6 +4,7 @@ import {
   isSupabasePublicCredentialsConfigured,
   parseSupabasePublicCredentials,
 } from './src/lib/env';
+import { isFeatureEnabled, parseMetaPixelId } from './src/lib/env.server';
 
 /**
  * Runbook Step 40 (security and abuse verification) found `lib/security/
@@ -52,13 +53,40 @@ function supabaseConnectSrc(): string[] {
   if (!isSupabasePublicCredentialsConfigured()) return [];
   return [new URL(parseSupabasePublicCredentials().NEXT_PUBLIC_SUPABASE_URL).origin];
 }
+
+/**
+ * Runbook Step 37 follow-up: the browser Meta Pixel needs to load
+ * `https://connect.facebook.net/en_US/fbevents.js` (script-src) and send
+ * its own tracking calls to `connect.facebook.net` (connect-src) — allowed
+ * only under the same condition `meta-pixel.ts#resolveMetaPixelId` requires
+ * before ever rendering the bootstrap script (`FEATURE_META_MARKETING` on,
+ * `META_PIXEL_ID` configured), so an unconfigured/disabled environment's
+ * CSP is unaffected. Per-guest consent is a separate, per-request gate
+ * enforced at render time (`[locale]/layout.tsx`) — CSP itself is a single
+ * static policy with no per-request session access, so it can only ever
+ * express "this domain may be used at all," not "this specific guest
+ * consented."
+ */
+function metaPixelDomainsAllowed(): boolean {
+  return isFeatureEnabled('FEATURE_META_MARKETING') && Boolean(parseMetaPixelId());
+}
+function metaConnectSrc(): string[] {
+  return metaPixelDomainsAllowed() ? ['https://connect.facebook.net'] : [];
+}
+function metaScriptSrc(): string[] {
+  return metaPixelDomainsAllowed() ? ['https://connect.facebook.net'] : [];
+}
+
 const isDev = process.env.NODE_ENV === 'development';
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   async headers() {
     if (isDev) return [];
-    const headers = securityHeaders({ connectSrc: supabaseConnectSrc() });
+    const headers = securityHeaders({
+      connectSrc: [...supabaseConnectSrc(), ...metaConnectSrc()],
+      scriptSrc: metaScriptSrc(),
+    });
     return [
       {
         source: '/:path*',

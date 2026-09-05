@@ -49,3 +49,24 @@ export function resolveCustomerSession(
     setCookieHeader: serializeSessionCookie(token, { secure: input.secure }),
   };
 }
+
+export interface ReadVerifiedSessionIdInput {
+  readonly existingToken: string | undefined;
+  readonly secret: string;
+  readonly now?: Date;
+}
+
+/**
+ * Read-only counterpart to `resolveCustomerSession` — never mints a session,
+ * never returns a cookie to set. For a Server Component (e.g. a layout
+ * deciding whether a consent-gated script may render) that cannot attach a
+ * `Set-Cookie` header to its own render. No cookie yet, or a token that
+ * fails verification, both resolve to `null` — the same "no session" state
+ * a guest who has never interacted with a session-minting route is
+ * genuinely in, never an invented one.
+ */
+export function readVerifiedSessionId(input: ReadVerifiedSessionIdInput): string | null {
+  if (!input.existingToken) return null;
+  const verified = verifySessionToken(input.existingToken, input.secret, { now: input.now });
+  return verified.ok ? verified.value.sessionId : null;
+}

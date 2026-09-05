@@ -201,6 +201,21 @@ export function parseMetaCredentials(source: EnvSource = process.env): MetaCrede
   };
 }
 
+const metaPixelIdSchema = serverEnvSchema
+  .pick({ META_PIXEL_ID: true })
+  .extend({ META_PIXEL_ID: z.string().min(1) });
+
+/**
+ * Narrow accessor for just `META_PIXEL_ID` — the browser Pixel bootstrap
+ * script needs only this (never `META_DATASET_ID`/`META_CONVERSIONS_API_TOKEN`,
+ * which are server-only CAPI concerns `parseMetaCredentials` requires all
+ * three of). Same "returns `undefined` rather than throwing" shape as
+ * `parseVapiWebhookSecret`.
+ */
+export function parseMetaPixelId(source: EnvSource = process.env): string | undefined {
+  return metaPixelIdSchema.safeParse(source).data?.META_PIXEL_ID;
+}
+
 const whatsAppCredentialsSchema = serverEnvSchema
   .pick({
     WHATSAPP_PHONE_NUMBER_ID: true,

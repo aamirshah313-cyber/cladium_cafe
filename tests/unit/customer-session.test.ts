@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createSessionToken } from '../../src/lib/security/session';
-import { resolveCustomerSession } from '../../src/lib/customer-session';
+import { readVerifiedSessionId, resolveCustomerSession } from '../../src/lib/customer-session';
 
 const SECRET = 'test-secret-value-at-least-32-bytes-long';
 const NOW = new Date('2026-08-26T12:00:00Z');
@@ -78,5 +78,44 @@ describe('resolveCustomerSession', () => {
       now: NOW,
     });
     expect(result.setCookieHeader).not.toContain('Secure');
+  });
+});
+
+describe('readVerifiedSessionId — never mints, for a Server Component that cannot set a cookie', () => {
+  it('returns null when there is no existing token', () => {
+    expect(
+      readVerifiedSessionId({ existingToken: undefined, secret: SECRET, now: NOW }),
+    ).toBeNull();
+  });
+
+  it('returns the session id from a valid existing token', () => {
+    const token = createSessionToken(SECRET, { sessionId: 'session-abc', now: NOW });
+    expect(readVerifiedSessionId({ existingToken: token, secret: SECRET, now: NOW })).toBe(
+      'session-abc',
+    );
+  });
+
+  it('returns null for a malformed token, never a mint', () => {
+    expect(
+      readVerifiedSessionId({ existingToken: 'not-a-real-token', secret: SECRET, now: NOW }),
+    ).toBeNull();
+  });
+
+  it('returns null for a token signed with a different secret', () => {
+    const token = createSessionToken('a-completely-different-secret-value', {
+      sessionId: 'session-abc',
+      now: NOW,
+    });
+    expect(readVerifiedSessionId({ existingToken: token, secret: SECRET, now: NOW })).toBeNull();
+  });
+
+  it('returns null for an expired token', () => {
+    const token = createSessionToken(SECRET, {
+      sessionId: 'session-abc',
+      now: NOW,
+      ttlSeconds: 60,
+    });
+    const later = new Date(NOW.getTime() + 120_000);
+    expect(readVerifiedSessionId({ existingToken: token, secret: SECRET, now: later })).toBeNull();
   });
 });

@@ -179,6 +179,31 @@ describe('headers and redaction', () => {
     expect(csp).not.toContain('unsafe-inline');
   });
 
+  it('adds extra script-src origins only when scriptSrc is supplied — Step 37 follow-up (Meta Pixel)', () => {
+    expect(buildContentSecurityPolicy()).not.toContain('connect.facebook.net');
+    const csp = buildContentSecurityPolicy({ scriptSrc: ['https://connect.facebook.net'] });
+    expect(csp).toContain("script-src 'self' 'unsafe-inline' https://connect.facebook.net");
+  });
+
+  it('scriptSrc and connectSrc are independent extension points, each landing in its own directive only', () => {
+    const csp = buildContentSecurityPolicy({
+      connectSrc: ['https://example.supabase.co'],
+      scriptSrc: ['https://connect.facebook.net'],
+    });
+    const directives = new Map(
+      csp.split('; ').map((directive) => {
+        const [name, ...values] = directive.split(' ');
+        return [name, values];
+      }),
+    );
+    expect(directives.get('connect-src')).toEqual(["'self'", 'https://example.supabase.co']);
+    expect(directives.get('script-src')).toEqual([
+      "'self'",
+      "'unsafe-inline'",
+      'https://connect.facebook.net',
+    ]);
+  });
+
   it('adds unsafe-eval only when allowEval is explicitly set (dev-only)', () => {
     expect(buildContentSecurityPolicy({ allowEval: true })).toContain('unsafe-eval');
     expect(buildContentSecurityPolicy()).not.toContain('unsafe-eval');
