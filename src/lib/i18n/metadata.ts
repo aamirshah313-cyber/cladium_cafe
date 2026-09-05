@@ -8,6 +8,8 @@
  * testable without rendering a route.
  */
 
+import type { Metadata } from 'next';
+import { chromeText, type ChromeKey } from './chrome';
 import { DEFAULT_LOCALE, LOCALES, type Locale } from './locale';
 
 export interface LocaleMetadataAlternates {
@@ -34,5 +36,27 @@ export function localeMetadataAlternates(
   return {
     canonical: `/${locale}${localePath}`,
     languages,
+  };
+}
+
+/**
+ * Builds one inner page's metadata: a page-specific title (the layout's
+ * template appends the brand), a truthful description, and the correct
+ * canonical/alternate URLs for that path.
+ *
+ * Descriptions come from reviewed chrome copy, so a page summary can never
+ * drift into an unapproved claim — and the same rule applies here as
+ * everywhere else: no availability, no confirmation, no invented facility.
+ */
+export function localePageMetadata(
+  locale: Locale,
+  localePath: string,
+  titleKey: ChromeKey,
+  descriptionKey: ChromeKey,
+): Metadata {
+  return {
+    title: chromeText(titleKey, locale),
+    description: chromeText(descriptionKey, locale),
+    alternates: localeMetadataAlternates(locale, localePath),
   };
 }

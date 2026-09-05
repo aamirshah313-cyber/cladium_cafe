@@ -61,6 +61,33 @@ export const chrome = {
     ur: 'براہ کرم دوبارہ کوشش کریں، یا ہوم پیج پر واپس جائیں۔',
   },
   errorRetry: { en: 'Try again', ur: 'دوبارہ کوشش کریں' },
+  // The site's search-result and link-preview summary. Only confirmed
+  // facts: the garden setting, the town, the hours, and that a table is
+  // requested and staff-confirmed rather than instantly booked.
+  siteMetaDescription: {
+    en: 'A garden café and resort in Tarhana, near Abbottabad. Open 12 pm to 12 am. Browse the menu and request a table — our staff confirm every request.',
+    ur: 'ترہانہ، ایبٹ آباد کے قریب ایک باغیچہ کیفے اور ریزورٹ۔ دوپہر 12 سے رات 12 بجے تک کھلا۔ مینو دیکھیں اور میز کی درخواست کریں — ہمارا عملہ ہر درخواست کی تصدیق کرتا ہے۔',
+  },
+  // Concierge transcript speaker labels. The speaker is named in text so
+  // it is never conveyed by alignment or colour alone (WCAG 1.4.1).
+  chatSpeakerYou: { en: 'You', ur: 'آپ' },
+  chatSpeakerConcierge: { en: 'Concierge', ur: 'قونصیرج' },
+  // Starter questions. Each is answerable from approved knowledge, and the
+  // button's text is exactly what gets sent as the guest's message.
+  conciergeStarterHours: { en: 'What are your opening hours?', ur: 'آپ کے اوقات کیا ہیں؟' },
+  conciergeStarterDirections: { en: 'How do I get there?', ur: 'وہاں کیسے پہنچوں؟' },
+  conciergeStarterSeating: { en: 'What seating do you have?', ur: 'آپ کے پاس کون سی نشست ہے؟' },
+  conciergeStarterBirthday: {
+    en: 'Can I arrange a birthday?',
+    ur: 'کیا میں سالگرہ کا انتظام کر سکتا ہوں؟',
+  },
+  // Shown when the security token a form needs could not be obtained. It
+  // names a retryable condition, because the form now retries on submit
+  // rather than disabling itself.
+  sessionUnavailableError: {
+    en: 'We could not start a secure session. Please check your connection and try again.',
+    ur: 'ہم محفوظ سیشن شروع نہیں کر سکے۔ براہ کرم اپنا کنکشن چیک کر کے دوبارہ کوشش کریں۔',
+  },
   errorHomeLink: { en: 'Go to home page', ur: 'ہوم پیج پر جائیں' },
   notFoundHeading: { en: 'Page not found', ur: 'صفحہ نہیں ملا' },
   notFoundBody: {
@@ -82,6 +109,33 @@ export const chrome = {
   },
   homeVisitHeading: { en: 'Finding us', ur: 'ہم تک پہنچنا' },
   homeClosingHeading: { en: 'Reserve your table', ur: 'اپنی میز محفوظ کریں' },
+  // Per-page search-result and link-preview summaries. Each describes only
+  // what the page actually offers — never availability, a confirmed
+  // booking, delivery, or a facility the venue has not confirmed.
+  menuMetaDescription: {
+    en: 'Browse the full Cladium menu — grills, karahi, pasta, wok dishes, sandwiches and drinks, with current prices in PKR.',
+    ur: 'کلیڈیم کا مکمل مینو دیکھیں — گرل، کڑاہی، پاستا، ووک ڈشز، سینڈوچ اور مشروبات، موجودہ قیمتوں کے ساتھ۔',
+  },
+  bookMetaDescription: {
+    en: 'Request a table in the garden or the treehouse. Tell us your date, time and group size, and our staff confirm every request.',
+    ur: 'باغ یا ٹری ہاؤس میں میز کی درخواست کریں۔ ہمیں اپنی تاریخ، وقت اور افراد کی تعداد بتائیں، ہمارا عملہ ہر درخواست کی تصدیق کرتا ہے۔',
+  },
+  eventMetaDescription: {
+    en: 'Plan a birthday or event at Cladium. Décor starts from PKR 8,000; final price and availability are confirmed by our staff.',
+    ur: 'کلیڈیم میں سالگرہ یا تقریب کی منصوبہ بندی کریں۔ ڈیکور PKR 8,000 سے شروع؛ حتمی قیمت اور دستیابی کی تصدیق ہمارا عملہ کرتا ہے۔',
+  },
+  visitMetaDescription: {
+    en: 'Find Cladium in Tarhana, near Abbottabad — directions, opening hours and how to reach us on WhatsApp.',
+    ur: 'ترہانہ، ایبٹ آباد کے قریب کلیڈیم تک پہنچیں — راستہ، اوقات، اور واٹس ایپ پر رابطہ۔',
+  },
+  conciergeMetaDescription: {
+    en: 'Ask the Cladium concierge about the menu, opening hours, directions, seating or celebrations.',
+    ur: 'کلیڈیم قونصیرج سے مینو، اوقات، راستے، نشست یا تقریبات کے بارے میں پوچھیں۔',
+  },
+  privacyMetaDescription: {
+    en: 'How Cladium handles your information, and the choices available to you.',
+    ur: 'کلیڈیم آپ کی معلومات کو کیسے استعمال کرتا ہے، اور آپ کے پاس کون سے اختیارات ہیں۔',
+  },
   navVisitLabel: { en: 'Visit', ur: 'وزٹ' },
   visitPageHeading: { en: 'Visit us', ur: 'ہم سے ملیں' },
   directionsHeading: { en: 'Directions', ur: 'راستہ' },
@@ -139,6 +193,49 @@ export const chrome = {
   bookFormSeatingLabel: { en: 'Seating preference', ur: 'نشست کی ترجیح' },
   seatingGeneralLabel: { en: 'General seating', ur: 'عمومی نشست' },
   seatingTreehouseLabel: { en: 'Treehouse', ur: 'ٹری ہاؤس' },
+  // Notes shown under each seating choice. Both restate the approved
+  // position exactly: general seating is ample, treehouse is limited and
+  // staff-confirmed. Neither promises availability.
+  seatingGeneralNote: { en: 'Tables across the garden.', ur: 'باغ میں میزیں۔' },
+  seatingTreehouseNote: {
+    en: 'Limited capacity — confirmed by our staff.',
+    ur: 'محدود گنجائش — ہمارے عملے سے تصدیق شدہ۔',
+  },
+  // Page ledes. Each says plainly that this is a request awaiting staff
+  // confirmation, never a booking.
+  bookPageLede: {
+    en: 'Tell us when you would like to come and how many people you are. Our staff confirm every request directly.',
+    ur: 'ہمیں بتائیں کہ آپ کب آنا چاہتے ہیں اور کتنے افراد ہیں۔ ہمارا عملہ ہر درخواست کی براہ راست تصدیق کرتا ہے۔',
+  },
+  // Restates the approved décor position wherever décor is offered as a
+  // choice. "From" and "confirmed by staff" are both load-bearing: neither
+  // may be dropped to make the option look simpler.
+  eventDecorPricingNote: {
+    en: 'From PKR 8,000. Final price and availability are confirmed by our staff.',
+    ur: 'PKR 8,000 سے۔ حتمی قیمت اور دستیابی کی تصدیق ہمارا عملہ کرتا ہے۔',
+  },
+  eventPageLede: {
+    en: 'Tell us about the occasion and our staff will come back to you with what is possible.',
+    ur: 'ہمیں تقریب کے بارے میں بتائیں اور ہمارا عملہ آپ کو بتائے گا کہ کیا ممکن ہے۔',
+  },
+  visitPageLede: {
+    en: 'Where to find us, when we are open, and how to reach us.',
+    ur: 'ہم کہاں ہیں، کب کھلے ہوتے ہیں، اور ہم سے کیسے رابطہ کریں۔',
+  },
+  conciergePageLede: {
+    en: 'Ask about the menu, hours, directions, seating or celebrations.',
+    ur: 'مینو، اوقات، راستے، نشست یا تقریبات کے بارے میں پوچھیں۔',
+  },
+  menuPageLede: {
+    en: 'Every dish, variant and current price, straight from the kitchen’s own menu.',
+    ur: 'ہر ڈش، قسم اور موجودہ قیمت، باورچی خانے کے اپنے مینو سے۔',
+  },
+  // The supporting column beside the booking form.
+  bookWhatHappensHeading: { en: 'What happens next', ur: 'آگے کیا ہوگا' },
+  bookWhatHappensBody: {
+    en: 'You will see your details to check before anything is sent. After you confirm, our staff review the request and contact you on the number you gave us.',
+    ur: 'کچھ بھی بھیجنے سے پہلے آپ اپنی تفصیلات دیکھ کر جانچ سکیں گے۔ تصدیق کے بعد، ہمارا عملہ درخواست کا جائزہ لے کر آپ کے دیے گئے نمبر پر رابطہ کرے گا۔',
+  },
   bookFormNotesLabel: { en: 'Notes (optional)', ur: 'نوٹس (اختیاری)' },
   bookReviewHeading: { en: 'Review your request', ur: 'اپنی درخواست کا جائزہ لیں' },
   bookEditButtonLabel: { en: 'Edit details', ur: 'تفصیلات میں ترمیم کریں' },

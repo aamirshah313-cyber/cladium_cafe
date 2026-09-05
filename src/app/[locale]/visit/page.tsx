@@ -20,12 +20,16 @@
  * plus a visible external-navigation notice.
  */
 
+import Image from 'next/image';
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { chromeText } from '../../../lib/i18n/chrome';
 import { isSupportedLocale } from '../../../lib/i18n/locale';
-import { resolveLocalizedText } from '../../../lib/i18n/localized-text';
+import { localePageMetadata } from '../../../lib/i18n/metadata';
 import { isOpenAt } from '../../../lib/business/hours';
 import { buildWhatsAppUrl } from '../../../lib/business/whatsapp-link';
+import { venueHero } from '../../../modules/brand/asset-manifest';
+import { LocalizedProse } from '../localized-prose';
 import { TrackedWhatsAppLink } from '../tracked-whatsapp-link';
 import {
   ADDRESS_DISPLAY,
@@ -39,6 +43,16 @@ import {
   SEATING_POLICY_TEXT,
   WHATSAPP_DISPLAY,
 } from '../../../modules/business/facts';
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale: rawLocale } = await params;
+  if (!isSupportedLocale(rawLocale)) return {};
+  return localePageMetadata(rawLocale, '/visit', 'visitPageHeading', 'visitMetaDescription');
+}
 
 export default async function VisitPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale: rawLocale } = await params;
@@ -57,49 +71,85 @@ export default async function VisitPage({ params }: { params: Promise<{ locale: 
 
   return (
     <div>
-      <h1>{chromeText('visitPageHeading', locale)}</h1>
+      <div className="page-header">
+        <h1>{chromeText('visitPageHeading', locale)}</h1>
+        <p className="u-lede">{chromeText('visitPageLede', locale)}</p>
+      </div>
 
-      <section aria-labelledby="directions-heading">
-        <h2 id="directions-heading">{chromeText('directionsHeading', locale)}</h2>
-        <p>{resolveLocalizedText(DIRECTIONS_TEXT, locale)}</p>
-        <p>
-          <span>{chromeText('addressHeading', locale)}: </span>
-          <span>{ADDRESS_DISPLAY}</span>
-        </p>
-        <p>
-          <a href={GOOGLE_MAPS_URL} target="_blank" rel="noopener noreferrer">
-            {chromeText('mapCtaLabel', locale)}
-          </a>
-        </p>
-      </section>
+      {/*
+       * The same real garden photograph as the homepage, at a calmer size.
+       * It is the only authentic venue image that exists, so it appears
+       * here as an arrival image rather than being duplicated into a
+       * gallery of crops pretending to be different views. Lazy-loaded:
+       * this is not the LCP element on this page.
+       */}
+      <Image
+        src={venueHero.wideSmall.path}
+        alt={venueHero.wideSmall.alt}
+        width={venueHero.wideSmall.width}
+        height={venueHero.wideSmall.height}
+        sizes="(min-width: 1240px) 1240px, 100vw"
+        className="visit-image"
+        loading="lazy"
+        style={{ objectPosition: venueHero.wideSmall.focalPoint }}
+      />
 
-      <section aria-labelledby="hours-heading">
-        <h2 id="hours-heading">{chromeText('hoursLabel', locale)}</h2>
-        <p>
-          <span>{BUSINESS_HOURS_DISPLAY}</span>
-          <span> · </span>
-          <span>{chromeText(statusKey, locale)}</span>
-        </p>
-      </section>
+      <div className="visit-grid">
+        <section className="panel" aria-labelledby="directions-heading">
+          <h2 id="directions-heading">{chromeText('directionsHeading', locale)}</h2>
+          <LocalizedProse text={DIRECTIONS_TEXT} locale={locale} />
+          <dl className="summary-list">
+            <dt>{chromeText('addressHeading', locale)}</dt>
+            <dd>{ADDRESS_DISPLAY}</dd>
+          </dl>
+          <div className="form-actions">
+            {/*
+             * A link to the verified listing, not an embedded map: an embed
+             * would block rendering and load third-party tracking for a
+             * destination a link already reaches.
+             */}
+            <a
+              href={GOOGLE_MAPS_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="u-button u-button--secondary"
+            >
+              {chromeText('mapCtaLabel', locale)}
+            </a>
+          </div>
+        </section>
 
-      <section aria-labelledby="contact-heading">
-        <h2 id="contact-heading">{chromeText('contactHeading', locale)}</h2>
-        <p>
-          <TrackedWhatsAppLink href={buildWhatsAppUrl(locale)} eventSourceUrl={`/${locale}/visit`}>
-            {chromeText('whatsappCtaLabel', locale)}
-          </TrackedWhatsAppLink>
-          <span> ({WHATSAPP_DISPLAY})</span>
-        </p>
-        <p>
-          <small>{chromeText('whatsappExternalNoticeText', locale)}</small>
-        </p>
-      </section>
+        <section className="panel" aria-labelledby="hours-heading">
+          <h2 id="hours-heading">{chromeText('hoursLabel', locale)}</h2>
+          <p className="visit-hours">{BUSINESS_HOURS_DISPLAY}</p>
+          <p className="u-muted">{chromeText(statusKey, locale)}</p>
+        </section>
 
-      <section aria-labelledby="good-to-know-heading">
+        <section className="panel" aria-labelledby="contact-heading">
+          <h2 id="contact-heading">{chromeText('contactHeading', locale)}</h2>
+          <p>{WHATSAPP_DISPLAY}</p>
+          <div className="form-actions">
+            <TrackedWhatsAppLink
+              href={buildWhatsAppUrl(locale)}
+              eventSourceUrl={`/${locale}/visit`}
+              className="u-button u-button--primary"
+            >
+              {chromeText('whatsappCtaLabel', locale)}
+            </TrackedWhatsAppLink>
+          </div>
+          {/* The external-navigation notice stays visible, not a tooltip. */}
+          <p className="field-hint">{chromeText('whatsappExternalNoticeText', locale)}</p>
+        </section>
+      </div>
+
+      <section className="panel visit-good-to-know" aria-labelledby="good-to-know-heading">
         <h2 id="good-to-know-heading">{chromeText('goodToKnowHeading', locale)}</h2>
-        <ul>
+        {/* Approved operational answers, rendered verbatim. */}
+        <ul className="fact-list">
           {policies.map((policy) => (
-            <li key={policy.en}>{resolveLocalizedText(policy, locale)}</li>
+            <li key={policy.en}>
+              <LocalizedProse text={policy} locale={locale} as="span" />
+            </li>
           ))}
         </ul>
       </section>

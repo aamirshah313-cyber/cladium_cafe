@@ -21,6 +21,7 @@ import { useEffect, useState } from 'react';
 import { chromeText } from '../../../lib/i18n/chrome';
 import type { Locale } from '../../../lib/i18n/locale';
 import type { SeatingPreference } from '../../../lib/schemas/common';
+import { BUSINESS_HOURS_DISPLAY } from '../../../modules/business/facts';
 
 interface BookingFormProps {
   readonly locale: Locale;
@@ -88,18 +89,47 @@ export function BookingForm({ locale, initialSeatingPreference }: BookingFormPro
         if (!cancelled && body.csrfToken) setCsrfToken(body.csrfToken);
       })
       .catch(() => {
-        if (!cancelled) setError('Could not start a session. Please reload the page.');
+        // Deliberately not surfaced here: the token is fetched again on
+        // demand when the guest actually submits, so a transient failure
+        // on mount should not greet them with an error before they have
+        // typed anything.
       });
     return () => {
       cancelled = true;
     };
   }, []);
 
+  /**
+   * Returns a usable CSRF token, fetching one if the request on mount did
+   * not produce it. Recovering here rather than disabling the submit button
+   * means one failed background fetch cannot leave the form permanently
+   * unusable with no way to retry.
+   */
+  async function ensureCsrfToken(): Promise<string | null> {
+    if (csrfToken) return csrfToken;
+    try {
+      const response = await fetch('/api/session/csrf');
+      if (!response.ok) return null;
+      const body = (await response.json()) as { csrfToken?: string };
+      if (!body.csrfToken) return null;
+      setCsrfToken(body.csrfToken);
+      return body.csrfToken;
+    } catch {
+      return null;
+    }
+  }
+
   async function handleReview(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!csrfToken) return;
     setSubmitting(true);
     setError(null);
+
+    const token = await ensureCsrfToken();
+    if (!token) {
+      setError(chromeText('sessionUnavailableError', locale));
+      setSubmitting(false);
+      return;
+    }
 
     try {
       const response = await fetch('/api/bookings/review', {
@@ -113,7 +143,7 @@ export function BookingForm({ locale, initialSeatingPreference }: BookingFormPro
           partySize: Number(fields.partySize),
           seatingPreference: fields.seatingPreference,
           notes: fields.notes.length > 0 ? fields.notes : undefined,
-          csrfToken,
+          csrfToken: token,
         }),
       });
       if (!response.ok) {
@@ -133,9 +163,16 @@ export function BookingForm({ locale, initialSeatingPreference }: BookingFormPro
   }
 
   async function handleConfirm() {
-    if (stage.kind !== 'review' || !csrfToken) return;
+    if (stage.kind !== 'review') return;
     setSubmitting(true);
     setError(null);
+
+    const token = await ensureCsrfToken();
+    if (!token) {
+      setError(chromeText('sessionUnavailableError', locale));
+      setSubmitting(false);
+      return;
+    }
 
     try {
       const response = await fetch('/api/bookings/submit', {
@@ -152,7 +189,7 @@ export function BookingForm({ locale, initialSeatingPreference }: BookingFormPro
           sourceChannel: 'WEB',
           confirmationToken: stage.confirmationToken,
           idempotencyKey: crypto.randomUUID(),
-          csrfToken,
+          csrfToken: token,
         }),
       });
       if (!response.ok) {
@@ -169,7 +206,7 @@ export function BookingForm({ locale, initialSeatingPreference }: BookingFormPro
 
   if (stage.kind === 'confirmed') {
     return (
-      <div role="status">
+      <div className="receipt" role="status">
         <h2>{chromeText('bookConfirmedHeading', locale)}</h2>
         <p>{chromeText('bookConfirmedBody', locale)}</p>
       </div>
@@ -181,7 +218,7 @@ export function BookingForm({ locale, initialSeatingPreference }: BookingFormPro
     return (
       <div>
         <h2>{chromeText('bookReviewHeading', locale)}</h2>
-        <dl>
+        <dl className="summary-list">
           <dt>{chromeText('bookFormNameLabel', locale)}</dt>
           <dd>{review.guestName}</dd>
           <dt>{chromeText('bookFormPhoneLabel', locale)}</dt>
@@ -206,43 +243,57 @@ export function BookingForm({ locale, initialSeatingPreference }: BookingFormPro
           ) : null}
         </dl>
         {error ? (
-          <p role="alert" aria-live="assertive">
+          <p className="alert" role="alert" aria-live="assertive">
             {error}
           </p>
         ) : null}
-        <button type="button" onClick={() => setStage({ kind: 'form' })} disabled={submitting}>
-          {chromeText('bookEditButtonLabel', locale)}
-        </button>
-        <button type="button" onClick={() => void handleConfirm()} disabled={submitting}>
-          {chromeText('bookConfirmButtonLabel', locale)}
-        </button>
+        <div className="form-actions">
+          <button
+            type="button"
+            className="u-button u-button--primary"
+            onClick={() => void handleConfirm()}
+            disabled={submitting}
+          >
+            {chromeText('bookConfirmButtonLabel', locale)}
+          </button>
+          <button
+            type="button"
+            className="u-button u-button--secondary"
+            onClick={() => setStage({ kind: 'form' })}
+            disabled={submitting}
+          >
+            {chromeText('bookEditButtonLabel', locale)}
+          </button>
+        </div>
       </div>
     );
   }
 
   return (
     <form onSubmit={(event) => void handleReview(event)}>
-      <div>
+      <div className="field">
         <label htmlFor="book-name">{chromeText('bookFormNameLabel', locale)}</label>
         <input
           id="book-name"
           type="text"
+          autoComplete="name"
           required
           value={fields.guestName}
           onChange={(event) => setFields({ ...fields, guestName: event.target.value })}
         />
       </div>
-      <div>
+      <div className="field">
         <label htmlFor="book-phone">{chromeText('bookFormPhoneLabel', locale)}</label>
         <input
           id="book-phone"
           type="tel"
+          autoComplete="tel"
           required
           value={fields.guestPhone}
           onChange={(event) => setFields({ ...fields, guestPhone: event.target.value })}
         />
       </div>
-      <div>
+      <div className="field">
         <label htmlFor="book-date">{chromeText('bookFormDateLabel', locale)}</label>
         <input
           id="book-date"
@@ -252,7 +303,7 @@ export function BookingForm({ locale, initialSeatingPreference }: BookingFormPro
           onChange={(event) => setFields({ ...fields, requestedDate: event.target.value })}
         />
       </div>
-      <div>
+      <div className="field">
         <label htmlFor="book-time">{chromeText('bookFormTimeLabel', locale)}</label>
         <input
           id="book-time"
@@ -261,8 +312,13 @@ export function BookingForm({ locale, initialSeatingPreference }: BookingFormPro
           value={fields.requestedTime}
           onChange={(event) => setFields({ ...fields, requestedTime: event.target.value })}
         />
+        {/* The kitchen's real hours, so a guest is not left guessing which
+            times are plausible. It is guidance, not a promise of a slot. */}
+        <p className="field-hint">
+          {chromeText('hoursLabel', locale)}: {BUSINESS_HOURS_DISPLAY}
+        </p>
       </div>
-      <div>
+      <div className="field">
         <label htmlFor="book-party-size">{chromeText('bookFormPartySizeLabel', locale)}</label>
         <input
           id="book-party-size"
@@ -274,28 +330,36 @@ export function BookingForm({ locale, initialSeatingPreference }: BookingFormPro
           onChange={(event) => setFields({ ...fields, partySize: event.target.value })}
         />
       </div>
-      <fieldset>
+      <fieldset className="fieldset">
         <legend>{chromeText('bookFormSeatingLabel', locale)}</legend>
-        <label>
-          <input
-            type="radio"
-            name="seating"
-            checked={fields.seatingPreference === 'GENERAL'}
-            onChange={() => setFields({ ...fields, seatingPreference: 'GENERAL' })}
-          />
-          {chromeText('seatingGeneralLabel', locale)}
-        </label>
-        <label>
-          <input
-            type="radio"
-            name="seating"
-            checked={fields.seatingPreference === 'TREEHOUSE'}
-            onChange={() => setFields({ ...fields, seatingPreference: 'TREEHOUSE' })}
-          />
-          {chromeText('seatingTreehouseLabel', locale)}
-        </label>
+        <div className="choice-grid">
+          <label className="choice">
+            <input
+              type="radio"
+              name="seating"
+              checked={fields.seatingPreference === 'GENERAL'}
+              onChange={() => setFields({ ...fields, seatingPreference: 'GENERAL' })}
+            />
+            <span>
+              <span className="choice-text">{chromeText('seatingGeneralLabel', locale)}</span>
+              <span className="choice-note">{chromeText('seatingGeneralNote', locale)}</span>
+            </span>
+          </label>
+          <label className="choice">
+            <input
+              type="radio"
+              name="seating"
+              checked={fields.seatingPreference === 'TREEHOUSE'}
+              onChange={() => setFields({ ...fields, seatingPreference: 'TREEHOUSE' })}
+            />
+            <span>
+              <span className="choice-text">{chromeText('seatingTreehouseLabel', locale)}</span>
+              <span className="choice-note">{chromeText('seatingTreehouseNote', locale)}</span>
+            </span>
+          </label>
+        </div>
       </fieldset>
-      <div>
+      <div className="field">
         <label htmlFor="book-notes">{chromeText('bookFormNotesLabel', locale)}</label>
         <textarea
           id="book-notes"
@@ -305,13 +369,25 @@ export function BookingForm({ locale, initialSeatingPreference }: BookingFormPro
         />
       </div>
       {error ? (
-        <p role="alert" aria-live="assertive">
+        <p className="alert" role="alert" aria-live="assertive">
           {error}
         </p>
       ) : null}
-      <button type="submit" disabled={submitting || !csrfToken}>
-        {chromeText('bookSubmitButtonLabel', locale)}
-      </button>
+      <div className="form-actions">
+        {/*
+         * Disabled only while a request is genuinely in flight. It used to
+         * also be disabled until the CSRF token arrived, which meant any
+         * failure of that one fetch left the guest looking at a button that
+         * could never be pressed and no way to retry. `handleReview` still
+         * refuses to send without a token and surfaces the reason, so the
+         * guard is kept where it belongs rather than in the disabled state.
+         */}
+        <button type="submit" className="u-button u-button--primary" disabled={submitting}>
+          {submitting
+            ? chromeText('loadingLabel', locale)
+            : chromeText('bookSubmitButtonLabel', locale)}
+        </button>
+      </div>
     </form>
   );
 }

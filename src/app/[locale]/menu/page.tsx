@@ -25,9 +25,11 @@
  * signal, regardless of publish state.
  */
 
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { chromeText } from '../../../lib/i18n/chrome';
 import { isSupportedLocale, type Locale } from '../../../lib/i18n/locale';
+import { localePageMetadata } from '../../../lib/i18n/metadata';
 import { formatPkr } from '../../../lib/business/money';
 import { buildWhatsAppUrl } from '../../../lib/business/whatsapp-link';
 import { filterMenuCategories, getPublishedMenuView } from '../../../modules/menu/menu-view';
@@ -47,6 +49,16 @@ interface MenuPageProps {
   readonly searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale: rawLocale } = await params;
+  if (!isSupportedLocale(rawLocale)) return {};
+  return localePageMetadata(rawLocale, '/menu', 'navMenuLabel', 'menuMetaDescription');
+}
+
 export default async function MenuPage({ params, searchParams }: MenuPageProps) {
   const { locale: rawLocale } = await params;
   if (!isSupportedLocale(rawLocale)) notFound();
@@ -58,19 +70,32 @@ export default async function MenuPage({ params, searchParams }: MenuPageProps) 
     return (
       <div>
         <MenuViewTracker path={`/${locale}/menu`} />
-        <h1>{chromeText('navMenuLabel', locale)}</h1>
-        <p>{chromeText('menuUnpublishedHeading', locale)}</p>
-        <p>{chromeText('menuUnpublishedBody', locale)}</p>
-        <p>
-          <TrackedWhatsAppLink href={buildWhatsAppUrl(locale)} eventSourceUrl={`/${locale}/menu`}>
-            {chromeText('whatsappCtaLabel', locale)}
-          </TrackedWhatsAppLink>
-          <br />
-          <small>{chromeText('whatsappExternalNoticeText', locale)}</small>
-        </p>
-        <p>
-          <a href={`/${locale}/visit`}>{chromeText('navVisitLabel', locale)}</a>
-        </p>
+        <div className="page-header">
+          <h1>{chromeText('navMenuLabel', locale)}</h1>
+        </div>
+        {/*
+         * The honest "not published yet" state, styled as a real panel
+         * rather than left as unstyled text. It offers the two routes that
+         * genuinely work in this state — ask on WhatsApp, or come in — and
+         * never substitutes a cached or draft menu to fill the space.
+         */}
+        <div className="panel">
+          <h2>{chromeText('menuUnpublishedHeading', locale)}</h2>
+          <p>{chromeText('menuUnpublishedBody', locale)}</p>
+          <div className="form-actions">
+            <TrackedWhatsAppLink
+              href={buildWhatsAppUrl(locale)}
+              eventSourceUrl={`/${locale}/menu`}
+              className="u-button u-button--primary"
+            >
+              {chromeText('whatsappCtaLabel', locale)}
+            </TrackedWhatsAppLink>
+            <a href={`/${locale}/visit`} className="u-button u-button--secondary">
+              {chromeText('navVisitLabel', locale)}
+            </a>
+          </div>
+          <p className="field-hint">{chromeText('whatsappExternalNoticeText', locale)}</p>
+        </div>
       </div>
     );
   }
@@ -83,49 +108,90 @@ export default async function MenuPage({ params, searchParams }: MenuPageProps) 
   return (
     <div>
       <MenuViewTracker path={`/${locale}/menu`} />
-      <h1>{chromeText('navMenuLabel', locale)}</h1>
+      <div className="page-header">
+        <h1>{chromeText('navMenuLabel', locale)}</h1>
+        <p className="u-lede">{chromeText('menuPageLede', locale)}</p>
+      </div>
 
       <MenuFeatureCarousel categories={view.categories} locale={locale} />
 
-      <form method="GET">
-        <label htmlFor="menu-search-input">{chromeText('menuSearchLabel', locale)}</label>
-        <input id="menu-search-input" type="search" name="q" defaultValue={query ?? ''} />
+      {/*
+       * A plain GET form, so search and filtering keep working without
+       * JavaScript and the result stays a real, linkable URL — which is
+       * also what lets the language switcher carry `q`/`category` across a
+       * locale change.
+       */}
+      <form method="GET" className="menu-filters" role="search">
+        <div className="field">
+          <label htmlFor="menu-search-input">{chromeText('menuSearchLabel', locale)}</label>
+          <input id="menu-search-input" type="search" name="q" defaultValue={query ?? ''} />
+        </div>
 
-        <label htmlFor="menu-category-select">
-          {chromeText('menuCategoryFilterLabel', locale)}
-        </label>
-        <select id="menu-category-select" name="category" defaultValue={categoryId ?? ''}>
-          <option value="">{chromeText('menuAllCategoriesLabel', locale)}</option>
-          {view.categories.map((category) => (
-            <option key={category.id} value={category.id}>
-              {category.name}
-            </option>
-          ))}
-        </select>
+        <div className="field">
+          <label htmlFor="menu-category-select">
+            {chromeText('menuCategoryFilterLabel', locale)}
+          </label>
+          <select id="menu-category-select" name="category" defaultValue={categoryId ?? ''}>
+            <option value="">{chromeText('menuAllCategoriesLabel', locale)}</option>
+            {view.categories.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.name}
+              </option>
+            ))}
+          </select>
+        </div>
 
-        <button type="submit">{chromeText('menuSearchButtonLabel', locale)}</button>
+        <button type="submit" className="u-button u-button--primary">
+          {chromeText('menuSearchButtonLabel', locale)}
+        </button>
       </form>
 
       {filtered.length === 0 ? (
-        <p>{chromeText('menuNoResultsText', locale)}</p>
+        <div className="state-block">
+          <p className="u-lede">{chromeText('menuNoResultsText', locale)}</p>
+          <div className="form-actions state-actions">
+            <a href={`/${locale}/menu`} className="u-button u-button--secondary">
+              {chromeText('menuAllCategoriesLabel', locale)}
+            </a>
+          </div>
+        </div>
       ) : (
         filtered.map((category) => (
-          <section key={category.id} aria-labelledby={`menu-category-${category.id}`}>
-            <h2 id={`menu-category-${category.id}`}>{category.name}</h2>
-            <ul>
+          <section
+            key={category.id}
+            className="menu-category"
+            aria-labelledby={`menu-category-${category.id}`}
+          >
+            <h2 id={`menu-category-${category.id}`} className="menu-category-heading">
+              {category.name}
+            </h2>
+            <ul className="menu-items">
               {category.items.map((item) => (
-                <li key={item.id}>
-                  <span>{item.name}</span>
-                  {item.groupLabel ? <span> ({item.groupLabel})</span> : null}
-                  {item.basePricePkr !== null ? (
-                    <span> — {formatPkr(item.basePricePkr)}</span>
-                  ) : null}
-                  <span> · {chromeText(availabilityChromeKey(item.availability), locale)}</span>
+                <li key={item.id} className="menu-item">
+                  <div className="menu-item-head">
+                    <span className="menu-item-name">
+                      {item.name}
+                      {item.groupLabel ? (
+                        <span className="menu-item-group"> ({item.groupLabel})</span>
+                      ) : null}
+                    </span>
+                    {/* A leader rule between name and price, so a long name
+                        and its amount stay visually connected across the row. */}
+                    <span className="menu-item-leader" aria-hidden="true" />
+                    {item.basePricePkr !== null ? (
+                      <span className="menu-item-price">{formatPkr(item.basePricePkr)}</span>
+                    ) : null}
+                  </div>
+                  <p className="menu-item-availability">
+                    {chromeText(availabilityChromeKey(item.availability), locale)}
+                  </p>
                   {item.variants.length > 0 ? (
-                    <ul>
+                    <ul className="menu-variants">
                       {item.variants.map((variant) => (
                         <li key={variant.id}>
-                          {variant.label} — {formatPkr(variant.pricePkr)}
+                          <span>{variant.label}</span>
+                          <span className="menu-item-leader" aria-hidden="true" />
+                          <span className="menu-item-price">{formatPkr(variant.pricePkr)}</span>
                         </li>
                       ))}
                     </ul>

@@ -30,12 +30,20 @@ interface TrackedWhatsAppLinkProps {
   readonly href: string;
   readonly eventSourceUrl: string;
   readonly children: ReactNode;
+  /** Lets a caller present the link as a button without changing its tracking or external-navigation behaviour. */
+  readonly className?: string;
 }
 
-export function TrackedWhatsAppLink({ href, eventSourceUrl, children }: TrackedWhatsAppLinkProps) {
+export function TrackedWhatsAppLink({
+  href,
+  eventSourceUrl,
+  children,
+  className,
+}: TrackedWhatsAppLinkProps) {
   return (
     <a
       href={href}
+      className={className}
       target="_blank"
       rel="noopener noreferrer"
       onClick={() => trackMetaEventWithFreshCsrf('contact', eventSourceUrl)}

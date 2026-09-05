@@ -16,12 +16,24 @@
  * right now regardless of whether the full written notice exists yet.
  */
 
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { chromeText } from '../../../lib/i18n/chrome';
 import { isSupportedLocale } from '../../../lib/i18n/locale';
+import { localePageMetadata } from '../../../lib/i18n/metadata';
 import { buildWhatsAppUrl } from '../../../lib/business/whatsapp-link';
 import { ConsentPreferences } from './consent-preferences';
 import { TrackedWhatsAppLink } from '../tracked-whatsapp-link';
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale: rawLocale } = await params;
+  if (!isSupportedLocale(rawLocale)) return {};
+  return localePageMetadata(rawLocale, '/privacy', 'privacyPageHeading', 'privacyMetaDescription');
+}
 
 export default async function PrivacyPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale: rawLocale } = await params;
@@ -29,10 +41,15 @@ export default async function PrivacyPage({ params }: { params: Promise<{ locale
   const locale = rawLocale;
 
   return (
-    <div>
-      <h1>{chromeText('privacyPageHeading', locale)}</h1>
+    <div className="reading">
+      <div className="page-header">
+        <h1>{chromeText('privacyPageHeading', locale)}</h1>
+      </div>
 
-      <section aria-labelledby="privacy-notice-heading">
+      {/* The unpublished-policy notice keeps its honest status and stays
+          the first thing on the page — it is not softened, hidden behind a
+          disclosure, or replaced with placeholder legal text. */}
+      <section className="panel" aria-labelledby="privacy-notice-heading">
         <h2 id="privacy-notice-heading">{chromeText('privacyNoticeUnavailableHeading', locale)}</h2>
         <p>{chromeText('privacyNoticeUnavailableBody', locale)}</p>
         <p>
@@ -43,7 +60,7 @@ export default async function PrivacyPage({ params }: { params: Promise<{ locale
             {chromeText('whatsappCtaLabel', locale)}
           </TrackedWhatsAppLink>
           <br />
-          <small>{chromeText('whatsappExternalNoticeText', locale)}</small>
+          <small className="u-muted">{chromeText('whatsappExternalNoticeText', locale)}</small>
         </p>
       </section>
 

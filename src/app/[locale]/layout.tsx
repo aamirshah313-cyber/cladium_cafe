@@ -36,6 +36,7 @@ import type { ReactNode } from 'react';
 import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
 import '../globals.css';
+import { BRAND_NAME, chromeText } from '../../lib/i18n/chrome';
 import { LOCALES, isSupportedLocale, localeDirection } from '../../lib/i18n/locale';
 import { localeMetadataAlternates } from '../../lib/i18n/metadata';
 import { THEME_COOKIE_NAME } from '../../lib/theme/preference-cookie';
@@ -47,6 +48,7 @@ import { isFeatureEnabled, parseMetaPixelId, parseSessionSecret } from '../../li
 import { hasConsent } from '../../modules/consent/consent-service';
 import { consentDeps } from '../../modules/consent/deps';
 import { resolveMetaPixelId } from '../../modules/integrations/meta-pixel';
+import { brandLogo } from '../../modules/brand/asset-manifest';
 import { fontVariables } from '../fonts';
 import { MetaPixelBootstrap } from './meta-pixel-bootstrap';
 import { SiteFooter } from './site-footer';
@@ -95,10 +97,33 @@ export async function generateMetadata({
   const { locale: rawLocale } = await params;
   if (!isSupportedLocale(rawLocale)) return {};
 
+  /*
+   * The description replaces a "pre-launch scaffold" placeholder that would
+   * otherwise have been the site's search-result and link-preview summary.
+   * It states only confirmed facts: the setting, the town, the hours, and
+   * that a table is requested rather than instantly booked.
+   *
+   * `%s` in the title template lets each page name itself while keeping the
+   * brand suffix, so a shared link says which page it points at.
+   */
+  const description = chromeText('siteMetaDescription', rawLocale);
+
   return {
-    title: 'Cladium Café & Resort',
-    description: 'Cladium Café & Resort, Abbottabad — pre-launch scaffold.',
+    title: {
+      default: BRAND_NAME,
+      template: `%s · ${BRAND_NAME}`,
+    },
+    description,
     alternates: localeMetadataAlternates(rawLocale),
+    openGraph: {
+      title: BRAND_NAME,
+      description,
+      locale: rawLocale === 'ur' ? 'ur_PK' : 'en_PK',
+      type: 'website',
+      // The supplied crest, which is real artwork the café owns — never a
+      // stock photograph or an invented promotional image.
+      images: [{ url: brandLogo.raster.path, width: 512, height: 512, alt: BRAND_NAME }],
+    },
   };
 }
 

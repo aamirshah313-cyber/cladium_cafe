@@ -81,18 +81,44 @@ export function EventForm({ locale }: EventFormProps) {
         if (!cancelled && body.csrfToken) setCsrfToken(body.csrfToken);
       })
       .catch(() => {
-        if (!cancelled) setError('Could not start a session. Please reload the page.');
+        // Fetched again on demand at submit time; see ensureCsrfToken.
       });
     return () => {
       cancelled = true;
     };
   }, []);
 
+  /**
+   * Returns a usable CSRF token, fetching one if the request on mount did
+   * not produce it. Recovering here rather than disabling the submit button
+   * means one failed background fetch cannot leave the form permanently
+   * unusable with no way to retry.
+   */
+  async function ensureCsrfToken(): Promise<string | null> {
+    if (csrfToken) return csrfToken;
+    try {
+      const response = await fetch('/api/session/csrf');
+      if (!response.ok) return null;
+      const body = (await response.json()) as { csrfToken?: string };
+      if (!body.csrfToken) return null;
+      setCsrfToken(body.csrfToken);
+      return body.csrfToken;
+    } catch {
+      return null;
+    }
+  }
+
   async function handleReview(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!csrfToken) return;
     setSubmitting(true);
     setError(null);
+
+    const token = await ensureCsrfToken();
+    if (!token) {
+      setError(chromeText('sessionUnavailableError', locale));
+      setSubmitting(false);
+      return;
+    }
 
     try {
       const response = await fetch('/api/events/review', {
@@ -107,7 +133,7 @@ export function EventForm({ locale }: EventFormProps) {
           guestCount: Number(fields.guestCount),
           decorInterest: fields.decorInterest,
           notes: fields.notes.length > 0 ? fields.notes : undefined,
-          csrfToken,
+          csrfToken: token,
         }),
       });
       if (!response.ok) {
@@ -127,9 +153,16 @@ export function EventForm({ locale }: EventFormProps) {
   }
 
   async function handleConfirm() {
-    if (stage.kind !== 'review' || !csrfToken) return;
+    if (stage.kind !== 'review') return;
     setSubmitting(true);
     setError(null);
+
+    const token = await ensureCsrfToken();
+    if (!token) {
+      setError(chromeText('sessionUnavailableError', locale));
+      setSubmitting(false);
+      return;
+    }
 
     try {
       const response = await fetch('/api/events/submit', {
@@ -147,7 +180,7 @@ export function EventForm({ locale }: EventFormProps) {
           sourceChannel: 'WEB',
           confirmationToken: stage.confirmationToken,
           idempotencyKey: crypto.randomUUID(),
-          csrfToken,
+          csrfToken: token,
         }),
       });
       if (!response.ok) {
@@ -164,7 +197,7 @@ export function EventForm({ locale }: EventFormProps) {
 
   if (stage.kind === 'confirmed') {
     return (
-      <div role="status">
+      <div className="receipt" role="status">
         <h2>{chromeText('eventConfirmedHeading', locale)}</h2>
         <p>{chromeText('eventConfirmedBody', locale)}</p>
       </div>
@@ -176,7 +209,7 @@ export function EventForm({ locale }: EventFormProps) {
     return (
       <div>
         <h2>{chromeText('eventReviewHeading', locale)}</h2>
-        <dl>
+        <dl className="summary-list">
           <dt>{chromeText('bookFormNameLabel', locale)}</dt>
           <dd>{review.guestName}</dd>
           <dt>{chromeText('bookFormPhoneLabel', locale)}</dt>
@@ -201,23 +234,35 @@ export function EventForm({ locale }: EventFormProps) {
           ) : null}
         </dl>
         {error ? (
-          <p role="alert" aria-live="assertive">
+          <p className="alert" role="alert" aria-live="assertive">
             {error}
           </p>
         ) : null}
-        <button type="button" onClick={() => setStage({ kind: 'form' })} disabled={submitting}>
-          {chromeText('bookEditButtonLabel', locale)}
-        </button>
-        <button type="button" onClick={() => void handleConfirm()} disabled={submitting}>
-          {chromeText('eventConfirmButtonLabel', locale)}
-        </button>
+        <div className="form-actions">
+          <button
+            type="button"
+            className="u-button u-button--primary"
+            onClick={() => void handleConfirm()}
+            disabled={submitting}
+          >
+            {chromeText('eventConfirmButtonLabel', locale)}
+          </button>
+          <button
+            type="button"
+            className="u-button u-button--secondary"
+            onClick={() => setStage({ kind: 'form' })}
+            disabled={submitting}
+          >
+            {chromeText('bookEditButtonLabel', locale)}
+          </button>
+        </div>
       </div>
     );
   }
 
   return (
     <form onSubmit={(event) => void handleReview(event)}>
-      <div>
+      <div className="field">
         <label htmlFor="event-name">{chromeText('bookFormNameLabel', locale)}</label>
         <input
           id="event-name"
@@ -227,7 +272,7 @@ export function EventForm({ locale }: EventFormProps) {
           onChange={(event) => setFields({ ...fields, guestName: event.target.value })}
         />
       </div>
-      <div>
+      <div className="field">
         <label htmlFor="event-phone">{chromeText('bookFormPhoneLabel', locale)}</label>
         <input
           id="event-phone"
@@ -237,7 +282,7 @@ export function EventForm({ locale }: EventFormProps) {
           onChange={(event) => setFields({ ...fields, guestPhone: event.target.value })}
         />
       </div>
-      <div>
+      <div className="field">
         <label htmlFor="event-occasion">{chromeText('eventFormOccasionLabel', locale)}</label>
         <input
           id="event-occasion"
@@ -247,7 +292,7 @@ export function EventForm({ locale }: EventFormProps) {
           onChange={(event) => setFields({ ...fields, occasion: event.target.value })}
         />
       </div>
-      <div>
+      <div className="field">
         <label htmlFor="event-date">{chromeText('bookFormDateLabel', locale)}</label>
         <input
           id="event-date"
@@ -257,7 +302,7 @@ export function EventForm({ locale }: EventFormProps) {
           onChange={(event) => setFields({ ...fields, requestedDate: event.target.value })}
         />
       </div>
-      <div>
+      <div className="field">
         <label htmlFor="event-time">{chromeText('bookFormTimeLabel', locale)}</label>
         <input
           id="event-time"
@@ -267,7 +312,7 @@ export function EventForm({ locale }: EventFormProps) {
           onChange={(event) => setFields({ ...fields, requestedTime: event.target.value })}
         />
       </div>
-      <div>
+      <div className="field">
         <label htmlFor="event-guest-count">{chromeText('eventFormGuestCountLabel', locale)}</label>
         <input
           id="event-guest-count"
@@ -279,18 +324,27 @@ export function EventForm({ locale }: EventFormProps) {
           onChange={(event) => setFields({ ...fields, guestCount: event.target.value })}
         />
       </div>
-      <div>
-        <label htmlFor="event-decor-interest">
+      <div className="field">
+        {/*
+         * Reuses the seating cards' selectable-row treatment so the décor
+         * question reads as a real choice. The note restates the approved
+         * position — from PKR 8,000, staff-confirmed — so ticking this box
+         * can never look like accepting a quoted price.
+         */}
+        <label className="choice" htmlFor="event-decor-interest">
           <input
             id="event-decor-interest"
             type="checkbox"
             checked={fields.decorInterest}
             onChange={(event) => setFields({ ...fields, decorInterest: event.target.checked })}
           />
-          {chromeText('eventFormDecorInterestLabel', locale)}
+          <span>
+            <span className="choice-text">{chromeText('eventFormDecorInterestLabel', locale)}</span>
+            <span className="choice-note">{chromeText('eventDecorPricingNote', locale)}</span>
+          </span>
         </label>
       </div>
-      <div>
+      <div className="field">
         <label htmlFor="event-notes">{chromeText('bookFormNotesLabel', locale)}</label>
         <textarea
           id="event-notes"
@@ -300,13 +354,19 @@ export function EventForm({ locale }: EventFormProps) {
         />
       </div>
       {error ? (
-        <p role="alert" aria-live="assertive">
+        <p className="alert" role="alert" aria-live="assertive">
           {error}
         </p>
       ) : null}
-      <button type="submit" disabled={submitting || !csrfToken}>
-        {chromeText('eventSubmitButtonLabel', locale)}
-      </button>
+      <div className="form-actions">
+        {/* Disabled only while a request is genuinely in flight — see the
+            booking form's note on why the token is not part of this. */}
+        <button type="submit" className="u-button u-button--primary" disabled={submitting}>
+          {submitting
+            ? chromeText('loadingLabel', locale)
+            : chromeText('eventSubmitButtonLabel', locale)}
+        </button>
+      </div>
     </form>
   );
 }

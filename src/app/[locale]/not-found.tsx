@@ -13,7 +13,7 @@ import { LOCALES, localeDirection } from '../../lib/i18n/locale';
 
 export default function LocaleNotFound() {
   return (
-    <div>
+    <div className="state-block">
       <h1>
         <span lang="en">{chrome.notFoundHeading.en}</span>
         {' / '}
@@ -21,14 +21,17 @@ export default function LocaleNotFound() {
           {chrome.notFoundHeading.ur}
         </span>
       </h1>
-      <p>
+      <p className="u-lede">
         <span lang="en">{chrome.notFoundBody.en}</span>
         {' / '}
         <span lang="ur" dir="rtl">
           {chrome.notFoundBody.ur}
         </span>
       </p>
-      <nav aria-label="Home / ہوم">
+      {/* Bilingual because this route renders outside a known locale: the
+          guest's language is genuinely unknown here, so both are offered
+          rather than guessing one. */}
+      <nav aria-label="Home / ہوم" className="site-nav state-actions">
         <ul>
           {LOCALES.map((locale) => (
             <li key={locale}>

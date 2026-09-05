@@ -28,15 +28,19 @@ export default function LocaleError({ error, reset }: { error: Error; reset: () 
   }, [error]);
 
   return (
-    <div>
+    <div className="state-block">
       <h1>{chromeText('errorHeading', locale)}</h1>
-      <p>{chromeText('errorBody', locale)}</p>
-      <button type="button" onClick={() => reset()}>
-        {chromeText('errorRetry', locale)}
-      </button>
-      <nav aria-label={chromeText('errorHomeLink', locale)}>
-        <Link href={`/${locale}`}>{chromeText('errorHomeLink', locale)}</Link>
-      </nav>
+      <p className="u-lede">{chromeText('errorBody', locale)}</p>
+      {/* Both recoveries are offered: retry the failed render, or leave for
+          a page known to work. */}
+      <div className="form-actions state-actions">
+        <button type="button" className="u-button u-button--primary" onClick={() => reset()}>
+          {chromeText('errorRetry', locale)}
+        </button>
+        <Link href={`/${locale}`} className="u-button u-button--secondary">
+          {chromeText('errorHomeLink', locale)}
+        </Link>
+      </div>
     </div>
   );
 }

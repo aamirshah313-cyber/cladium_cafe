@@ -139,32 +139,35 @@ export function ConsentPreferences({ locale }: ConsentPreferencesProps) {
   }
 
   return (
-    <div>
+    <div className="panel">
       <h2>{chromeText('consentPreferencesHeading', locale)}</h2>
       <p>{chromeText('consentPreferencesIntro', locale)}</p>
-      <ul>
+      <ul className="consent-list">
         {CATEGORY_ORDER.map((category) => {
           const state = snapshot[category];
           const isEssential = category === 'ESSENTIAL_PREFERENCES';
           return (
-            <li key={category}>
-              <strong>{chromeText(LABEL_KEY[category], locale)}</strong>
-              <p>{chromeText(DESCRIPTION_KEY[category], locale)}</p>
+            <li key={category} className="consent-item">
+              <strong className="consent-name">{chromeText(LABEL_KEY[category], locale)}</strong>
+              <p className="consent-description">{chromeText(DESCRIPTION_KEY[category], locale)}</p>
               {isEssential ? (
-                <span>{chromeText('consentAlwaysOnLabel', locale)}</span>
+                <span className="consent-status">{chromeText('consentAlwaysOnLabel', locale)}</span>
               ) : (
                 <>
-                  <span>
+                  <span className="consent-status">
                     {chromeText(
                       state.granted ? 'consentGrantedStatusLabel' : 'consentNotGrantedStatusLabel',
                       locale,
                     )}
                   </span>
                   {state.stale ? (
-                    <p role="status">{chromeText('consentStaleNotice', locale)}</p>
+                    <p className="field-hint" role="status">
+                      {chromeText('consentStaleNotice', locale)}
+                    </p>
                   ) : null}
                   <button
                     type="button"
+                    className="u-button u-button--secondary"
                     onClick={() => void setConsent(category, !state.granted)}
                     disabled={!csrfToken || pendingCategory === category}
                   >
@@ -180,7 +183,7 @@ export function ConsentPreferences({ locale }: ConsentPreferencesProps) {
         })}
       </ul>
       {error ? (
-        <p role="alert" aria-live="assertive">
+        <p className="alert" role="alert" aria-live="assertive">
           {error}
         </p>
       ) : null}

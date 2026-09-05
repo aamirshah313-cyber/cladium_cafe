@@ -9,16 +9,29 @@
  * Urdu, never a machine translation.
  */
 
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { chromeText } from '../../../lib/i18n/chrome';
 import { isSupportedLocale } from '../../../lib/i18n/locale';
+import { localePageMetadata } from '../../../lib/i18n/metadata';
 import { resolveLocalizedText } from '../../../lib/i18n/localized-text';
 import {
   BIRTHDAY_POLICY_TEXT,
   CAKE_POLICY_TEXT,
   OUTSIDE_FOOD_POLICY_TEXT,
 } from '../../../modules/business/facts';
+import { LocalizedProse } from '../localized-prose';
 import { EventForm } from './event-form';
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale: rawLocale } = await params;
+  if (!isSupportedLocale(rawLocale)) return {};
+  return localePageMetadata(rawLocale, '/event', 'eventPageHeading', 'eventMetaDescription');
+}
 
 export default async function EventPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale: rawLocale } = await params;
@@ -29,18 +42,40 @@ export default async function EventPage({ params }: { params: Promise<{ locale: 
 
   return (
     <div>
-      <h1>{chromeText('eventPageHeading', locale)}</h1>
+      <div className="page-header">
+        <h1>{chromeText('eventPageHeading', locale)}</h1>
+        <p className="u-lede">{chromeText('eventPageLede', locale)}</p>
+      </div>
 
-      <section aria-labelledby="event-good-to-know-heading">
-        <h2 id="event-good-to-know-heading">{chromeText('goodToKnowHeading', locale)}</h2>
-        <ul>
-          {policies.map((policy) => (
-            <li key={policy.en}>{resolveLocalizedText(policy, locale)}</li>
-          ))}
-        </ul>
-      </section>
+      <div className="form-layout">
+        <div className="panel">
+          <EventForm locale={locale} />
+        </div>
 
-      <EventForm locale={locale} />
+        {/*
+         * The décor, cake and outside-food positions are approved
+         * operational answers and are rendered verbatim. They stay beside
+         * the form rather than below it so a guest reads them before
+         * describing an occasion that might depend on them — and they are
+         * never rewritten into an inclusions list or a package.
+         */}
+        <aside className="panel" aria-labelledby="event-good-to-know-heading">
+          <h2
+            id="event-good-to-know-heading"
+            className="u-display"
+            style={{ fontSize: 'var(--step-h3)' }}
+          >
+            {chromeText('goodToKnowHeading', locale)}
+          </h2>
+          <ul className="fact-list">
+            {policies.map((policy) => (
+              <li key={policy.en}>
+                <LocalizedProse text={policy} locale={locale} as="span" />
+              </li>
+            ))}
+          </ul>
+        </aside>
+      </div>
     </div>
   );
 }

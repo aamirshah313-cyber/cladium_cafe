@@ -1141,3 +1141,571 @@ button[aria-pressed='true'] {
   background-size: cover;
   background-position: center;
 }
+
+/* ============================================ inner pages (Step D) */
+
+/*
+ * A shared page opening: title plus an optional short lede. Gives every
+ * inner page the same entry rhythm instead of a bare `h1` sitting on the
+ * canvas.
+ */
+.page-header {
+  margin-block-end: clamp(2rem, 4vw, 3rem);
+}
+
+.page-header h1 {
+  margin-bottom: 0.5rem;
+}
+
+.page-header .u-lede {
+  margin-bottom: 0;
+}
+
+/* A quiet raised surface for a form, a policy list, or a reading block. */
+.panel {
+  padding: clamp(1.5rem, 3vw, 2.5rem);
+  background: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.panel + .panel {
+  margin-block-start: 1.5rem;
+}
+
+.panel > :last-child {
+  margin-bottom: 0;
+}
+
+/*
+ * Two-column layout for a form beside its supporting information. The
+ * information column comes second on a narrow screen so the guest reaches
+ * the form without scrolling past explanatory text.
+ */
+.form-layout {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: 1fr;
+  align-items: start;
+}
+
+@media (min-width: 900px) {
+  .form-layout {
+    grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+    gap: 2.5rem;
+  }
+}
+
+/* ------------------------------------------------------------- forms */
+
+.field {
+  margin-block-end: 1.25rem;
+}
+
+.field label,
+.fieldset legend {
+  display: block;
+  margin-block-end: 0.4rem;
+  font-size: var(--step-small);
+  font-weight: 600;
+}
+
+.field input,
+.field textarea,
+.field select {
+  width: 100%;
+  min-height: 48px;
+  padding: 0.7rem 0.85rem;
+  font: inherit;
+  font-size: 1rem; /* 16px minimum: anything smaller makes iOS zoom on focus. */
+  color: var(--text-primary);
+  background: var(--surface-canvas);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+}
+
+.field textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+.field input:focus-visible,
+.field textarea:focus-visible {
+  border-color: var(--accent-gold);
+}
+
+.field-hint {
+  margin: 0.375rem 0 0;
+  font-size: var(--step-small);
+  color: var(--text-muted);
+}
+
+.fieldset {
+  margin: 0 0 1.25rem;
+  padding: 0;
+  border: 0;
+}
+
+/*
+ * Seating choice as two selectable cards rather than bare radios: the
+ * choice is a real decision with different consequences (treehouse is
+ * staff-confirmed), so it deserves more than a 13px dot. The native radio
+ * stays in the DOM and keeps its own semantics and keyboard behaviour.
+ */
+.choice-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 560px) {
+  .choice-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.choice {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  padding: 1rem;
+  background: var(--surface-canvas);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.choice:has(input:checked) {
+  border-color: var(--accent-gold);
+  box-shadow: inset 0 0 0 1px var(--accent-gold);
+}
+
+.choice:has(input:focus-visible) {
+  outline: 2px solid var(--accent-gold);
+  outline-offset: 2px;
+}
+
+.choice input {
+  margin: 0.2rem 0 0;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  accent-color: var(--action-primary);
+}
+
+.choice-text {
+  display: block;
+  font-weight: 600;
+}
+
+.choice-note {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: var(--step-small);
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-block-start: 1.5rem;
+}
+
+/* --------------------------------------------------- messages/states */
+
+/*
+ * An error is a bordered block, not red text alone — colour is never the
+ * only carrier of meaning (WCAG 1.4.1). Fixed readable values rather than
+ * theme tokens, since both themes need the same warning legibility.
+ */
+.alert {
+  margin-block: 1rem;
+  padding: 0.875rem 1rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid #b3453d;
+  background: rgb(179 69 61 / 10%);
+  color: var(--text-primary);
+  font-size: var(--step-small);
+}
+
+/* The post-submission state. Deliberately styled as a receipt of a
+   *request*, never as a confirmed reservation. */
+.receipt {
+  padding: clamp(1.5rem, 3vw, 2.5rem);
+  background: var(--surface-raised);
+  border: 1px solid var(--accent-gold);
+  border-radius: var(--radius-md);
+}
+
+.receipt h2 {
+  margin-bottom: 0.5rem;
+}
+
+.receipt > :last-child {
+  margin-bottom: 0;
+}
+
+/* The review step's summary of what will be sent. */
+.summary-list {
+  margin: 0;
+  display: grid;
+  gap: 0.875rem;
+}
+
+@media (min-width: 560px) {
+  .summary-list {
+    grid-template-columns: max-content 1fr;
+    gap: 0.875rem 1.5rem;
+  }
+}
+
+.summary-list dt {
+  font-size: var(--step-small);
+  color: var(--text-muted);
+}
+
+.summary-list dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+/* A short list of approved facts or policies. */
+.fact-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.fact-list li {
+  padding-inline-start: 1.1rem;
+  position: relative;
+}
+
+.fact-list li::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: 0;
+  top: 0.62em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-gold);
+}
+
+/* Comfortable measure for a page that is mostly reading. */
+.reading {
+  max-width: 68ch;
+}
+
+/* ------------------------------------------------------- visit page */
+
+.visit-image {
+  display: block;
+  width: 100%;
+  height: clamp(200px, 34vw, 380px);
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  margin-block-end: clamp(1.5rem, 3vw, 2.5rem);
+}
+
+.visit-grid {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: 1fr;
+  align-items: start;
+}
+
+@media (min-width: 720px) {
+  .visit-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1040px) {
+  .visit-grid {
+    /* Directions carries the most content, so it gets the wider column. */
+    grid-template-columns: 1.4fr 1fr 1fr;
+  }
+}
+
+.visit-hours {
+  font-family: var(--font-serif), Georgia, serif;
+  font-size: var(--step-h3);
+  margin-bottom: 0.25rem;
+}
+
+[lang='ur'] .visit-hours {
+  font-family: var(--font-urdu), var(--font-sans), sans-serif;
+}
+
+.visit-good-to-know {
+  margin-block-start: 1.5rem;
+}
+
+/* ----------------------------------------- loading / error / 404 */
+
+/*
+ * One shared treatment so a system state looks like part of the site
+ * rather than an unstyled fallback. `min-height` reserves roughly the
+ * space the real content will occupy, so arriving content does not jolt
+ * the page (the brief's "stable loading geometry").
+ */
+.state-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 40vh;
+  padding-block: clamp(2rem, 6vw, 4rem);
+}
+
+.state-actions {
+  margin-block-start: 1rem;
+}
+
+.state-spinner {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid var(--border-subtle);
+  border-block-start-color: var(--accent-gold);
+  animation: state-spin 900ms linear infinite;
+}
+
+@keyframes state-spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+/* Decoration only: a guest who asked for less motion gets a static ring,
+   and the text beside it still says what is happening. */
+@media (prefers-reduced-motion: reduce) {
+  .state-spinner {
+    animation: none;
+  }
+}
+
+/* ------------------------------------------------------- concierge */
+
+.chat {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.chat-starters {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.625rem;
+}
+
+/*
+ * The transcript. `min-height` reserves room so the composer does not jump
+ * up the page when the first message arrives.
+ */
+.chat-log {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-height: 8rem;
+}
+
+.chat-log li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  max-width: min(46rem, 88%);
+}
+
+/* Alignment is a secondary cue only — `.chat-speaker` always names who
+   spoke, so meaning never rests on position or colour. */
+.chat-turn-user {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+
+.chat-turn-agent {
+  align-self: flex-start;
+}
+
+.chat-speaker {
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+[lang='ur'] .chat-speaker {
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.chat-bubble {
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-raised);
+  white-space: pre-wrap;
+}
+
+.chat-turn-user .chat-bubble {
+  background: var(--surface-atmosphere);
+}
+
+.chat-composer {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.chat-composer .field {
+  flex: 1 1 16rem;
+  margin-block-end: 0;
+}
+
+/* ------------------------------------------------------- menu page */
+
+.menu-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 1rem;
+  margin-block: clamp(2rem, 4vw, 3rem);
+  padding: 1.25rem;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.menu-filters .field {
+  flex: 1 1 14rem;
+  margin-block-end: 0;
+}
+
+.menu-category {
+  margin-block-end: clamp(2.5rem, 5vw, 4rem);
+}
+
+.menu-category-heading {
+  padding-block-end: 0.5rem;
+  border-block-end: 1px solid var(--accent-gold);
+}
+
+.menu-items,
+.menu-variants {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.menu-item {
+  padding-block: 0.875rem;
+  border-block-end: 1px solid var(--border-subtle);
+}
+
+.menu-item:last-child {
+  border-block-end: 0;
+}
+
+/*
+ * Name, a leader rule, then the amount. The leader is a flexible element
+ * rather than dotted characters so it works identically in RTL and never
+ * ends up read aloud.
+ */
+.menu-item-head,
+.menu-variants li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.menu-item-name {
+  font-weight: 600;
+}
+
+.menu-item-group {
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.menu-item-leader {
+  flex: 1 1 auto;
+  min-width: 1.5rem;
+  border-block-end: 1px dotted var(--border-subtle);
+  transform: translateY(-0.25em);
+}
+
+.menu-item-price {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.menu-item-availability {
+  margin: 0.2rem 0 0;
+  font-size: var(--step-small);
+  color: var(--text-muted);
+}
+
+.menu-variants {
+  margin-block-start: 0.5rem;
+  padding-inline-start: 1rem;
+  display: grid;
+  gap: 0.375rem;
+}
+
+.menu-variants li {
+  font-size: var(--step-small);
+  color: var(--text-muted);
+}
+
+/* --------------------------------------------------------- consent */
+
+.consent-list {
+  list-style: none;
+  margin: 1.5rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 1rem;
+}
+
+.consent-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  align-items: flex-start;
+  padding: 1.125rem;
+  background: var(--surface-canvas);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+}
+
+.consent-name {
+  font-size: 1.05rem;
+}
+
+.consent-description {
+  margin: 0;
+  font-size: var(--step-small);
+  color: var(--text-muted);
+}
+
+/* The current state is spelled out in words, never signalled by the
+   button's colour alone. */
+.consent-status {
+  font-size: var(--step-small);
+  font-weight: 600;
+}

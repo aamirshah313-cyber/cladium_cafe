@@ -9,12 +9,18 @@
 
 export default function Loading() {
   return (
-    <p role="status" aria-live="polite">
-      <span lang="en">Loading…</span>
-      {' / '}
-      <span lang="ur" dir="rtl">
-        لوڈ ہو رہا ہے…
-      </span>
-    </p>
+    <div className="state-block" role="status" aria-live="polite">
+      {/* A modest indicator with reserved height, so the next screen does
+          not jump into place around it. Animation is decorative and stops
+          entirely under prefers-reduced-motion (globals.css). */}
+      <span className="state-spinner" aria-hidden="true" />
+      <p className="u-muted">
+        <span lang="en">Loading…</span>
+        {' / '}
+        <span lang="ur" dir="rtl">
+          لوڈ ہو رہا ہے…
+        </span>
+      </p>
+    </div>
   );
 }

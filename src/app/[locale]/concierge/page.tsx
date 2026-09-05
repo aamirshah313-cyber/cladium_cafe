@@ -13,12 +13,29 @@
  * `.env.example`, so voice is off by default until deliberately enabled.
  */
 
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { chromeText } from '../../../lib/i18n/chrome';
 import { isSupportedLocale } from '../../../lib/i18n/locale';
+import { localePageMetadata } from '../../../lib/i18n/metadata';
 import { isFeatureEnabled } from '../../../lib/env.server';
 import { ConciergeChat } from './concierge-chat';
 import { ConciergeModeToggle } from './concierge-mode-toggle';
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale: rawLocale } = await params;
+  if (!isSupportedLocale(rawLocale)) return {};
+  return localePageMetadata(
+    rawLocale,
+    '/concierge',
+    'conciergePageHeading',
+    'conciergeMetaDescription',
+  );
+}
 
 export default async function ConciergePage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale: rawLocale } = await params;
@@ -31,7 +48,10 @@ export default async function ConciergePage({ params }: { params: Promise<{ loca
 
   return (
     <div>
-      <h1>{chromeText('conciergePageHeading', locale)}</h1>
+      <div className="page-header">
+        <h1>{chromeText('conciergePageHeading', locale)}</h1>
+        <p className="u-lede">{chromeText('conciergePageLede', locale)}</p>
+      </div>
       {voiceAvailable ? <ConciergeModeToggle locale={locale} /> : <ConciergeChat locale={locale} />}
     </div>
   );
