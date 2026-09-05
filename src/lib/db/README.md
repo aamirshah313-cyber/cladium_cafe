@@ -23,19 +23,63 @@ interfaces and no calling code changes.
 | `postgres-takeaway-request-store.ts`   | `VersionedStore<TakeawayRequestRecord>`     | No — built and tested, not yet used at runtime    |
 | `postgres-event-request-store.ts`      | `VersionedStore<EventRequestRecord>`        | No — built and tested, not yet used at runtime    |
 
+`outbox_claim_batch` (the function behind `postgres-outbox-store.ts`'s
+`claimBatch`) was rewritten in
+`20260905020000_fix_outbox_claim_batch_limit.sql` after a real
+over-claiming bug was found running through PostgREST — see D-072.
+Candidate ids are now materialized into a plain array before the `UPDATE`
+runs, rather than a correlated subquery inside the `UPDATE`'s own `WHERE`.
+If a future change to this function is needed, keep that shape:
+select-then-array, not `WHERE id IN (SELECT ... LIMIT ... FOR UPDATE)`.
+
 That completes all five storage primitives and all three request mappings.
 Every domain's _request row_ can now be read and written against real
-Postgres. What is still missing before any domain can be cut over:
+Postgres. Still missing: the `takeaway_items` line-snapshot sink,
+genuinely blocked rather than unbuilt — its `menu_item_id` is a foreign
+key into `menu_items`, and nothing guest-facing reads `menu_items` yet
+(see the menu-review section below, D-072), so a line snapshot still has
+nothing to point at.
 
-- The `takeaway_items` line-snapshot sink — genuinely blocked, not
-  unbuilt: its `menu_item_id` is a foreign key into `menu_items`, and no
-  menu has been imported or published (D-021), so a line snapshot has
-  nothing to point at.
-- The cutover itself: wiring a real domain's `deps.ts` to these adapters
-  and proving a full submission → snapshot → status event → outbox event
-  sequence is consistent, not just that each store works in isolation.
-  Bookings has no missing piece and is the only domain unblocked for this
-  today.
+## The bookings cutover (built and proven, not switched on)
+
+`modules/bookings/deps.ts` exports `createPostgresBookingDeps(client)`,
+wiring bookings' five domain-specific stores to the adapters above.
+`tests/integration/bookings-postgres-cutover.test.ts` proves the real,
+unmodified `prepareBookingRequest`/`submitBookingRequest`/
+`transitionBookingRequest` services produce a consistent set of rows
+across `confirmation_tokens`, `idempotency_keys`, `booking_requests`,
+`status_events`, and `audit_events` — the first test in this project to
+exercise a full domain flow against real Postgres rather than one store
+in isolation. See D-071.
+
+**`bookingDeps` — the live singleton every booking route imports — is
+unchanged.** Building `createPostgresBookingDeps()` and switching the app
+to use it are two different decisions. The switch is deliberately not
+made here:
+
+- `bookingDeps` is constructed once at module import time. Building a
+  real `SupabaseClient` there would call the throwing (`.parse()`, not
+  `.safeParse()`) env parsers eagerly, and this sandbox has no
+  `.env.local` — every file importing `modules/bookings/deps.ts` would
+  fail at import, not just at request time.
+- This repo's `master` branch auto-deploys to the live staging Vercel
+  project. Every commit this session has landed there directly, with no
+  review gate. Flipping the live singleton is the first change in this
+  whole sequence that would alter what the deployed app actually does the
+  moment it is pushed, against the real staging Supabase project — which
+  this sandbox cannot reach to verify beforehand.
+- `outbox` stays the shared in-memory singleton
+  (`modules/notifications/deps.ts`) even inside
+  `createPostgresBookingDeps()`, on purpose: switching it here would
+  silently change takeaway's and events' notification durability too,
+  since all three domains share that one object. That is a decision
+  belonging to `notifications/deps.ts` itself. The real, stated
+  consequence of leaving it as-is: a process exit between
+  `requestStore.create()` succeeding and `outbox.append()` running would
+  leave a booking permanently persisted with no staff notification ever
+  generated — a risk that did not exist while everything was in-memory (a
+  crash lost the whole attempt, leaving nothing half-written), and is
+  specific to this partial cutover.
 
 `postgres-event-request-store.ts` deliberately **refuses to write a
 non-null `quotedAmountPkr`**: `event_requests_quote_attribution` requires
@@ -45,10 +89,24 @@ resolve a real quote written outside this adapter (verified against a real
 GoTrue-provisioned staff fixture, not a raw insert), so the store stays
 honest about data it did not itself write.
 
-`takeaway_items` is not merely unwritten — it is blocked. Its
-`menu_item_id` is a foreign key into `menu_items`, and no menu has been
-imported or published (D-021), so there is nothing for a line snapshot to
-point at. `MenuViewItem.id`, which supplies that value at runtime, has no
+## Staff menu review/publish (built, real, not guest-reachable)
+
+`modules/menu/admin-service.ts` executes, for real, the plans
+`import-plan.ts`/`publish-plan.ts`/`diff-report.ts` have computed since
+Step 11 with no database connection of their own: `OWNER`/`MANAGER` staff
+can import the current `menu.json`, review a real diff against whatever is
+published, approve, and publish, via `/staff/menu`. Unlike every adapter
+above, this is not a dormant, unwired capability — it is real, working,
+and reachable by any signed-in `OWNER`/`MANAGER` the moment it deploys.
+That is safe because `modules/menu/menu-view.ts#getPublishedMenuView()`
+has no database call at all and always returns `UNPUBLISHED` — confirmed
+live, not assumed: after real publish cycles, `/en/menu` still showed the
+unchanged guest-facing "not available yet" message. See D-072.
+
+`takeaway_items` is not merely unwritten — it is blocked. A menu version
+_can_ now be imported (`modules/menu/admin-service.ts`, D-072), but nothing
+guest-facing reads `menu_items` yet — `MenuViewItem.id`, which supplies
+`takeaway_items.menu_item_id` at runtime, has no
 concrete source either: `getPublishedMenuView()` still returns
 `UNPUBLISHED` and is itself the seam a future menu repository fills.
 

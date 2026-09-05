@@ -129,6 +129,21 @@ export interface RunIdempotentInput {
  * "reusing a key with a different fingerprint is rejected." A key still
  * `IN_PROGRESS` (a genuine concurrent duplicate, not just a sequential
  * replay) is also rejected rather than running `fn` twice at once.
+ *
+ * `fn` throwing (rather than returning `err(...)`) is caught and marked
+ * `FAILED` before the exception is rethrown. Found while wiring the first
+ * durable `IdempotencyStore`: every Postgres adapter in `lib/db` throws on
+ * a write failure by design (D-064 — the interfaces have no error channel,
+ * and a swallowed error would look like success), so a transient DB error
+ * inside `fn` used to leave the fresh `IN_PROGRESS` record `findOrBegin`
+ * had just written completely unresolved. Against the in-memory store that
+ * was survivable — a crash erased the whole record anyway, so the next
+ * attempt started clean. Against a durable store it is not: the record
+ * persists past any restart, `expires_at` is deliberately never
+ * interpreted on read (D-065), and every retry with the same key would
+ * have returned `idempotencyConflict` forever, with no path back. Marking
+ * it `FAILED` here restores the retry behaviour this function has always
+ * had, regardless of which store backs it.
  */
 export async function runIdempotent<R>(
   store: IdempotencyStore<R>,
@@ -150,7 +165,23 @@ export async function runIdempotent<R>(
     return err(idempotencyConflict(input.correlationId));
   }
 
-  const result = await fn();
+  let result: Result<R, AppError>;
+  try {
+    result = await fn();
+  } catch (thrown) {
+    try {
+      await store.fail(input.scope, input.key, now());
+    } catch (failError) {
+      // Recording the failure failed too (e.g. the same outage that broke
+      // fn). The original error is the one worth surfacing — it is not
+      // swallowed, only attached as `cause` so nothing is lost.
+      throw new Error('runIdempotent: fn() threw and store.fail() also threw while recording it', {
+        cause: { thrown, failError },
+      });
+    }
+    throw thrown;
+  }
+
   if (result.ok) {
     await store.complete(input.scope, input.key, result.value, now());
   } else {

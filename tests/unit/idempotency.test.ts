@@ -149,4 +149,79 @@ describe('runIdempotent', () => {
     expect(second).toEqual(ok({ id: 'order-1' }));
     expect(calls).toBe(2);
   });
+
+  it('marks the record FAILED and rethrows when fn() throws instead of returning err()', async () => {
+    // The case a durable store makes dangerous: without this, the fresh
+    // IN_PROGRESS record findOrBegin just wrote would never be resolved.
+    const store = createInMemoryIdempotencyStore<{ id: string }>();
+    const boom = new Error('transient store failure');
+
+    await expect(
+      runIdempotent(
+        store,
+        { scope: 'session-1:submitTakeaway', key: 'key-1', fingerprint: 'fp-a', now: NOW },
+        async () => {
+          throw boom;
+        },
+      ),
+    ).rejects.toBe(boom);
+
+    const record = store.records.get('session-1:submitTakeaway key-1');
+    expect(record?.status).toBe('FAILED');
+  });
+
+  it('allows a retry with the same key/fingerprint after fn() threw', async () => {
+    // Proves the FAILED mark actually unblocks the next attempt, not just
+    // that it gets written.
+    const store = createInMemoryIdempotencyStore<{ id: string }>();
+    let calls = 0;
+    const run = () =>
+      runIdempotent(
+        store,
+        { scope: 'session-1:submitTakeaway', key: 'key-1', fingerprint: 'fp-a', now: NOW },
+        async () => {
+          calls += 1;
+          if (calls === 1) throw new Error('transient store failure');
+          return ok({ id: 'order-1' });
+        },
+      );
+
+    await expect(run()).rejects.toThrow('transient store failure');
+
+    const second = await run();
+    expect(second).toEqual(ok({ id: 'order-1' }));
+    expect(calls).toBe(2);
+  });
+
+  it('surfaces the original error, with cause, when store.fail() itself throws', async () => {
+    // Neither error is silently lost: the original is not swallowed, and
+    // the secondary failure is not hidden either.
+    const original = new Error('fn failed');
+    const failStore = {
+      async findOrBegin() {
+        return null;
+      },
+      async complete() {},
+      async fail() {
+        throw new Error('store.fail also failed');
+      },
+    };
+
+    let caught: unknown;
+    try {
+      await runIdempotent(
+        failStore,
+        { scope: 'session-1:submitTakeaway', key: 'key-1', fingerprint: 'fp-a', now: NOW },
+        async () => {
+          throw original;
+        },
+      );
+    } catch (thrown) {
+      caught = thrown;
+    }
+
+    expect(caught).toBeInstanceOf(Error);
+    expect((caught as Error).message).toMatch(/store\.fail\(\) also threw/);
+    expect((caught as Error).cause).toMatchObject({ thrown: original });
+  });
 });

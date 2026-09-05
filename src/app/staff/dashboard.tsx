@@ -394,6 +394,11 @@ export function StaffDashboard() {
               <Link href={`/staff/${key}`}>{STAFF_ENTITY_CONFIG[key].label}</Link>
             </li>
           ))}
+          {session.roles.includes('OWNER') || session.roles.includes('MANAGER') ? (
+            <li>
+              <Link href="/staff/menu">Menu review</Link>
+            </li>
+          ) : null}
         </ul>
       </nav>
 

@@ -94,3 +94,17 @@ export const staffAssignBodySchema = strictObject({
   assignedStaffId: assignedStaffIdSchema,
   csrfToken: csrfTokenSchema,
 });
+
+/** Import needs no fields beyond CSRF: the content is menu.json itself, not anything the caller supplies. */
+export const menuImportBodySchema = strictObject({
+  csrfToken: csrfTokenSchema,
+});
+
+export const menuApproveBodySchema = strictObject({
+  expectedVersion: z.number().int().min(1),
+  csrfToken: csrfTokenSchema,
+});
+
+export const menuPublishBodySchema = strictObject({
+  csrfToken: csrfTokenSchema,
+});

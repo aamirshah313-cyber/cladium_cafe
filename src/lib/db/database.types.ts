@@ -1638,6 +1638,60 @@ export type Database = {
         Returns: boolean
       }
       is_staff: { Args: never; Returns: boolean }
+      menu_import_draft: {
+        Args: {
+          p_categories: Json
+          p_items: Json
+          p_source_checksum: string
+          p_source_references: Json
+          p_variants: Json
+        }
+        Returns: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          id: string
+          imported_at: string
+          notes: string | null
+          published_at: string | null
+          review_status: Database["public"]["Enums"]["menu_review_status"]
+          source_checksum: string
+          source_references: Json
+          updated_at: string
+          version: number
+          version_number: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "menu_versions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      menu_publish_version: {
+        Args: { p_version_number: number }
+        Returns: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          id: string
+          imported_at: string
+          notes: string | null
+          published_at: string | null
+          review_status: Database["public"]["Enums"]["menu_review_status"]
+          source_checksum: string
+          source_references: Json
+          updated_at: string
+          version: number
+          version_number: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "menu_versions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       outbox_claim_batch: {
         Args: { p_limit: number; p_now: string; p_stale_claim_ms: number }
         Returns: {
