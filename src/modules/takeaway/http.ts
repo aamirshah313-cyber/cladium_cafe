@@ -51,7 +51,7 @@ export interface CartView {
 async function loadOrCreateCart(deps: TakeawayHttpDeps, sessionId: string): Promise<Cart> {
   const existing = await deps.cartStore.get(sessionId);
   if (existing) return existing;
-  const menuView = deps.getMenuView();
+  const menuView = await deps.getMenuView();
   const versionNumber = menuView.status === 'PUBLISHED' ? menuView.versionNumber : 0;
   return emptyCart(deps.generateId(), sessionId, versionNumber);
 }
@@ -65,19 +65,20 @@ async function loadExistingCart(
   return ok(cart);
 }
 
-function requirePublishedMenu(deps: TakeawayHttpDeps): Result<void, AppError> {
-  return deps.getMenuView().status === 'PUBLISHED' ? ok(undefined) : err(featureDisabled());
+async function requirePublishedMenu(deps: TakeawayHttpDeps): Promise<Result<void, AppError>> {
+  const menuView = await deps.getMenuView();
+  return menuView.status === 'PUBLISHED' ? ok(undefined) : err(featureDisabled());
 }
 
 export async function getCart(
   deps: TakeawayHttpDeps,
   sessionId: string,
 ): Promise<Result<CartView, AppError>> {
-  const menuCheck = requirePublishedMenu(deps);
+  const menuCheck = await requirePublishedMenu(deps);
   if (!menuCheck.ok) return menuCheck;
 
   const cart = await loadOrCreateCart(deps, sessionId);
-  const totals = recomputeCartTotals(cart, deps.getMenuView());
+  const totals = recomputeCartTotals(cart, await deps.getMenuView());
   if (!totals.ok) return totals;
   return ok({ cart, totals: totals.value });
 }
@@ -87,11 +88,11 @@ export async function addItem(
   sessionId: string,
   input: AddItemInput,
 ): Promise<Result<CartView, AppError>> {
-  const menuCheck = requirePublishedMenu(deps);
+  const menuCheck = await requirePublishedMenu(deps);
   if (!menuCheck.ok) return menuCheck;
 
   const cart = await loadOrCreateCart(deps, sessionId);
-  const menuView = deps.getMenuView();
+  const menuView = await deps.getMenuView();
   const updated = addItemToCart(cart, menuView, input);
   if (!updated.ok) return updated;
 
@@ -106,7 +107,7 @@ export async function modifyItem(
   sessionId: string,
   input: ModifyCartItemInput,
 ): Promise<Result<CartView, AppError>> {
-  const menuCheck = requirePublishedMenu(deps);
+  const menuCheck = await requirePublishedMenu(deps);
   if (!menuCheck.ok) return menuCheck;
 
   const cartResult = await loadExistingCart(deps, sessionId);
@@ -116,7 +117,7 @@ export async function modifyItem(
   if (!updated.ok) return updated;
 
   await deps.cartStore.save(updated.value);
-  const menuView = deps.getMenuView();
+  const menuView = await deps.getMenuView();
   const totals = recomputeCartTotals(updated.value, menuView);
   if (!totals.ok) return totals;
   return ok({ cart: updated.value, totals: totals.value });
@@ -127,7 +128,7 @@ export async function removeItem(
   sessionId: string,
   cartLineId: string,
 ): Promise<Result<CartView, AppError>> {
-  const menuCheck = requirePublishedMenu(deps);
+  const menuCheck = await requirePublishedMenu(deps);
   if (!menuCheck.ok) return menuCheck;
 
   const cartResult = await loadExistingCart(deps, sessionId);
@@ -137,7 +138,7 @@ export async function removeItem(
   if (!updated.ok) return updated;
 
   await deps.cartStore.save(updated.value);
-  const menuView = deps.getMenuView();
+  const menuView = await deps.getMenuView();
   const totals = recomputeCartTotals(updated.value, menuView);
   if (!totals.ok) return totals;
   return ok({ cart: updated.value, totals: totals.value });

@@ -44,7 +44,7 @@ const MENU: PublishedMenuView = {
 function harness(menu: PublishedMenuView = MENU) {
   let idCounter = 0;
   const deps: TakeawayServiceDeps = {
-    getMenuView: () => menu,
+    getMenuView: async () => menu,
     confirmationTokens: createInMemoryConfirmationTokenStore(),
     idempotency: createInMemoryIdempotencyStore(),
     requestStore: createInMemoryVersionedStore<TakeawayRequestRecord>(),
@@ -327,7 +327,7 @@ describe('submitTakeawayRequest — stale review', () => {
     // Menu price changes between review and submission.
     const depsWithChangedPrice: TakeawayServiceDeps = {
       ...deps,
-      getMenuView: () => ({
+      getMenuView: async () => ({
         ...MENU,
         categories: MENU.categories.map((c) => ({
           ...c,

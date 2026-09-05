@@ -171,7 +171,7 @@ describe.skipIf(!configured)('menu admin-service (real Postgres, real menu.json)
     if (!result.ok) expect(result.error.code).toBe('CONFLICT');
   });
 
-  it('approves, then publishes, and the public-menu read path stays untouched', async () => {
+  it('approves, then publishes, flipping every child row to PUBLISHED', async () => {
     const imported = await importMenuDraft(deps, ownerActor, randomUUID());
     if (!imported.ok) throw new Error('import failed');
     const versionNumber = imported.value.versionNumber;
@@ -200,11 +200,10 @@ describe.skipIf(!configured)('menu admin-service (real Postgres, real menu.json)
       .not('published_at', 'is', null);
     expect(count).toBe(1);
 
-    // The whole point of D-060/this feature's contained blast radius:
-    // getPublishedMenuView() has no database call at all, so a real
-    // publish here cannot be reachable by a guest through it.
-    const { getPublishedMenuView } = await import('../../src/modules/menu/menu-view');
-    expect(getPublishedMenuView()).toEqual({ status: 'UNPUBLISHED' });
+    // The guest-visible contract this row-level state actually produces
+    // (anon-key read sees exactly this version, nothing else) is proven
+    // end-to-end in tests/integration/menu-guest-view.test.ts, not here —
+    // this test only proves the admin-service's own writes landed correctly.
   });
 
   /**

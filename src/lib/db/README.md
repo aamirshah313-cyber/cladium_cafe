@@ -89,26 +89,34 @@ resolve a real quote written outside this adapter (verified against a real
 GoTrue-provisioned staff fixture, not a raw insert), so the store stays
 honest about data it did not itself write.
 
-## Staff menu review/publish (built, real, not guest-reachable)
+## Staff menu review/publish, and the guest-facing published-menu read side
 
 `modules/menu/admin-service.ts` executes, for real, the plans
 `import-plan.ts`/`publish-plan.ts`/`diff-report.ts` have computed since
 Step 11 with no database connection of their own: `OWNER`/`MANAGER` staff
 can import the current `menu.json`, review a real diff against whatever is
-published, approve, and publish, via `/staff/menu`. Unlike every adapter
-above, this is not a dormant, unwired capability — it is real, working,
-and reachable by any signed-in `OWNER`/`MANAGER` the moment it deploys.
-That is safe because `modules/menu/menu-view.ts#getPublishedMenuView()`
-has no database call at all and always returns `UNPUBLISHED` — confirmed
-live, not assumed: after real publish cycles, `/en/menu` still showed the
-unchanged guest-facing "not available yet" message. See D-072.
+published, approve, and publish, via `/staff/menu`. This is real, working,
+and reachable by any signed-in `OWNER`/`MANAGER` the moment it deploys. See
+D-072.
 
-`takeaway_items` is not merely unwritten — it is blocked. A menu version
-_can_ now be imported (`modules/menu/admin-service.ts`, D-072), but nothing
-guest-facing reads `menu_items` yet — `MenuViewItem.id`, which supplies
-`takeaway_items.menu_item_id` at runtime, has no
-concrete source either: `getPublishedMenuView()` still returns
-`UNPUBLISHED` and is itself the seam a future menu repository fills.
+`modules/menu/menu-view.ts#getPublishedMenuView()` (Step 19) now reads the
+real, currently-published version through `guest-view-repository.ts`, via
+an **anon-key** client (`supabase-public-client.ts`) — never
+`supabase-admin-client.ts`'s service-role client, which would bypass RLS.
+RLS (`menu_versions_public_read`/`menu_categories_public_read`/etc.,
+`20260824140002_rls_policies.sql`) is the actual security boundary: a
+draft or approved-but-unpublished version's rows are physically absent
+from anything this client can query. With zero published versions, this
+still correctly returns `UNPUBLISHED`; publishing a version makes it
+guest-visible immediately (no caching layer sits in front — `/[locale]/menu`
+is already fully dynamic, D-019) and supersedes whatever was published
+before, atomically (`menu_publish_version`, D-072).
+
+`takeaway_items` (the immutable per-line snapshot sink) is still
+unwritten — nothing in this codebase currently wires a real, published
+`menu_items.id` through to a takeaway submission's stored line snapshot.
+That is a separate decision (the takeaway Postgres cutover itself, still
+in-memory per D-023) from the guest-read side landed here.
 
 `VersionedStore` is split in two because all three request tables share the
 interface but none maps 1:1 onto its domain record:
@@ -170,6 +178,14 @@ The lean service list is not arbitrary — see D-063. They skip themselves
 with an explicit message when `SUPABASE_TEST_URL` /
 `SUPABASE_TEST_SERVICE_ROLE_KEY` are unset, so a run without a database
 reports "skipped" rather than a false pass.
+
+`tests/integration/menu-guest-view.test.ts` additionally needs
+`SUPABASE_TEST_ANON_KEY` — it proves the guest-facing read side (Step 19)
+through the same RLS-bound anon client the app itself uses, not the
+service-role one every other integration test uses to seed/inspect data.
+For a local `supabase start` stack, this is the CLI's standard local anon
+key (`supabase status`). Same skip-if-unset convention as the two vars
+above.
 
 **Reset before running `npm run db:test` afterwards.** The integration
 tests write to `status_events` and `audit_events`, which are append-only

@@ -41,7 +41,7 @@ const MENU: PublishedMenuView = {
 function harness(menu: PublishedMenuView = MENU): TakeawayHttpDeps {
   let idCounter = 0;
   return {
-    getMenuView: () => menu,
+    getMenuView: async () => menu,
     confirmationTokens: createInMemoryConfirmationTokenStore(),
     idempotency: createInMemoryIdempotencyStore(),
     requestStore: createInMemoryVersionedStore<TakeawayRequestRecord>(),

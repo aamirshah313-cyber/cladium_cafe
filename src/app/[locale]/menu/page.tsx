@@ -1,15 +1,20 @@
 /**
- * Menu page — Runbook Step 17.
+ * Menu page — Runbook Step 17/19.
  *
- * `getPublishedMenuView()` always returns `UNPUBLISHED` today (see that
- * function's doc comment: no menu is owner-approved/published yet), so
- * this shows an honest "not available online yet" state with a WhatsApp/
- * Visit fallback — never the real, unapproved item list. The `PUBLISHED`
- * branch below is fully built and was verified live against fixture data
- * (temporarily substituted for `getPublishedMenuView()`, then reverted —
- * see `.continuum/DECISIONS.md`), ready for the moment Step 19's
- * repository and an actual owner approval make it reachable; nothing here
- * needs to change when that happens.
+ * `getPublishedMenuView()` now reads real Postgres rows through an
+ * RLS-bound anon client (`guest-view-repository.ts`) — with zero published
+ * versions this still correctly returns `UNPUBLISHED`, showing an honest
+ * "not available online yet" state with a WhatsApp/Visit fallback, never
+ * a draft or unapproved item list. The `PUBLISHED` branch below is the
+ * same one already verified live against fixture data (see
+ * `.continuum/DECISIONS.md`); nothing here needed to change to make it
+ * real.
+ *
+ * `dynamic = 'force-dynamic'` is documentation/defense-in-depth, not a
+ * behavior change: `app/[locale]/layout.tsx` already calls `cookies()` for
+ * theme (D-019), which forces this whole subtree dynamic — so a real
+ * per-request DB read here was already guaranteed fresh, with no caching
+ * layer that could leave a guest seeing a stale menu after a publish.
  *
  * Search/category filtering is a plain `<form method="GET">` reading
  * `searchParams` server-side — full functionality with no JavaScript at
@@ -29,6 +34,8 @@ import type { AvailabilityStatus } from '../../../lib/schemas/common';
 import { filterMenuCategories, getPublishedMenuView } from '../../../modules/menu/menu-view';
 import { MenuViewTracker } from './menu-view-tracker';
 import { TrackedWhatsAppLink } from '../tracked-whatsapp-link';
+
+export const dynamic = 'force-dynamic';
 
 function availabilityChromeKey(status: AvailabilityStatus): ChromeKey {
   switch (status) {
@@ -55,7 +62,7 @@ export default async function MenuPage({ params, searchParams }: MenuPageProps) 
   if (!isSupportedLocale(rawLocale)) notFound();
   const locale: Locale = rawLocale;
 
-  const view = getPublishedMenuView();
+  const view = await getPublishedMenuView();
 
   if (view.status === 'UNPUBLISHED') {
     return (

@@ -164,7 +164,7 @@ const REGISTRY: Readonly<Record<string, ToolRegistryEntry>> = {
     async execute(rawInput) {
       const parsed = getMenuInputSchema.safeParse(rawInput);
       if (!parsed.success) return { error: 'Invalid input for getMenu.' };
-      return getMenu(parsed.data);
+      return await getMenu(parsed.data);
     },
   },
   getVenueInfo: {

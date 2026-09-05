@@ -99,7 +99,7 @@ const MENU: PublishedMenuView = {
 function takeawayHarness() {
   let idCounter = 0;
   const deps: TakeawayServiceDeps = {
-    getMenuView: () => MENU,
+    getMenuView: async () => MENU,
     confirmationTokens: createInMemoryConfirmationTokenStore(),
     idempotency: createInMemoryIdempotencyStore(),
     requestStore: createInMemoryVersionedStore<TakeawayRequestRecord>(),

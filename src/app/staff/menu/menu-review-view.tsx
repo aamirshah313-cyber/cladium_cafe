@@ -12,10 +12,11 @@
  * Approve and Publish each require a second, explicit confirm click (never
  * fire on the first click) — the same discipline this project already
  * requires before saving a guest order or calling a booking/event
- * confirmed, applied here because publishing changes what `menu_versions`
- * reports live, even though nothing a guest sees changes as a result
- * (`getPublishedMenuView()` has no database call at all — see this
- * feature's own D-071-adjacent decision record).
+ * confirmed, applied here because publishing changes what a guest actually
+ * sees: `getPublishedMenuView()` (Step 19, `modules/menu/menu-view.ts`) now
+ * reads the real, currently-published version via RLS, so Publish is a
+ * genuinely guest-visible action, not the inert one it was when that
+ * function was a hardcoded stub.
  */
 
 import { useEffect, useState } from 'react';

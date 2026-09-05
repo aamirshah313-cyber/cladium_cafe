@@ -1,24 +1,34 @@
 /**
- * Published menu view — Runbook Step 17.
+ * Published menu view — Runbook Step 17/19.
  *
- * The guest-facing shape a repository would eventually return (Step 19+):
- * categories → items → variants, tri-state availability, integer PKR. This
- * is deliberately its own type, not `adapter.ts`'s `NormalizedMenuImport`
- * or `import-plan.ts`'s planned-row types — those describe a *draft import
- * plan* for a database write, not something safe to show a guest.
+ * The guest-facing shape a repository returns: categories → items →
+ * variants, tri-state availability, integer PKR. This is deliberately its
+ * own type, not `adapter.ts`'s `NormalizedMenuImport` or `import-plan.ts`'s
+ * planned-row types — those describe a *draft import plan* for a database
+ * write, not something safe to show a guest.
  *
- * `getPublishedMenuView` always returns `UNPUBLISHED` today: no menu has
- * been imported or published (Step 11's own evidence note), and
- * `operations/release-gates-v2.md` Gate 0/Gate 2 are explicit — "The owner
- * has approved the transcribed menu names, variants, and prices" and "The
- * public menu reads only the owner-approved published version" — neither
- * of which has happened (see the outstanding items in
- * `cladium-research/data/validation/owner-signoff-report.md`). This
- * function is the one seam a future Step 19 repository replaces; nothing
- * else in the menu-browsing UI needs to change when it does.
+ * `getPublishedMenuView` reads real Postgres rows via
+ * `guest-view-repository.ts#fetchPublishedMenuView`, through an anon-key
+ * client (`supabase-public-client.ts`) — never the service-role client
+ * `admin-service.ts` uses. RLS (`menu_versions_public_read`/
+ * `menu_categories_public_read`/etc., `20260824140002_rls_policies.sql`)
+ * is the actual security boundary enforcing
+ * `operations/release-gates-v2.md` Gate 2's "the public menu reads only
+ * the owner-approved published version": a draft or approved-but-
+ * unpublished version's rows are physically absent from any query this
+ * function's client can construct, not merely filtered by convention.
+ * Whether the owner has actually approved/published real content (Gate 0)
+ * is a separate, later business decision this function does not make —
+ * with zero published versions, this correctly still returns
+ * `UNPUBLISHED`.
  */
 
+import { assertServerOnly } from '../../lib/server-only';
 import type { AvailabilityStatus } from '../../lib/schemas/common';
+import { createSupabasePublicClient } from '../integrations/supabase-public-client';
+import { fetchPublishedMenuView } from './guest-view-repository';
+
+assertServerOnly('src/modules/menu/menu-view.ts');
 
 export type { AvailabilityStatus };
 
@@ -55,9 +65,9 @@ export type PublishedMenuView =
       readonly categories: readonly MenuViewCategory[];
     };
 
-/** The one seam Step 19's repository replaces. See module doc comment. */
-export function getPublishedMenuView(): PublishedMenuView {
-  return { status: 'UNPUBLISHED' };
+/** The one seam every consumer (guest page, takeaway/cart, concierge) shares. See module doc comment. */
+export async function getPublishedMenuView(): Promise<PublishedMenuView> {
+  return fetchPublishedMenuView({ client: createSupabasePublicClient() });
 }
 
 export interface MenuFilterInput {

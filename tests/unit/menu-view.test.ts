@@ -1,15 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import {
-  filterMenuCategories,
-  getPublishedMenuView,
-  type MenuViewCategory,
-} from '../../src/modules/menu/menu-view';
+import { filterMenuCategories, type MenuViewCategory } from '../../src/modules/menu/menu-view';
 
-describe('getPublishedMenuView', () => {
-  it('is UNPUBLISHED — no menu is owner-approved/published yet (Gate 0/Gate 2)', () => {
-    expect(getPublishedMenuView()).toEqual({ status: 'UNPUBLISHED' });
-  });
-});
+// `getPublishedMenuView` itself now does real Postgres I/O
+// (`guest-view-repository.ts` via an anon-key client) — it has no
+// meaningful fixture-free unit test any more. Its draft/approve/publish
+// visibility boundary is covered by `tests/integration/menu-guest-view.test.ts`
+// against a real database instead.
 
 const FIXTURE_CATEGORIES: readonly MenuViewCategory[] = [
   {

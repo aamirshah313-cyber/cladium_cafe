@@ -44,11 +44,13 @@ describe('dispatchToolCall — valid calls execute the real tool', () => {
     if (result.ok) expect(result.value).toMatchObject({ topic: 'CONTACT' });
   });
 
-  it('getMenu returns UNPUBLISHED, the real current state', async () => {
-    const result = await dispatchToolCall('getMenu', {}, CONTEXT);
-    expect(result.ok).toBe(true);
-    if (result.ok) expect(result.value).toEqual({ status: 'UNPUBLISHED' });
-  });
+  // `getMenu`'s real default path now does real Postgres I/O (Step 19,
+  // `guest-view-repository.ts` via an anon-key client) — dispatching it
+  // here with no fixture and no live DB is no longer meaningful. Its
+  // filtering/shaping logic is unit-tested with an injected fixture in
+  // `concierge-get-menu.test.ts`; its real draft/publish visibility
+  // boundary is proven against a real database in
+  // `tests/integration/menu-guest-view.test.ts`.
 
   it('getRequestStatus returns found:false for an unknown request id', async () => {
     const result = await dispatchToolCall(

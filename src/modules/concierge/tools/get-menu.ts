@@ -35,11 +35,11 @@ export type GetMenuResult =
   | { readonly status: 'OK_ITEM'; readonly item: MenuViewItem };
 
 /** `getMenuView` defaults to the real seam; tests inject a fixture, same pattern as `modules/takeaway/deps.ts`. */
-export function getMenu(
+export async function getMenu(
   input: GetMenuInput,
-  getMenuView: () => PublishedMenuView = getPublishedMenuView,
-): GetMenuResult {
-  const menuView = getMenuView();
+  getMenuView: () => Promise<PublishedMenuView> = getPublishedMenuView,
+): Promise<GetMenuResult> {
+  const menuView = await getMenuView();
   if (menuView.status === 'UNPUBLISHED') return { status: 'UNPUBLISHED' };
 
   if (input.itemId) {

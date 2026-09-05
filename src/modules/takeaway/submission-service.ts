@@ -87,7 +87,7 @@ export interface PrepareTakeawayRequestResult {
 }
 
 export interface TakeawayServiceDeps {
-  readonly getMenuView: () => PublishedMenuView;
+  readonly getMenuView: () => Promise<PublishedMenuView>;
   readonly confirmationTokens: ConfirmationTokenStore;
   readonly idempotency: IdempotencyStore<SubmitTakeawayRequestResult>;
   readonly requestStore: VersionedStore<TakeawayRequestRecord>;
@@ -104,7 +104,7 @@ export async function prepareTakeawayRequest(
   deps: Pick<TakeawayServiceDeps, 'getMenuView' | 'confirmationTokens' | 'now'>,
   input: PrepareTakeawayRequestInput,
 ): Promise<Result<PrepareTakeawayRequestResult, AppError>> {
-  const menuView = deps.getMenuView();
+  const menuView = await deps.getMenuView();
   if (menuView.status !== 'PUBLISHED') return err(featureDisabled());
 
   const reviewResult = buildReview(input.cart, menuView, input);
@@ -162,7 +162,7 @@ export async function submitTakeawayRequest(
       now,
     },
     async (): Promise<Result<SubmitTakeawayRequestResult, AppError>> => {
-      const menuView = deps.getMenuView();
+      const menuView = await deps.getMenuView();
       if (menuView.status !== 'PUBLISHED') return err(featureDisabled(input.correlationId));
 
       const reviewResult = buildReview(input.cart, menuView, input);
