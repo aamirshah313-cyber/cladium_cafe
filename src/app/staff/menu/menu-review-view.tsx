@@ -288,12 +288,26 @@ export function MenuReviewView() {
                 <ul>
                   {detail.items
                     .filter((item) => item.categoryStableId === category.stableId)
-                    .map((item) => (
-                      <li key={item.stableId}>
-                        {item.name}
-                        {item.basePricePkr !== null ? ` — ${formatPkr(item.basePricePkr)}` : ''}
-                      </li>
-                    ))}
+                    .map((item) => {
+                      const itemVariants = detail.variants.filter(
+                        (variant) => variant.itemStableId === item.stableId,
+                      );
+                      return (
+                        <li key={item.stableId}>
+                          {item.name}
+                          {item.basePricePkr !== null ? ` — ${formatPkr(item.basePricePkr)}` : ''}
+                          {itemVariants.length > 0 ? (
+                            <ul>
+                              {itemVariants.map((variant) => (
+                                <li key={variant.stableId}>
+                                  {variant.label} — {formatPkr(variant.pricePkr)}
+                                </li>
+                              ))}
+                            </ul>
+                          ) : null}
+                        </li>
+                      );
+                    })}
                 </ul>
               </li>
             ))}
