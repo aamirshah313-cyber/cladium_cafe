@@ -32,7 +32,7 @@ Build a luxury, mobile-first Cladium Café & Resort web application on Next.js/V
 - Requests are pending until staff acts. Never promise instant order, availability, booking, payment, or confirmation.
 - Treehouses are limited/staff-confirmed.
 - Birthday décor starts PKR 8,000; no cakes are provided; outside food is not allowed.
-- Menu source (`data/menu.json`) verified by `scripts/validate/run-all.mjs`: 118 items across 12 categories, 100 single-price, 18 variant-price, zero missing prices, eight source pages, zero empty categories. (The Step 1 audit's "52 items / 4 empty categories" figure was a bug in that step's ad hoc script, which missed items nested under `groups[].items` in Steaks/Burgers/Bar Menu/BBQ — see D-015. The original 118-item figure was correct.) Owner publication signoff remains required.
+- Menu source (`data/menu.json`) verified by `scripts/validate/run-all.mjs`: 118 items across 12 categories, 100 single-price, 18 variant-price, zero missing prices, eight source pages, zero empty categories. (The Step 1 audit's "52 items / 4 empty categories" figure was a bug in that step's ad hoc script, which missed items nested under `groups[].items` in Steaks/Burgers/Bar Menu/BBQ — see D-015. The original 118-item figure was correct.) **Owner publication signoff is done (D-075)** — a real version is approved and published live on staging; `/en/menu` serves it to guests today.
 - Vapi browser voice uses separate English/Urdu assistants, short-lived origin/assistant-restricted JWTs, HMAC/replay protection, and visible tap confirmation. Recording is off.
 
 ## Completed
@@ -182,7 +182,7 @@ Build a luxury, mobile-first Cladium Café & Resort web application on Next.js/V
 
 ## Production blockers
 
-Owner-approved menu/Urdu publication signoff (menu content itself is now structurally verified complete — 118 items, 12 categories, no empty categories); vector/transparent logo and 20–40 licensed photos; primary phone and staff roles/workflows; tax/service charges and collection-payment rules; booking/event rules; privacy/retention/consent wording; real-speaker bilingual Vapi bake-off; business-owned Meta/WhatsApp configuration for later flagged integrations.
+**Resolved (D-075)**: owner-approved menu publication signoff — the owner signed in as MANAGER on real staging and approved/published a real menu version; `/en/menu` now serves the real, live 118-item menu to guests, verified directly. Urdu translation of that content is still outstanding (canonical English stays authoritative until an owner-reviewed Urdu translation exists, per CLAUDE.md). Still open: vector/transparent logo and 20–40 licensed photos; primary phone and staff roles/workflows; tax/service charges and collection-payment rules; booking/event rules; privacy/retention/consent wording; real-speaker bilingual Vapi bake-off; business-owned Meta/WhatsApp configuration for later flagged integrations.
 
 ## Load next, not everything
 

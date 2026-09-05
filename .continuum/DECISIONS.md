@@ -2,6 +2,19 @@
 
 Newest decisions go first. Each entry stays short and points to authoritative evidence.
 
+## D-076 — Staff menu review page fixed to actually show variant prices (found by the owner during a real review)
+
+- Decision: `menu-review-view.tsx` fetched `detail.variants` from the API the whole time but never rendered them — only `item.basePricePkr`, `null` by design for every variant-priced item (Karahis/Handis/Soups/Turkish BBQ). The owner, doing a real import/approve pass, correctly read this as "the values haven't been added."
+- Checked `cladium-research/data/menu.json` against all 8 real source menu photos (`assets/provided/Menu/`), item by item, before touching anything — the data was already fully correct; nothing needed adding there. This was a display bug, not a data gap.
+- Fixed by grouping `detail.variants` by `itemStableId` and rendering each item's option labels/prices as a nested list. Staff-only, display-only — no change to import/approve/publish logic, RLS, or any guest-facing code.
+- Evidence: full `npm run verify` clean; a real-Postgres integration test re-run confirmed variant rows import correctly from the real `menu.json`. Deployed and confirmed live: the owner signed in as MANAGER on real staging and successfully approved and published a menu version for real — the first one ever.
+
+## D-075 — First real, owner-approved menu version published live to guests
+
+- Decision/event: the owner signed in as MANAGER on real staging (`/staff/menu`), approved, and published a menu version — through the real code path (D-072's admin-service, D-074's guest read side), not a synthetic/test fixture. This is the first time `release-gates-v2.md` Gate 0's "the owner has approved the transcribed menu names, variants, and prices" and Gate 2's "the public menu reads only the owner-approved published version" have both actually been satisfied for real, not just structurally supported.
+- Verified independently, not just trusted: fetched `https://cladium-cafe.vercel.app/en/menu` directly (bypassing the browser, avoiding the known hidden-pane rendering artifact) — confirmed the full real 118-item menu is live, and every variant item (Chicken Peshawari Karahi, Chicken Shinwari, the Turkish BBQ kababs, etc.) renders both its half/full prices with the exact correct PKR values from the source photos. `/staff/menu` still correctly fails closed (401/401) for a signed-out visitor — no regression.
+- Updates `.continuum/PROJECT_STATE.md`'s "Production blockers" line: menu content approval/publication itself is no longer outstanding. Remaining menu-related blockers are narrower now — see that file.
+
 ## D-074 — Guest-facing published-menu read side (Step 18/19): `getPublishedMenuView()` now reads real, RLS-bound Postgres rows
 
 - Decision: `modules/menu/menu-view.ts#getPublishedMenuView()` — hardcoded to always return `UNPUBLISHED` since Step 17 — now calls a new `modules/menu/guest-view-repository.ts#fetchPublishedMenuView()` through a new anon-key client (`modules/integrations/supabase-public-client.ts`), never `supabase-admin-client.ts`'s service-role client. This closes the read half of what D-072's staff review/publish feature left deliberately disconnected.
