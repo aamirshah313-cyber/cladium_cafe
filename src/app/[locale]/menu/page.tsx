@@ -26,27 +26,17 @@
  */
 
 import { notFound } from 'next/navigation';
-import { chromeText, type ChromeKey } from '../../../lib/i18n/chrome';
+import { chromeText } from '../../../lib/i18n/chrome';
 import { isSupportedLocale, type Locale } from '../../../lib/i18n/locale';
 import { formatPkr } from '../../../lib/business/money';
 import { buildWhatsAppUrl } from '../../../lib/business/whatsapp-link';
-import type { AvailabilityStatus } from '../../../lib/schemas/common';
 import { filterMenuCategories, getPublishedMenuView } from '../../../modules/menu/menu-view';
+import { availabilityChromeKey } from '../../../modules/menu/availability-chrome-key';
 import { MenuViewTracker } from './menu-view-tracker';
 import { TrackedWhatsAppLink } from '../tracked-whatsapp-link';
+import { MenuFeatureCarousel } from './menu-feature-carousel';
 
 export const dynamic = 'force-dynamic';
-
-function availabilityChromeKey(status: AvailabilityStatus): ChromeKey {
-  switch (status) {
-    case 'AVAILABLE':
-      return 'availabilityAvailable';
-    case 'UNAVAILABLE':
-      return 'availabilityUnavailable';
-    case 'UNKNOWN':
-      return 'availabilityUnknown';
-  }
-}
 
 function firstString(value: string | string[] | undefined): string | undefined {
   return typeof value === 'string' && value.length > 0 ? value : undefined;
@@ -94,6 +84,8 @@ export default async function MenuPage({ params, searchParams }: MenuPageProps) 
     <div>
       <MenuViewTracker path={`/${locale}/menu`} />
       <h1>{chromeText('navMenuLabel', locale)}</h1>
+
+      <MenuFeatureCarousel categories={view.categories} locale={locale} />
 
       <form method="GET">
         <label htmlFor="menu-search-input">{chromeText('menuSearchLabel', locale)}</label>

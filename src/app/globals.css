@@ -166,3 +166,143 @@ button[aria-pressed='true'] {
   stroke-width: 2;
   stroke-linecap: round;
 }
+
+/*
+ * Menu feature carousel (Step 18, `design/menu-carousel-reference.md`).
+ * Reuses the same existing semantic tokens as `.menu-media-stage` above,
+ * for the same reason: theme-mode.md's tokens are the actually-implemented
+ * source of truth, not the design doc's own speculative
+ * `--cladium-menu-canvas`/`--cladium-menu-panel` names. Two-column desktop
+ * / one-column mobile at 768px, matching `FeatureMediaStage`'s own
+ * existing breakpoint. Motion is colour/opacity/transform only, 200ms, and
+ * skipped entirely for reduced motion — same guard `body`/`a`/`button`
+ * already use above.
+ */
+.menu-carousel {
+  margin-block: 1.5rem;
+  padding: 1rem;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.75rem;
+}
+
+.menu-carousel-tablist {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding-block-end: 0.5rem;
+}
+
+.menu-carousel-tab {
+  white-space: nowrap;
+  border-radius: 999px;
+}
+
+.menu-carousel-tab[aria-selected='true'] {
+  background: var(--action-primary);
+  color: var(--action-on-primary);
+  border-color: var(--action-primary);
+}
+
+.menu-carousel-stage {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+@media (min-width: 768px) {
+  .menu-carousel-stage {
+    grid-template-columns: 3fr 2fr;
+  }
+}
+
+.menu-carousel-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .menu-carousel-details {
+    transition:
+      opacity 200ms ease,
+      transform 200ms ease;
+  }
+}
+
+.menu-carousel-category-label {
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.menu-carousel-item-name {
+  font-family: Georgia, 'Times New Roman', serif;
+  margin: 0;
+}
+
+.menu-carousel-price {
+  color: var(--accent-gold);
+  font-weight: 600;
+  margin: 0;
+}
+
+.menu-carousel-availability {
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.menu-carousel-variant-option {
+  margin-inline-end: 0.5rem;
+}
+
+.menu-carousel-variant-option[aria-checked='true'] {
+  border-color: var(--accent-gold);
+  outline: 2px solid var(--accent-gold);
+}
+
+.menu-carousel-add-button {
+  background: var(--action-primary);
+  color: var(--action-on-primary);
+  border-color: var(--action-primary);
+  border-radius: 0.5rem;
+  padding-block: 0.6rem;
+}
+
+.menu-carousel-add-button:disabled {
+  opacity: 0.6;
+}
+
+.menu-carousel-item-rail {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  padding-block: 0.25rem;
+}
+
+.menu-carousel-item-selector {
+  scroll-snap-align: start;
+  white-space: nowrap;
+}
+
+.menu-carousel-item-selector[aria-selected='true'] {
+  border-color: var(--accent-gold);
+  outline: 2px solid var(--accent-gold);
+}
+
+.menu-carousel-media {
+  min-height: 12rem;
+}
+
+/* Visually hidden but still announced by assistive tech — the standard accessible "sr-only" pattern. */
+.menu-carousel-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
