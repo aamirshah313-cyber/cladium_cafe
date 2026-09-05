@@ -38,6 +38,18 @@ export const chrome = {
     ur: 'ایک شاندار کیفے اور ریزورٹ کا تجربہ۔',
   },
   primaryNavLabel: { en: 'Primary', ur: 'بنیادی' },
+  // "Navigation", not "Menu": this site has a real food Menu page, and a
+  // trigger labelled "Menu" that opens site navigation would be ambiguous
+  // in both languages.
+  menuDrawerOpenLabel: { en: 'Navigation', ur: 'نیویگیشن' },
+  menuDrawerTitle: { en: 'Navigation', ur: 'نیویگیشن' },
+  menuDrawerCloseLabel: { en: 'Close', ur: 'بند کریں' },
+  // Footer column headings. Plain navigational labels — no marketing claim,
+  // no invented contact channel.
+  footerExploreLabel: { en: 'Explore', ur: 'دریافت کریں' },
+  footerVisitLabel: { en: 'Visit', ur: 'وزٹ' },
+  footerContactLabel: { en: 'Contact', ur: 'رابطہ' },
+  footerDirectionsLinkLabel: { en: 'Open in Google Maps', ur: 'گوگل میپس میں کھولیں' },
   navHomeLabel: { en: 'Home', ur: 'ہوم' },
   hoursLabel: { en: 'Hours', ur: 'اوقات' },
   statusOpenNow: { en: 'Open now', ur: 'ابھی کھلا ہے' },
@@ -55,6 +67,21 @@ export const chrome = {
     en: "The page you're looking for doesn't exist.",
     ur: 'جو صفحہ آپ تلاش کر رہے ہیں وہ موجود نہیں ہے۔',
   },
+  // Homepage section headings and the two hero actions. Navigational and
+  // descriptive only — no claim about quality, awards, or availability, and
+  // nothing here promises a confirmed booking.
+  homeExploreMenuCtaLabel: { en: 'Explore the Menu', ur: 'مینو دیکھیں' },
+  homePlaceHeading: { en: 'The garden', ur: 'باغ' },
+  homeExperiencesHeading: { en: 'Seating and celebrations', ur: 'نشست اور تقریبات' },
+  homeSeatingHeading: { en: 'Garden and treehouse seating', ur: 'باغ اور ٹری ہاؤس کی نشست' },
+  homeCelebrationsHeading: { en: 'Birthdays and events', ur: 'سالگرہ اور تقریبات' },
+  homeDiningHeading: { en: 'From the kitchen', ur: 'باورچی خانے سے' },
+  homeDiningCaption: {
+    en: 'Photographs show each category, not a specific dish.',
+    ur: 'تصاویر ہر زمرے کی نمائندگی کرتی ہیں، کسی مخصوص ڈش کی نہیں۔',
+  },
+  homeVisitHeading: { en: 'Finding us', ur: 'ہم تک پہنچنا' },
+  homeClosingHeading: { en: 'Reserve your table', ur: 'اپنی میز محفوظ کریں' },
   navVisitLabel: { en: 'Visit', ur: 'وزٹ' },
   visitPageHeading: { en: 'Visit us', ur: 'ہم سے ملیں' },
   directionsHeading: { en: 'Directions', ur: 'راستہ' },

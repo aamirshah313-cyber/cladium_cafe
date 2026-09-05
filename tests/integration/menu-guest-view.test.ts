@@ -189,6 +189,17 @@ describe.skipIf(!configured)(
       expect(found?.basePricePkr).toBe(100);
     });
 
+    it('carries the stable slug as mediaKey while id stays the database UUID', async () => {
+      // The live defect this guards: media lookup keyed off `id` (a UUID)
+      // always missed, so every published category rendered the fallback.
+      const view = await fetchPublishedMenuView({ client: anonClient });
+      if (view.status !== 'PUBLISHED') throw new Error('expected a published view');
+      const category = view.categories.find((c) => c.mediaKey === 'draft-a-category');
+      expect(category).toBeDefined();
+      expect(category?.id).toMatch(/^[0-9a-f-]{36}$/);
+      expect(category?.id).not.toBe(category?.mediaKey);
+    });
+
     it('two consecutive reads return identical output — one single source, not two', async () => {
       const first = await fetchPublishedMenuView({ client: anonClient });
       const second = await fetchPublishedMenuView({ client: anonClient });

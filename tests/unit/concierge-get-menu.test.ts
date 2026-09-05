@@ -8,6 +8,7 @@ const FIXTURE: PublishedMenuView = {
   categories: [
     {
       id: 'steaks',
+      mediaKey: 'steaks',
       name: 'Steaks',
       items: [
         {
@@ -25,6 +26,7 @@ const FIXTURE: PublishedMenuView = {
     },
     {
       id: 'beverages',
+      mediaKey: 'beverages',
       name: 'Beverages',
       items: [
         {

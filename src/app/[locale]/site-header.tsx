@@ -1,21 +1,35 @@
 /**
- * Site header — Runbook Steps 15–16.
+ * Site header — Runbook Steps 15–16, developed into the real visual shell.
  *
- * The skip link is the very first focusable element (WCAG 2.4.1), pointing
- * at `#main-content` in `layout.tsx`. Primary navigation (`PrimaryNav`) has
- * Home and Visit — every other destination in `design/site-map.md` (Menu,
- * Concierge) is a later step, and "hide unavailable routes" (Step 15's
- * scope, still in force) means not linking to a page that doesn't exist
- * yet. Language and theme are utility controls, not primary navigation, so
- * they get their own labelled groups rather than living inside the `nav`.
+ * Layout: the supplied crest and wordmark lead, primary navigation and the
+ * language/theme utilities sit on the end, and one primary action (Request
+ * a Table) is always visible. Below 1024px the navigation and utilities
+ * move into `SiteDrawer` so they cannot consume the first screen; the
+ * brand, the drawer trigger, and the header surface itself stay put.
+ *
+ * The header is a solid surface rather than a transparent overlay: the
+ * homepage hero sits directly beneath it, and legibility over photography
+ * matters more here than the small amount of atmosphere an overlay buys.
+ *
+ * The skip link is still the very first focusable element (WCAG 2.4.1), but
+ * is now visually hidden until focused rather than permanently sitting
+ * beside the brand.
+ *
+ * The crest is supplied artwork: rendered at its real aspect ratio, never
+ * recoloured, never mirrored under RTL, and never redrawn with a font. Its
+ * illustrated cabin and lake are part of the mark, not a photograph of the
+ * venue, so it carries no caption implying otherwise.
  */
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { BRAND_NAME, chromeText } from '../../lib/i18n/chrome';
 import type { Locale } from '../../lib/i18n/locale';
 import type { Theme } from '../../lib/theme/theme';
+import { brandLogo } from '../../modules/brand/asset-manifest';
 import { LanguageSwitcher } from './language-switcher';
 import { PrimaryNav } from './primary-nav';
+import { SiteDrawer } from './site-drawer';
 import { ThemeToggle } from './theme-toggle';
 
 interface SiteHeaderProps {
@@ -24,13 +38,57 @@ interface SiteHeaderProps {
 }
 
 export function SiteHeader({ locale, initialTheme }: SiteHeaderProps) {
-  return (
-    <header>
-      <a href="#main-content">{chromeText('skipToContent', locale)}</a>
-      <Link href={`/${locale}`}>{BRAND_NAME}</Link>
-      <PrimaryNav locale={locale} />
-      <LanguageSwitcher locale={locale} currentPath={`/${locale}`} />
+  const utilities = (
+    <>
+      <LanguageSwitcher locale={locale} />
       <ThemeToggle locale={locale} initialTheme={initialTheme} />
+    </>
+  );
+
+  return (
+    <header className="site-header">
+      <a href="#main-content" className="u-skip-link">
+        {chromeText('skipToContent', locale)}
+      </a>
+
+      <div className="u-container site-header-inner">
+        {/*
+         * The crest alone. The supplied artwork already contains the
+         * `CLADIUM` wordmark, so setting the name again in type beside it
+         * was both redundant and — measured at 1366px — the ~200px that
+         * pushed the composed row past its container and made the page
+         * scroll sideways. The link's accessible name comes from the
+         * image's alt text, so nothing is lost to a screen reader.
+         */}
+        <Link href={`/${locale}`} className="site-brand" aria-label={BRAND_NAME}>
+          <Image
+            src={brandLogo.medium.path}
+            alt={BRAND_NAME}
+            width={brandLogo.medium.width}
+            height={brandLogo.medium.height}
+            className="site-brand-mark"
+            priority
+          />
+        </Link>
+
+        <div className="site-header-desktop">
+          <PrimaryNav locale={locale} />
+          <div className="site-header-utilities">{utilities}</div>
+          <Link href={`/${locale}/book`} className="u-button u-button--primary site-header-cta">
+            {chromeText('navBookLabel', locale)}
+          </Link>
+        </div>
+
+        <SiteDrawer locale={locale}>
+          <PrimaryNav locale={locale} />
+          <div className="site-drawer-utilities">
+            {utilities}
+            <Link href={`/${locale}/book`} className="u-button u-button--primary">
+              {chromeText('navBookLabel', locale)}
+            </Link>
+          </div>
+        </SiteDrawer>
+      </div>
     </header>
   );
 }

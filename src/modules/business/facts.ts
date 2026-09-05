@@ -34,6 +34,24 @@ export const GOOGLE_MAPS_URL = 'https://maps.app.goo.gl/rHvGG5a82LGkTLLY6?g_st=i
 
 export const WHATSAPP_DISPLAY = '+92 312 3978889';
 export const WHATSAPP_URL = 'https://wa.me/923123978889';
+
+/**
+ * The café's official social profiles, both opened and visually confirmed
+ * as Cladium's own during the 5 September 2026 design audit
+ * (`design/LUXURY_REDESIGN_AUDIT_AND_PLAN.md`).
+ *
+ * Links only. Nothing on the site embeds a live social feed, hotlinks a
+ * social CDN URL (those expire), or republishes a collaborator's or a
+ * visitor's post as Cladium-owned media.
+ *
+ * Two items the audit recorded for owner verification, deliberately NOT
+ * acted on here because inference is not confirmation: the WhatsApp number
+ * above opens a profile displaying the name "Mehran", and the Google Maps
+ * listing shows a different public phone number than the WhatsApp one. The
+ * configured values stay exactly as approved until the owner confirms.
+ */
+export const FACEBOOK_URL = 'https://www.facebook.com/people/CladiumCafeResort/61590768862564/';
+export const INSTAGRAM_URL = 'https://www.instagram.com/cladium.cafe/';
 // Guest-facing click-to-WhatsApp links use `lib/business/whatsapp-link.ts`'s
 // `buildWhatsAppUrl(locale)` (Step 35), which appends a minimal, reviewed,
 // non-sensitive prefilled `?text=` message to this same verified URL —

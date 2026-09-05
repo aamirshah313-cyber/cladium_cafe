@@ -48,7 +48,7 @@ export function PrimaryNav({ locale }: PrimaryNavProps) {
   const pathname = usePathname();
 
   return (
-    <nav aria-label={chromeText('primaryNavLabel', locale)}>
+    <nav className="site-nav" aria-label={chromeText('primaryNavLabel', locale)}>
       <ul>
         {ITEMS.map((item) => {
           const href = `/${locale}${item.path}`;

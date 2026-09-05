@@ -10,6 +10,7 @@ import { filterMenuCategories, type MenuViewCategory } from '../../src/modules/m
 const FIXTURE_CATEGORIES: readonly MenuViewCategory[] = [
   {
     id: 'steaks',
+    mediaKey: 'steaks',
     name: 'Steaks',
     items: [
       {
@@ -41,6 +42,7 @@ const FIXTURE_CATEGORIES: readonly MenuViewCategory[] = [
   },
   {
     id: 'beverages',
+    mediaKey: 'beverages',
     name: 'Beverages',
     items: [
       {

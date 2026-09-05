@@ -78,6 +78,7 @@ const MENU: PublishedMenuView = {
   categories: [
     {
       id: 'steaks',
+      mediaKey: 'steaks',
       name: 'Steaks',
       items: [
         {

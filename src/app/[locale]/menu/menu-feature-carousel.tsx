@@ -192,7 +192,7 @@ export function MenuFeatureCarousel({ categories, locale }: MenuFeatureCarouselP
         <div className="menu-carousel-media">
           <FeatureMediaStage
             categoryName={category.name}
-            media={resolveCategoryMedia(category.id)}
+            media={resolveCategoryMedia(category.mediaKey)}
           />
         </div>
       </div>

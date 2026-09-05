@@ -43,6 +43,7 @@ interface PublishedVersionRow {
 
 interface CategoryRow {
   readonly id: string;
+  readonly stable_id: string;
   readonly name: string;
   readonly sort_order: number;
 }
@@ -83,7 +84,7 @@ export async function fetchPublishedMenuView(deps: GuestMenuViewDeps): Promise<P
 
   const { data: categoryRows, error: categoryError } = await client
     .from('menu_categories')
-    .select('id, name, sort_order')
+    .select('id, stable_id, name, sort_order')
     .eq('menu_version_id', versionRow.id)
     .eq('publish_state', 'PUBLISHED')
     .order('sort_order', { ascending: true })
@@ -142,6 +143,7 @@ export async function fetchPublishedMenuView(deps: GuestMenuViewDeps): Promise<P
 
   const categories: MenuViewCategory[] = (categoryRows ?? []).map((c) => ({
     id: c.id,
+    mediaKey: c.stable_id,
     name: c.name,
     items: itemsByCategoryId.get(c.id) ?? [],
   }));

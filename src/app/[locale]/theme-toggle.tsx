@@ -31,7 +31,11 @@ export function ThemeToggle({ locale, initialTheme }: ThemeToggleProps) {
   const [activeTheme, setActiveTheme] = useState<Theme | null>(initialTheme);
 
   return (
-    <div role="group" aria-label={chromeText('themeSwitcherLabel', locale)}>
+    <div
+      className="site-theme-toggle"
+      role="group"
+      aria-label={chromeText('themeSwitcherLabel', locale)}
+    >
       {THEMES.map((theme) => {
         const nameKey = theme === 'day' ? 'dayThemeName' : 'nightThemeName';
         return (

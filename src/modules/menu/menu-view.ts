@@ -53,6 +53,14 @@ export interface MenuViewItem {
 
 export interface MenuViewCategory {
   readonly id: string;
+  /**
+   * The stable slug (`menu_categories.stable_id`, e.g. `steaks`) media
+   * mapping and other presentation-only lookups key off — `id` is the
+   * database UUID and must stay that way for cart/filter/domain operations.
+   * See `modules/menu/media-mapping.ts`'s module doc comment for why the
+   * two must not be conflated.
+   */
+  readonly mediaKey: string;
   readonly name: string;
   readonly items: readonly MenuViewItem[];
 }

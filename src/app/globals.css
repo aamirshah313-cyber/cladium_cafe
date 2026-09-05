@@ -53,6 +53,44 @@
   --border-subtle: #365246;
 }
 
+/*
+ * Layout, type scale, and control system.
+ *
+ * Sizes are fluid (`clamp`) rather than a stack of breakpoint overrides, so
+ * every width between 360px and desktop gets a deliberate size instead of
+ * only the widths someone remembered to test. The content measure is the
+ * 1200-1280px the design brief specifies.
+ */
+:root {
+  --content-max: 1240px;
+  --gutter: 1.5rem;
+  --section-gap: clamp(3.5rem, 8vw, 7.5rem);
+
+  /* Fluid type. Hero is constrained by real copy length, not an arbitrary max. */
+  --step-hero: clamp(2.25rem, 1.2rem + 4.6vw, 5rem);
+  --step-h1: clamp(1.9rem, 1.2rem + 2.6vw, 3.25rem);
+  --step-h2: clamp(1.5rem, 1.1rem + 1.6vw, 2.25rem);
+  --step-h3: clamp(1.2rem, 1rem + 0.8vw, 1.5rem);
+  --step-body: clamp(1rem, 0.97rem + 0.15vw, 1.125rem);
+  --step-small: 0.9375rem;
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --shadow-soft: 0 1px 2px rgb(11 26 21 / 6%), 0 8px 24px rgb(11 26 21 / 8%);
+}
+
+@media (min-width: 768px) {
+  :root {
+    --gutter: 3rem;
+  }
+}
+
+@media (min-width: 1280px) {
+  :root {
+    --gutter: 4.5rem;
+  }
+}
+
 * {
   box-sizing: border-box;
 }
@@ -62,9 +100,144 @@ body {
   background: var(--surface-canvas);
   color: var(--text-primary);
   font-family:
+    var(--font-sans),
     system-ui,
     -apple-system,
     sans-serif;
+  font-size: var(--step-body);
+  line-height: 1.6;
+  /* Never let a single wide element (table, image, long word) scroll the page sideways. */
+  overflow-x: hidden;
+}
+
+/*
+ * Urdu is set in a real Nastaliq face, which needs materially more vertical
+ * room than Latin: applied here rather than mirroring the Latin CSS, per
+ * `design/localization-and-rtl.md`'s requirement that Urdu typography be
+ * considered in its own right. Headings keep Nastaliq too — the Latin
+ * display serif has no Urdu coverage, so using it would silently fall back.
+ */
+[lang='ur'] body,
+[lang='ur'] h1,
+[lang='ur'] h2,
+[lang='ur'] h3,
+[lang='ur'] .u-display {
+  font-family: var(--font-urdu), var(--font-sans), system-ui, sans-serif;
+  line-height: 2.1;
+}
+
+h1,
+h2,
+h3,
+.u-display {
+  font-family: var(--font-serif), Georgia, 'Times New Roman', serif;
+  font-weight: 600;
+  line-height: 1.15;
+  text-wrap: balance;
+  margin: 0 0 0.5em;
+}
+
+h1 {
+  font-size: var(--step-h1);
+}
+
+h2 {
+  font-size: var(--step-h2);
+}
+
+h3 {
+  font-size: var(--step-h3);
+}
+
+p {
+  margin: 0 0 1rem;
+  max-width: 68ch;
+}
+
+/* ---------------------------------------------------------------- layout */
+
+.u-container {
+  width: 100%;
+  max-width: var(--content-max);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+.u-section {
+  padding-block: var(--section-gap);
+}
+
+.u-muted {
+  color: var(--text-muted);
+}
+
+.u-lede {
+  font-size: clamp(1.05rem, 1rem + 0.5vw, 1.3rem);
+  color: var(--text-muted);
+  max-width: 60ch;
+}
+
+/*
+ * Visible only to screen readers until focused. The skip link used to be
+ * permanently visible beside the brand; it must remain first in focus order
+ * and become fully visible when focused (WCAG 2.4.1 + 2.4.11).
+ */
+.u-skip-link {
+  position: absolute;
+  inset-inline-start: 0.5rem;
+  top: 0.5rem;
+  z-index: 100;
+  padding: 0.75rem 1rem;
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  border: 1px solid var(--accent-gold);
+  border-radius: var(--radius-sm);
+  transform: translateY(-200%);
+}
+
+.u-skip-link:focus-visible {
+  transform: translateY(0);
+}
+
+/* -------------------------------------------------------------- controls */
+
+.u-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 48px;
+  padding: 0.75rem 1.5rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-size: var(--step-small);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.u-button--primary {
+  background: var(--action-primary);
+  color: var(--action-on-primary);
+  border-color: var(--action-primary);
+}
+
+.u-button--secondary {
+  background: transparent;
+  color: var(--text-primary);
+  border-color: var(--border-subtle);
+}
+
+.u-button--secondary:hover {
+  border-color: var(--accent-gold);
+}
+
+.u-button:disabled,
+.u-button[aria-disabled='true'] {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 /* Colour-only, 150-200ms (theme-mode.md); no motion/transform, and skipped entirely for reduced motion. */
@@ -305,4 +478,666 @@ button[aria-pressed='true'] {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+/* ================================================== site header (Step B) */
+
+/*
+ * A stable, legible surface rather than a transparent bar: the homepage
+ * hero sits directly beneath it, and text over photography needs its own
+ * backing to stay readable. Sticky so the primary action stays reachable,
+ * with `scroll-padding` on the root so an anchored heading is never hidden
+ * underneath it.
+ */
+:root {
+  scroll-padding-top: 6rem;
+}
+
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: var(--surface-raised);
+  border-block-end: 1px solid var(--border-subtle);
+}
+
+.site-header-inner {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-height: 72px;
+  padding-block: 0.75rem;
+}
+
+@media (min-width: 1024px) {
+  .site-header-inner {
+    min-height: 88px;
+  }
+}
+
+.site-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  text-decoration: none;
+  color: inherit;
+  margin-inline-end: auto;
+}
+
+.site-brand-mark {
+  display: block;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-sm);
+  /* The crest is supplied artwork on its own forest field: never recoloured,
+     never cropped to a circle, never mirrored under RTL. */
+  object-fit: contain;
+}
+
+@media (min-width: 1024px) {
+  .site-brand-mark {
+    width: 60px;
+    height: 60px;
+  }
+}
+
+.site-brand-text {
+  display: none;
+  font-family: var(--font-serif), Georgia, serif;
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: 1.1;
+  /* The name is a brand mark, not prose: it must not break across lines
+     when navigation gets tight. */
+  white-space: nowrap;
+}
+
+.site-brand-tagline {
+  display: block;
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-size: 0.6875rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-top: 0.15rem;
+  white-space: nowrap;
+}
+
+/* The tagline's wide tracking and uppercasing are Latin typographic
+   devices; Nastaliq is neither uppercased nor letter-spaced. */
+[lang='ur'] .site-brand-tagline {
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+/* The wordmark appears once there is genuinely room for it beside the
+   crest and the navigation — below that the crest alone is the brand. */
+@media (min-width: 1360px) {
+  .site-brand-text {
+    display: block;
+  }
+}
+
+/* Desktop navigation and utilities are hidden on small screens, where the
+   drawer takes over — never a nav list that eats the first screen. */
+.site-header-desktop {
+  display: none;
+  align-items: center;
+  gap: 1.25rem;
+  /*
+   * A flex item defaults to `min-width: auto`, so with non-wrapping nav
+   * labels inside, this group refused to shrink and pushed the CTA past
+   * the container's edge — measured at 1366px, where the row ran to 1524px
+   * and the page scrolled sideways. Allowing it to shrink means the
+   * container, not the content, decides the width.
+   */
+  min-width: 0;
+}
+
+@media (min-width: 1200px) {
+  .site-header-desktop {
+    display: flex;
+  }
+}
+
+.site-header-utilities {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.site-header-cta {
+  white-space: nowrap;
+}
+
+.site-nav ul,
+.site-footer ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.site-nav ul {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.site-nav a {
+  display: inline-block;
+  padding: 0.5rem 0.625rem;
+  font-size: var(--step-small);
+  text-decoration: none;
+  color: var(--text-primary);
+  border-radius: var(--radius-sm);
+  /*
+   * A nav label is a label, not prose. Without this, Urdu's longer labels
+   * ("سالگرہ کی منصوبہ بندی کریں") wrapped onto three lines and pushed the
+   * header from 88px to 136px — measured, not assumed. The desktop
+   * breakpoint below is set wide enough that the un-wrapped Urdu labels
+   * still fit; narrower than that, both languages use the drawer, where a
+   * long label is simply a wider row.
+   */
+  white-space: nowrap;
+}
+
+.site-nav a:hover {
+  color: var(--accent-gold);
+}
+
+.site-nav a[aria-current='page'] {
+  color: var(--accent-gold);
+  box-shadow: inset 0 -2px 0 var(--accent-gold);
+}
+
+/* ------------------------------------------------------- mobile drawer */
+
+.site-header-drawer-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  padding: 0.5rem 0.875rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  background: transparent;
+  color: var(--text-primary);
+  font-size: var(--step-small);
+  cursor: pointer;
+}
+
+/* Declared after the trigger's own base rule so it actually wins — same
+   specificity means source order decides. */
+@media (min-width: 1200px) {
+  .site-header-drawer-trigger {
+    display: none;
+  }
+}
+
+.site-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgb(11 26 21 / 55%);
+}
+
+.site-drawer {
+  position: fixed;
+  inset-block: 0;
+  inset-inline-end: 0;
+  z-index: 61;
+  width: min(360px, 88vw);
+  padding: 1.25rem var(--gutter) 2rem;
+  background: var(--surface-raised);
+  border-inline-start: 1px solid var(--border-subtle);
+  overflow-y: auto;
+}
+
+.site-drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-block-end: 1.5rem;
+}
+
+.site-drawer nav ul {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  align-items: stretch;
+}
+
+.site-drawer nav a {
+  display: block;
+  padding: 0.875rem 0.5rem;
+  font-size: 1.0625rem;
+  border-block-end: 1px solid var(--border-subtle);
+  border-radius: 0;
+}
+
+.site-drawer-utilities {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin-block-start: 1.75rem;
+}
+
+/* ================================================== site footer (Step B) */
+
+/*
+ * Deliberately the one large forest surface on a Day-mode page: it closes
+ * the page rather than trailing off into three text links. Colours are
+ * fixed forest/ivory in both themes because it is a brand surface, not a
+ * reading surface — contrast is checked against those two values only.
+ */
+.site-footer {
+  --footer-ink: #f7f3ea;
+  --footer-ink-muted: #c8d6cb;
+  background: #0b1a15;
+  color: var(--footer-ink);
+  padding-block: clamp(2.5rem, 5vw, 4rem) 2rem;
+  margin-block-start: var(--section-gap);
+}
+
+.site-footer a {
+  color: var(--footer-ink);
+  text-decoration: none;
+}
+
+.site-footer a:hover {
+  color: #e7d5ab;
+  text-decoration: underline;
+}
+
+.site-footer-grid {
+  display: grid;
+  gap: 2.5rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 640px) {
+  .site-footer-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .site-footer-grid {
+    grid-template-columns: 1.4fr 1fr 1fr 1.2fr;
+    gap: 3rem;
+  }
+}
+
+.site-footer-brand-mark {
+  display: block;
+  width: 96px;
+  height: 96px;
+  border-radius: var(--radius-md);
+  object-fit: contain;
+  margin-block-end: 1rem;
+}
+
+.site-footer h2 {
+  font-size: 0.8125rem;
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--footer-ink-muted);
+  margin-block-end: 1rem;
+}
+
+[lang='ur'] .site-footer h2 {
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.site-footer-links li {
+  margin-block-end: 0.25rem;
+}
+
+.site-footer-links a {
+  display: inline-block;
+  padding: 0.4375rem 0;
+  font-size: var(--step-small);
+}
+
+.site-footer p {
+  font-size: var(--step-small);
+  color: var(--footer-ink-muted);
+  max-width: 40ch;
+}
+
+.site-footer-tagline {
+  font-family: var(--font-serif), Georgia, serif;
+  font-size: 1.05rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #e7d5ab;
+}
+
+[lang='ur'] .site-footer-tagline {
+  font-family: var(--font-urdu), var(--font-sans), sans-serif;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.site-footer-social {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-block-start: 0.75rem;
+}
+
+.site-footer-social a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0.5rem 0.875rem;
+  border: 1px solid #365246;
+  border-radius: var(--radius-sm);
+  font-size: var(--step-small);
+}
+
+.site-footer-bottom {
+  margin-block-start: 2.5rem;
+  padding-block-start: 1.5rem;
+  border-block-start: 1px solid #365246;
+  font-size: 0.875rem;
+  color: var(--footer-ink-muted);
+}
+
+/* ------------------------------------------- header utility controls */
+
+/*
+ * Language and theme are utility controls, visually quieter than primary
+ * navigation but still labelled text (never icon-only, per theme-mode.md)
+ * and still at least 44px of touch target.
+ */
+.site-lang-switcher ul {
+  gap: 0;
+}
+
+.site-lang-switcher a {
+  padding: 0.5rem 0.5rem;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.site-lang-switcher a[aria-current='page'] {
+  color: var(--text-primary);
+  font-weight: 600;
+  box-shadow: none;
+}
+
+.site-theme-toggle {
+  display: inline-flex;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.site-theme-toggle button {
+  min-height: 40px;
+  padding: 0.4rem 0.75rem;
+  border: 0;
+  background: transparent;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.site-theme-toggle button[aria-pressed='true'] {
+  background: var(--action-primary);
+  color: var(--action-on-primary);
+}
+
+/* In the drawer these controls get room to breathe rather than being
+   squeezed into a horizontal strip. */
+.site-drawer-utilities .site-nav ul {
+  justify-content: flex-start;
+}
+
+.site-drawer-utilities .site-theme-toggle {
+  align-self: flex-start;
+}
+
+/* ------------------------------------------------------ main content */
+
+/*
+ * Every page gets the measured content column and vertical rhythm by
+ * default, so no page can ship flush against the viewport edge.
+ *
+ * `main` itself is full width and the *children* carry the column. The
+ * obvious alternative — constraining `main` and letting a hero escape with
+ * `width: 100vw; margin-inline: calc(50% - 50vw)` — was built first and
+ * measured wrong: `100vw` includes the classic scrollbar's width, so on a
+ * 1366px window with a 15px scrollbar the hero hung 7px off each edge and
+ * the page really did scroll sideways. Constraining the children instead
+ * means a full-bleed section is simply "no max-width", with no viewport
+ * arithmetic and nothing for a scrollbar to throw off.
+ */
+.site-main {
+  display: block;
+  width: 100%;
+}
+
+.site-main > * {
+  width: 100%;
+  max-width: var(--content-max);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+.site-main > .u-bleed {
+  max-width: none;
+  padding-inline: 0;
+}
+
+/* Vertical rhythm below the header, cancelled for a hero that is meant to
+   sit directly against it. */
+.site-main > *:first-child {
+  margin-block-start: clamp(2rem, 4vw, 3.5rem);
+}
+
+.site-main > .u-bleed:first-child {
+  margin-block-start: 0;
+}
+
+.site-main > *:last-child {
+  margin-block-end: clamp(2rem, 4vw, 3.5rem);
+}
+
+/* ================================================== home page (Step C) */
+
+/*
+ * The hero is a real photograph with the brand and both actions on top of
+ * it. The image is a positioned element rather than a CSS background so it
+ * can be a responsive, preloaded `next/image` with a blur placeholder — a
+ * background-image cannot be preloaded or served responsively.
+ *
+ * `min-height` uses `svh` so mobile browser chrome appearing/disappearing
+ * does not resize the hero mid-scroll, with a `vh` fallback for browsers
+ * without `svh`.
+ */
+.home-hero {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  min-height: 68vh;
+  min-height: 68svh;
+  padding-block: clamp(3rem, 10vw, 7rem);
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.home-hero-image {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/*
+ * The photograph is bright and busy around the lit counter, so the text
+ * gets its own backing rather than relying on the image staying dark.
+ * A gradient keeps the garden visible at the top while guaranteeing
+ * contrast where the copy actually sits.
+ */
+.home-hero-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(
+    to bottom,
+    rgb(11 26 21 / 30%) 0%,
+    rgb(11 26 21 / 55%) 45%,
+    rgb(11 26 21 / 82%) 100%
+  );
+}
+
+/* Hero text is always on the dark photograph, in both themes — so these
+   are fixed ivory/gold values, not theme tokens whose Day values would
+   become unreadable here. */
+.home-hero-content {
+  position: relative;
+  color: #f7f3ea;
+}
+
+.home-hero-tagline {
+  font-size: 0.75rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #e7d5ab;
+  margin-bottom: 0.75rem;
+}
+
+[lang='ur'] .home-hero-tagline {
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.home-hero-title {
+  font-size: var(--step-hero);
+  color: #f7f3ea;
+  margin-bottom: 0.5rem;
+}
+
+.home-hero-intro {
+  font-size: clamp(1.05rem, 1rem + 0.5vw, 1.35rem);
+  color: #e6ece6;
+  max-width: 46ch;
+  margin-bottom: 2rem;
+}
+
+.home-hero-actions,
+.home-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+/* A secondary action sitting on the photograph: legible without a second
+   filled button competing with the primary one. */
+.u-button--on-image {
+  background: rgb(247 243 234 / 12%);
+  color: #f7f3ea;
+  border-color: rgb(247 243 234 / 55%);
+  backdrop-filter: blur(4px);
+}
+
+.u-button--on-image:hover {
+  background: rgb(247 243 234 / 22%);
+  border-color: #f7f3ea;
+}
+
+/* ------------------------------------------------------------ sections */
+
+.home-place .u-lede {
+  max-width: 54ch;
+}
+
+.home-cards {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 768px) {
+  .home-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.home-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: clamp(1.5rem, 3vw, 2.25rem);
+  background: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.home-card h3 {
+  margin-bottom: 0.5rem;
+}
+
+.home-card-actions {
+  margin-top: auto;
+  padding-top: 1.25rem;
+}
+
+.home-dining-caption {
+  font-size: var(--step-small);
+  margin-bottom: 1.5rem;
+}
+
+/* A short definition list, not a table: two facts, label above value. */
+.home-facts {
+  display: grid;
+  gap: 1.25rem;
+  margin: 1.75rem 0;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 640px) {
+  .home-facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.home-facts dt {
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 0.375rem;
+}
+
+[lang='ur'] .home-facts dt {
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.home-facts dd {
+  margin: 0;
+  max-width: 34ch;
+}
+
+.home-closing {
+  padding-bottom: 0;
+}
+
+.home-whatsapp {
+  margin-top: 1.75rem;
+}
+
+/* The blurred placeholder painted behind the real photograph. */
+.home-hero {
+  background-size: cover;
+  background-position: center;
 }

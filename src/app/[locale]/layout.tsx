@@ -47,6 +47,7 @@ import { isFeatureEnabled, parseMetaPixelId, parseSessionSecret } from '../../li
 import { hasConsent } from '../../modules/consent/consent-service';
 import { consentDeps } from '../../modules/consent/deps';
 import { resolveMetaPixelId } from '../../modules/integrations/meta-pixel';
+import { fontVariables } from '../fonts';
 import { MetaPixelBootstrap } from './meta-pixel-bootstrap';
 import { SiteFooter } from './site-footer';
 import { SiteHeader } from './site-header';
@@ -118,11 +119,18 @@ export default async function LocaleLayout({
   const metaPixelId = await resolvePageMetaPixelId(cookieStore);
 
   return (
-    <html lang={locale} dir={localeDirection(locale)} data-theme={theme ?? undefined}>
+    <html
+      lang={locale}
+      dir={localeDirection(locale)}
+      data-theme={theme ?? undefined}
+      className={fontVariables}
+    >
       <body>
         {metaPixelId ? <MetaPixelBootstrap pixelId={metaPixelId} /> : null}
         <SiteHeader locale={locale} initialTheme={theme} />
-        <main id="main-content">{children}</main>
+        <main id="main-content" className="site-main">
+          {children}
+        </main>
         <SiteFooter locale={locale} />
       </body>
     </html>
