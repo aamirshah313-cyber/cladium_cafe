@@ -606,13 +606,16 @@ button[aria-pressed='true'] {
   align-items: center;
   gap: 1.25rem;
   /*
-   * A flex item defaults to `min-width: auto`, so with non-wrapping nav
-   * labels inside, this group refused to shrink and pushed the CTA past
-   * the container's edge — measured at 1366px, where the row ran to 1524px
-   * and the page scrolled sideways. Allowing it to shrink means the
-   * container, not the content, decides the width.
+   * Deliberately NOT `min-width: 0`. That was added when the header still
+   * set the wordmark in type beside the crest and the row overflowed; with
+   * the wordmark gone (the crest artwork already contains it) the row fits,
+   * and allowing this group to shrink below its content did real harm —
+   * measured at 1440px, the group ended at 1022px while the CTA inside it
+   * ran to 1076px, overlapping the language links at 1038px. A flex item's
+   * default `min-width: auto` is what keeps the CTA inside its own box, and
+   * the 1200px breakpoint below hands over to the drawer before the row
+   * runs out of room.
    */
-  min-width: 0;
 }
 
 @media (min-width: 1200px) {
