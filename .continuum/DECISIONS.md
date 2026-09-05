@@ -2,6 +2,16 @@
 
 Newest decisions go first. Each entry stays short and points to authoritative evidence.
 
+## D-080 — Bookings' Postgres cutover re-enabled, confirmed live (D-077 → D-078 → D-079 → D-080)
+
+`bookingDeps` (`src/modules/bookings/deps.ts`) again prefers real Postgres via `createPostgresBookingDeps`, falling back to in-memory only on a construction failure — the same shape D-077 shipped, re-enabled now that D-079 closed the `customer_sessions` FK gap that broke it live within minutes of D-077 first going out.
+
+Verified before push: typecheck, lint, full unit suite (1133 tests), the real-Postgres integration suite (97/97) run twice consecutively, full `npm run verify` clean. Pushed as `9354626`.
+
+Verified live on staging immediately after push, not deferred: a real HTTP submission (`GET /api/session/csrf` → `POST /api/bookings/review` → `POST /api/bookings/submit`) against `https://cladium-cafe.vercel.app`, using clearly-fake TEST guest data. Result: `200`s throughout, `requestId 5408030c-...`. Confirmed by direct query against the live Supabase project (`vxvpxywszskxcugwpsch`) that `booking_requests`, `customer_sessions`, and `status_events` rows all landed correctly and durably — proving the D-078 gap is genuinely closed against production, not just against local tests. Test rows deleted afterward (`booking_requests`/`customer_sessions`; `status_events` left in place, append-only by design).
+
+Takeaway/events still have no Postgres cutover wired (events has no `createPostgresEventDeps` yet; takeaway needs a Postgres cart-store adapter first) — this decision covers bookings only.
+
 ## D-079 — The `customer_sessions` foreign-key gap (D-078) is fixed, for every domain, not just bookings
 
 - Decision: a new shared helper, `lib/db/postgres-customer-session.ts#ensureCustomerSessionRow(client, sessionId, now)`, upserts a `customer_sessions` row (`ON CONFLICT (id) DO NOTHING`) before any write that needs it. `token_hash` is `sha256(sessionId)` — a stated simplification, not a hash of the raw signed cookie: `sessionId` is already the plaintext FK value stored on every one of these tables, so hashing it again buys no real confidentiality, and threading the raw cookie token down into adapters that today only ever receive `sessionId` would be a materially bigger change than this gap requires.
