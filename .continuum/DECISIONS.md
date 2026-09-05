@@ -2,6 +2,22 @@
 
 Newest decisions go first. Each entry stays short and points to authoritative evidence.
 
+## D-084 — Redesign release deployed to production and smoke-tested
+
+Pushed `2a8fa5f..848e800` (six commits) to `origin/master` on 2026-09-06; Vercel auto-deployed. Production commit: **848e800d85b8f6e28dcc17f1dc9978a07d93f2ca**.
+
+Smoke-tested against `https://cladium-cafe.vercel.app` after the deployment went live. All checks passed with zero failures.
+
+Guest surfaces at 390px and 1440px (`/en`, `/ur`, `/en/menu`, `/ur/menu`, `/en/book`, `/en/event`, `/en/visit`, `/en/concierge`): HTTP 200, correct `lang`/`dir`, zero horizontal overflow, zero broken images, truthful per-page titles, correct mobile drawer vs desktop nav, and language/theme controls visible at both widths. Zero serious/critical axe violations.
+
+Production menu against the real published version: 12 categories, 118 items, 12 carousel tabs, 136 prices all PKR-formatted, real category photography resolving (`/menu/sandwiches.jpg`) — the media-identity bug (D-082) confirmed fixed in production. 38 rendered prices cross-checked directly against `data/menu.json` with zero mismatches; `validate:sources` independently matched the Step 3 baseline exactly.
+
+Takeaway gate (D-083) confirmed live: no add control in either locale, the honest ordering-unavailable note present in English and Urdu, no cart dead end — while `GET /api/takeaway/cart` still returns a real cart, so the backend is untouched.
+
+Server-side unaffected: a real booking and a real event request both submitted end to end (`200`, durable rows verified in Postgres, test rows deleted afterwards); language switching preserves route and context both directions while dropping injected `utm_source`/`next=`; staff workspace renders and every staff API returns 401 unauthenticated, with `/staff/menu` correctly unauthorized without a session.
+
+Status: **deployed and stable**.
+
 ## D-083 — The takeaway guest journey is hidden until its destination exists
 
 Found during the pre-release checkpoint, verified against the deployed site: `FEATURE_TAKEAWAY_REQUESTS` is **on** in production (`GET /api/takeaway/cart` returns a real cart), the menu carousel's "Add to takeaway order" control enables after hydration — and every candidate destination (`/takeaway`, `/cart`, `/takeaway/cart`, `/order`) is a 404. A guest could add items, watch a subtotal climb, and have nowhere to submit. That is a live dead end, pre-dating the redesign.
