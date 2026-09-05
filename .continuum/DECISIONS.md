@@ -2,6 +2,16 @@
 
 Newest decisions go first. Each entry stays short and points to authoritative evidence.
 
+## D-081 — Events' Postgres cutover, built with the session-gap fix in from the start, confirmed live
+
+`eventDeps` (`src/modules/events/deps.ts`) now prefers real Postgres via a new `createPostgresEventDeps`, mirroring `modules/bookings/deps.ts`'s exact lazy-Proxy singleton shape (D-077/D-080). Unlike bookings, this was enabled directly rather than shipped dormant first: `createPostgresEventRequestStore` already calls `ensureCustomerSessionRow` itself (D-079), and its own integration test already proves the no-pre-seeded-session case — the D-078 class of bug is closed here from the start.
+
+Verified before push: typecheck, lint, full unit suite (1133 tests), the real-Postgres integration suite (97/97) run twice consecutively, full `npm run verify` clean. Pushed as `4a460f1`.
+
+Verified live on staging immediately after push: the first attempt got a `404 NOT_FOUND` on `consumeConfirmationToken` — diagnosed as the deployment still propagating (traffic briefly still served by the pre-D-081 build, whose in-memory `eventDeps` doesn't coordinate `review`→`submit` across serverless instances, the same class of symptom bookings hit once for an unrelated reason). A fresh retry with a brand-new session succeeded cleanly (`200`s throughout, `requestId aae42a4b-...`). Confirmed by direct query against Supabase (`vxvpxywszskxcugwpsch`): `event_requests`, `customer_sessions`, and `status_events` rows all landed correctly. Test rows deleted afterward.
+
+Takeaway still has no Postgres cutover — needs a cart-store adapter and line-snapshot sink that don't exist yet.
+
 ## D-080 — Bookings' Postgres cutover re-enabled, confirmed live (D-077 → D-078 → D-079 → D-080)
 
 `bookingDeps` (`src/modules/bookings/deps.ts`) again prefers real Postgres via `createPostgresBookingDeps`, falling back to in-memory only on a construction failure — the same shape D-077 shipped, re-enabled now that D-079 closed the `customer_sessions` FK gap that broke it live within minutes of D-077 first going out.
