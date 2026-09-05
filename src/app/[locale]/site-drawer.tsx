@@ -102,6 +102,9 @@ export function SiteDrawer({ locale, children }: SiteDrawerProps) {
         type="button"
         className="site-header-drawer-trigger"
         aria-expanded={open}
+        // Carries the accessible name on the narrowest screens, where the
+        // visible text is hidden for space (globals.css).
+        aria-label={chromeText('menuDrawerOpenLabel', locale)}
         onClick={() => setOpen(true)}
       >
         <svg aria-hidden="true" width="18" height="18" viewBox="0 0 18 18" fill="none">
@@ -112,7 +115,9 @@ export function SiteDrawer({ locale, children }: SiteDrawerProps) {
             strokeLinecap="round"
           />
         </svg>
-        {chromeText('menuDrawerOpenLabel', locale)}
+        <span className="site-header-drawer-trigger-text">
+          {chromeText('menuDrawerOpenLabel', locale)}
+        </span>
       </button>
 
       {open ? (

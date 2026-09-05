@@ -38,13 +38,6 @@ interface SiteHeaderProps {
 }
 
 export function SiteHeader({ locale, initialTheme }: SiteHeaderProps) {
-  const utilities = (
-    <>
-      <LanguageSwitcher locale={locale} />
-      <ThemeToggle locale={locale} initialTheme={initialTheme} />
-    </>
-  );
-
   return (
     <header className="site-header">
       <a href="#main-content" className="u-skip-link">
@@ -71,18 +64,32 @@ export function SiteHeader({ locale, initialTheme }: SiteHeaderProps) {
           />
         </Link>
 
+        {/*
+         * Language and theme stay visible at every width rather than moving
+         * into the drawer. `design/theme-mode.md` calls the theme control
+         * "persistent" and requires it in the header *and* mobile
+         * navigation, and a preference a guest has to open a drawer to
+         * reach is not persistent. They also come before the page links in
+         * the DOM so the first navigation landmark on the page is a visible
+         * one at every width; `order` puts them after the links visually on
+         * desktop.
+         */}
+        <div className="site-header-utilities">
+          <LanguageSwitcher locale={locale} />
+          <ThemeToggle locale={locale} initialTheme={initialTheme} />
+        </div>
+
         <div className="site-header-desktop">
           <PrimaryNav locale={locale} />
-          <div className="site-header-utilities">{utilities}</div>
           <Link href={`/${locale}/book`} className="u-button u-button--primary site-header-cta">
             {chromeText('navBookLabel', locale)}
           </Link>
         </div>
 
+        {/* The page links only — the utilities above are already reachable. */}
         <SiteDrawer locale={locale}>
           <PrimaryNav locale={locale} />
           <div className="site-drawer-utilities">
-            {utilities}
             <Link href={`/${locale}/book`} className="u-button u-button--primary">
               {chromeText('navBookLabel', locale)}
             </Link>

@@ -2,6 +2,20 @@
 
 Newest decisions go first. Each entry stays short and points to authoritative evidence.
 
+## D-082 — Public-site visual redesign (owner-supplied brief), Checkpoints A–D
+
+Implements `cladium-research/claude/CLAUDE_LUXURY_REDESIGN_PROMPT.md` and its audit. Not pushed: `master` auto-deploys, and the brief keeps publication a separate decision.
+
+**Two real defects the audit identified, both fixed with tests.** Menu category images never rendered live because the guest read model put the database UUID in `MenuViewCategory.id` while `media-mapping.ts` is keyed by stable slugs; `menu_categories.stable_id` already existed, so the read model now carries it as `mediaKey` for presentation while `id` stays the UUID for cart/filter/domain use. Language switching from any inner page dropped the guest at the locale root; the switcher now reads the real pathname and preserves an allowlist of context parameters (`seating`, `q`, `category`), with everything else — including an injected `next=` — dropped.
+
+**A third defect found while working, not in the audit.** Both request forms and the concierge composer disabled their submit button until a background CSRF fetch resolved, so one failed fetch left a dead control with no retry. That was the real cause of the booking E2E suite's "permanently-disabled button" failures, which the audit had attributed to Playwright. Token resolution moved to submit time; `booking-flow.spec.ts` went 3/12 → 12/12.
+
+**Accessibility findings, measured not assumed.** Gold `#b38d4d` on the raised surface is 3.0:1 — below AA — so it no longer carries nav or price text and is used as a rule/border instead, matching `brand/visual-direction.md`'s own warning. The mobile header keeps language and theme visible rather than burying them in the drawer, because `design/theme-mode.md` requires the theme control to be persistent.
+
+**Honesty constraints held throughout.** No gallery was fabricated from the single real venue photograph; category photos carry a caption saying they show a category rather than a dish; approved operational answers (seating, décor, cake, outside food) render verbatim; new editorial prose is canonical English that falls back with `lang="en" dir="ltr"` until an owner approves Urdu; and the "pre-launch scaffold" metadata is replaced with truthful per-page copy.
+
+Still open: Checkpoint E (visual capture across viewports/themes, LCP/CLS measurement) and the takeaway journey gap — the carousel's add action still has no finished cart destination, which is reported rather than papered over with an invented checkout.
+
 ## D-081 — Events' Postgres cutover, built with the session-gap fix in from the start, confirmed live
 
 `eventDeps` (`src/modules/events/deps.ts`) now prefers real Postgres via a new `createPostgresEventDeps`, mirroring `modules/bookings/deps.ts`'s exact lazy-Proxy singleton shape (D-077/D-080). Unlike bookings, this was enabled directly rather than shipped dormant first: `createPostgresEventRequestStore` already calls `ensureCustomerSessionRow` itself (D-079), and its own integration test already proves the no-pre-seeded-session case — the D-078 class of bug is closed here from the start.

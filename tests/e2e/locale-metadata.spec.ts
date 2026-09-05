@@ -34,19 +34,40 @@ for (const locale of LOCALES) {
   });
 }
 
-test.describe('locale metadata — nested route (documents current scope)', () => {
-  // `[locale]/layout.tsx`'s `generateMetadata` builds alternates from the
-  // locale segment only (`localeMetadataAlternates(locale)`, no sub-path) —
-  // canonical/hreflang are correct for the locale root and identical on
-  // every nested page today, not per-page-accurate. Gate 7's own bullet
-  // asks only for correct metadata on "/en and /ur pages," satisfied here;
-  // true per-page canonical URLs are a real, separate SEO improvement,
-  // tracked in `.continuum/TASKS.md` rather than expanded into this step.
-  test('nested pages still carry the locale-root canonical/hreflang set, not a per-page one', async ({
-    page,
-  }) => {
+test.describe('locale metadata — nested routes carry their own canonical set', () => {
+  // This used to assert the opposite, documenting a known limitation:
+  // every nested page inherited the locale-root canonical because only
+  // `[locale]/layout.tsx` defined metadata. Each public page now supplies
+  // its own via `localePageMetadata`, which was the separate SEO
+  // improvement that limitation was tracked as — so the test asserts the
+  // real behaviour rather than continuing to pin the old one.
+  test('a nested page canonicalises to itself, not to the locale root', async ({ page }) => {
     await page.goto('/en/visit');
-    const canonical = page.locator('link[rel="canonical"]');
-    await expect(canonical).toHaveAttribute('href', /\/en$/);
+    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', /\/en\/visit$/);
+  });
+
+  test('hreflang alternates point at the same page in each locale', async ({ page }) => {
+    await page.goto('/en/visit');
+    await expect(page.locator('link[rel="alternate"][hreflang="en"]')).toHaveAttribute(
+      'href',
+      /\/en\/visit$/,
+    );
+    await expect(page.locator('link[rel="alternate"][hreflang="ur"]')).toHaveAttribute(
+      'href',
+      /\/ur\/visit$/,
+    );
+  });
+
+  test('each page carries its own title and description, not one shared pair', async ({ page }) => {
+    await page.goto('/en/visit');
+    const visitDescription = await page.locator('meta[name="description"]').getAttribute('content');
+    await page.goto('/en/book');
+    const bookDescription = await page.locator('meta[name="description"]').getAttribute('content');
+
+    expect(visitDescription).toBeTruthy();
+    expect(bookDescription).toBeTruthy();
+    expect(bookDescription).not.toBe(visitDescription);
+    // The scaffold placeholder must never come back.
+    expect(visitDescription).not.toContain('scaffold');
   });
 });
