@@ -2,12 +2,17 @@
  * Process-lifetime singleton deps for the booking API routes — Runbook
  * Step 22.
  *
- * In-memory, not durable — same caveat as `modules/takeaway/deps.ts` and
- * `security/rate-limit.ts`'s in-memory adapter. A real Postgres adapter
- * replaces every store this factory builds, later, without any route file
- * needing to change (D-023). `outbox` is the Step 25 shared singleton
- * (`modules/notifications/deps.ts`), not a private sink — `outbox_events`
- * is one table, not one per entity, so one dispatcher drains all three.
+ * **Real Postgres when configured, in-memory otherwise (D-077).** This is
+ * the first domain in the whole project to make that switch — see
+ * `createPostgresBookingDeps` below for why it was never simply exported
+ * as the live singleton before now, and `resolveBookingDeps`'s own doc
+ * comment for exactly how the switch itself is done safely. `outbox` stays
+ * the Step 25 shared in-memory singleton either way
+ * (`modules/notifications/deps.ts`) — `outbox_events` is one table, not
+ * one per entity, so one dispatcher drains all three, and switching it is
+ * a separate, cross-domain decision belonging to that module, not this
+ * one (see `createPostgresBookingDeps`'s own comment on the real,
+ * documented consequence of that).
  */
 
 import { randomUUID } from 'node:crypto';
@@ -23,6 +28,8 @@ import {
   createPostgresStatusEventSink,
   createPostgresAuditEventSink,
 } from '../../lib/db/postgres-event-sinks';
+import { createSupabaseAdminClient } from '../integrations/supabase-admin-client';
+import { createLogger } from '../../lib/logging';
 import { outboxStore } from '../notifications/deps';
 import type { BookingRequestRecord } from './request';
 import type { BookingServiceDeps, SubmitBookingRequestResult } from './submission-service';
@@ -39,35 +46,87 @@ function createBookingDeps(): BookingServiceDeps {
   };
 }
 
-export const bookingDeps: BookingServiceDeps = createBookingDeps();
+let cachedBookingDeps: BookingServiceDeps | null = null;
 
 /**
- * The real cutover, built and end-to-end proven (see
- * `tests/integration/bookings-postgres-cutover.test.ts`) but **not wired
- * into `bookingDeps` above** — a deliberate, separate decision from
- * building the adapters, not a mechanical next step.
+ * Constructs the real deps on first actual use (never at module import —
+ * every booking route file imports this module, and this sandbox's own
+ * missing Supabase env vars would otherwise throw at *import* time for
+ * all of them, per `createPostgresBookingDeps`'s own comment below), then
+ * caches it for the rest of the process's life, matching every other
+ * `deps.ts` singleton's own "construct once" shape.
  *
- * Why not just export this as the live singleton:
+ * Falls back to the in-memory store on **any** construction failure —
+ * missing/broken Supabase credentials, most commonly — rather than
+ * letting the request crash. This is a deliberate choice, not the
+ * simplest option: an environment that is *supposed* to have real
+ * credentials but has a broken one would silently keep "working" against
+ * the in-memory store, with no loud failure — durability would quietly
+ * stop without anyone being told by a crash. The alternative (let it
+ * throw) was rejected because this sandbox's own Playwright E2E suite
+ * (`playwright.config.ts`'s `TEST_ENV`) deliberately runs with no
+ * Supabase credentials at all, the same as every other unconfigured
+ * integration in this project (Vapi/Meta/WhatsApp) — those already
+ * gracefully no-op/fail-closed rather than crash, and a real booking
+ * route throwing a raw 500 the moment Postgres isn't configured would be
+ * the one exception to that pattern, breaking the currently-100%-passing
+ * `booking-flow.spec.ts` for no user-facing benefit. The residual risk
+ * (silent fallback in a real, meant-to-be-configured environment) is
+ * mitigated, not eliminated, by the `warn` log emitted below — real
+ * alerting on that log line is a separate, later task once a monitoring
+ * stack exists (same standing gap tracked since Step 41).
+ */
+function resolveBookingDeps(): BookingServiceDeps {
+  if (cachedBookingDeps) return cachedBookingDeps;
+  try {
+    cachedBookingDeps = createPostgresBookingDeps(createSupabaseAdminClient());
+  } catch (error) {
+    createLogger().warn('bookings.deps.postgres_unavailable_using_in_memory', {
+      errorType: error instanceof Error ? error.constructor.name : typeof error,
+    });
+    cachedBookingDeps = createBookingDeps();
+  }
+  return cachedBookingDeps;
+}
+
+/**
+ * A stable import that every route file already uses unchanged
+ * (`bookingDeps.requestStore`, etc.) — the `Proxy` defers actually
+ * resolving which implementation backs it until the first real property
+ * access, which only ever happens inside a route handler's request-time
+ * code, never during module evaluation.
+ */
+export const bookingDeps: BookingServiceDeps = new Proxy({} as BookingServiceDeps, {
+  get(_target, prop, receiver) {
+    return Reflect.get(resolveBookingDeps(), prop, receiver);
+  },
+});
+
+/**
+ * **Now the real, live path** (D-077) — `resolveBookingDeps` above calls
+ * this the first time any route touches `bookingDeps`, whenever
+ * `createSupabaseAdminClient()` succeeds. Built and end-to-end proven
+ * first (see `tests/integration/bookings-postgres-cutover.test.ts`)
+ * before ever being wired in — that gap between "built" and "live" was
+ * deliberate, not an oversight, for two reasons that still matter even
+ * now that it's wired in:
  *
- * 1. `bookingDeps` is a **module-level** singleton, constructed once at
- *    import time (`= createBookingDeps()` above). This function's
- *    Postgres-backed equivalent needs a real `SupabaseClient`, and
- *    building one eagerly at import time via
- *    `createSupabaseAdminClient()` would call `parseSupabasePublicCredentials()`/
- *    `parseSupabaseServiceRoleKey()` — both `.parse()` (throwing), not
- *    `.safeParse()` — during module load. This sandbox has no
- *    `.env.local`, so every file importing `modules/bookings/deps.ts`
- *    (all six booking route files) would start throwing at import time,
- *    not just at request time.
+ * 1. Constructing a real `SupabaseClient` calls
+ *    `parseSupabasePublicCredentials()`/`parseSupabaseServiceRoleKey()` —
+ *    both `.parse()` (throwing), not `.safeParse()`. Doing that eagerly
+ *    at module import time (rather than lazily, on first real property
+ *    access — see `resolveBookingDeps`) would have made every file
+ *    importing `modules/bookings/deps.ts` throw at *import* time in any
+ *    environment lacking Supabase env vars, this sandbox included.
  * 2. This repo's `master` branch auto-deploys to the live staging
- *    Vercel project (every commit this session has landed there directly,
- *    with no review gate). Flipping the live singleton is therefore not a
- *    dormant, always-safe addition like every other adapter built so
- *    far — it is the first change in this whole sequence that alters what
- *    the deployed app actually does the moment it is pushed, against the
- *    real staging Supabase project (`vxvpxywszskxcugwpsch`), which this
- *    sandbox cannot reach to verify beforehand (only a separate local
- *    Docker Postgres is reachable here).
+ *    Vercel project with no review gate — flipping this was the first
+ *    change in the whole D-064+ sequence that alters what the deployed
+ *    app actually does the moment it is pushed, against the real staging
+ *    Supabase project (`vxvpxywszskxcugwpsch`), which this sandbox
+ *    cannot reach to verify beforehand (only a separate local Docker
+ *    Postgres is reachable here) — proven safe first via the integration
+ *    test above, then switched on deliberately, with the graceful
+ *    in-memory fallback `resolveBookingDeps` documents.
  * 3. `outbox` stays the shared in-memory singleton on purpose, not an
  *    oversight — see its own note below.
  *

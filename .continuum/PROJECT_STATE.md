@@ -8,11 +8,11 @@ Baseline commit: `8732db0` "chore: establish Cladium pre-build baseline" (local 
 
 ## Progress (step-completion metrics, not effort estimates)
 
-- Overall: 43/47 runbook steps ≈ 91.5% (Steps 18 and 34 explicitly deferred, not counted as complete — see D-022, D-038). Step completion counts that the go/no-go report was produced, not that the answer was GO — see D-049.
+- Overall: 44/47 runbook steps ≈ 93.6% (Step 18 completed for real this session — see below; Step 34 still explicitly deferred, not counted as complete — see D-038). Step completion counts that the go/no-go report was produced, not that the answer was GO — see D-049.
 - Phase 0 (governance/evidence, steps 1–3): 3/3 = 100%
 - Phase 1 (repo/app foundation, steps 4–6): 3/3 = 100%
 - Phase 2 (data/auth/security, steps 7–12): 6/6 = 100%
-- Phase 3 (bilingual/dual-theme public experience, steps 13–18): 5/6 = 83.3% (1 deferred, not outstanding-forgotten)
+- Phase 3 (bilingual/dual-theme public experience, steps 13–18): 6/6 = 100% — complete (Step 18's menu carousel built for real once the menu was published and photo-use sign-off given; D-022's deferral resolved, not overridden)
 - Phase 4 (deterministic requests and staff workflows, steps 19–25): 7/7 = 100%
 - Phase 5 (text concierge, steps 26–29): 4/4 = 100%
 - Phase 6 (Vapi bilingual browser voice, steps 30–34): 4/5 = 80% (1 deferred, not outstanding-forgotten)
