@@ -32,8 +32,10 @@ import { isSupportedLocale, type Locale } from '../../../lib/i18n/locale';
 import { localePageMetadata } from '../../../lib/i18n/metadata';
 import { formatPkr } from '../../../lib/business/money';
 import { buildWhatsAppUrl } from '../../../lib/business/whatsapp-link';
+import { isFeatureEnabled } from '../../../lib/env.server';
 import { filterMenuCategories, getPublishedMenuView } from '../../../modules/menu/menu-view';
 import { availabilityChromeKey } from '../../../modules/menu/availability-chrome-key';
+import { TAKEAWAY_GUEST_JOURNEY_COMPLETE } from '../../../modules/takeaway/guest-journey';
 import { MenuViewTracker } from './menu-view-tracker';
 import { TrackedWhatsAppLink } from '../tracked-whatsapp-link';
 import { MenuFeatureCarousel } from './menu-feature-carousel';
@@ -100,6 +102,17 @@ export default async function MenuPage({ params, searchParams }: MenuPageProps) 
     );
   }
 
+  /*
+   * Both conditions, not either. The flag says the takeaway API is switched
+   * on (it is, in the deployed environment); the constant says a guest has
+   * somewhere to go after adding an item (they do not — the cart/review
+   * page is not built). Offering the add control on the flag alone is what
+   * produces the dead end, so the affordance waits for the destination.
+   * See `modules/takeaway/guest-journey.ts`.
+   */
+  const takeawayEnabled =
+    isFeatureEnabled('FEATURE_TAKEAWAY_REQUESTS') && TAKEAWAY_GUEST_JOURNEY_COMPLETE;
+
   const rawParams = await searchParams;
   const query = firstString(rawParams.q);
   const categoryId = firstString(rawParams.category);
@@ -113,7 +126,11 @@ export default async function MenuPage({ params, searchParams }: MenuPageProps) 
         <p className="u-lede">{chromeText('menuPageLede', locale)}</p>
       </div>
 
-      <MenuFeatureCarousel categories={view.categories} locale={locale} />
+      <MenuFeatureCarousel
+        categories={view.categories}
+        takeawayEnabled={takeawayEnabled}
+        locale={locale}
+      />
 
       {/*
        * A plain GET form, so search and filtering keep working without

@@ -32,6 +32,8 @@ export interface FeaturedItemDetailsProps {
   readonly selectedVariantId: string | null;
   readonly onSelectVariant: (variantId: string) => void;
   readonly onAddToOrder: () => void;
+  /** False when takeaway is not part of this release — the control is then not rendered at all. */
+  readonly showAddToOrder: boolean;
   readonly addToOrderDisabled: boolean;
   readonly locale: Locale;
 }
@@ -44,6 +46,7 @@ export function FeaturedItemDetails({
   selectedVariantId,
   onSelectVariant,
   onAddToOrder,
+  showAddToOrder,
   addToOrderDisabled,
   locale,
 }: FeaturedItemDetailsProps) {
@@ -92,16 +95,18 @@ export function FeaturedItemDetails({
         </div>
       ) : null}
 
-      <button
-        type="button"
-        className="menu-carousel-add-button"
-        disabled={
-          addToOrderDisabled || requiresVariantChoice || item.availability === 'UNAVAILABLE'
-        }
-        onClick={onAddToOrder}
-      >
-        {chromeText('carouselAddToOrderLabel', locale)}
-      </button>
+      {showAddToOrder ? (
+        <button
+          type="button"
+          className="menu-carousel-add-button"
+          disabled={
+            addToOrderDisabled || requiresVariantChoice || item.availability === 'UNAVAILABLE'
+          }
+          onClick={onAddToOrder}
+        >
+          {chromeText('carouselAddToOrderLabel', locale)}
+        </button>
+      ) : null}
     </div>
   );
 }

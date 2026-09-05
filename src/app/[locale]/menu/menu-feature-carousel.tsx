@@ -13,16 +13,26 @@
  * the text-search-filtered list, since this has its own independent
  * category-tab browsing model.
  *
- * "Add to takeaway order" posts to the same `POST /api/takeaway/cart/items`
- * the (not-yet-built) cart review page will eventually use — this pass
- * only wires the add action with an inline confirmation and running
- * total, not a full cart/checkout UI (a separate, already-tracked item).
- * Bootstraps its CSRF token from `GET /api/takeaway/cart` (returns
- * `{cart, totals, csrfToken}` in one call) rather than the generic
- * `/api/session/csrf`, matching that route's own documented intent. If
- * that bootstrap call fails (e.g. `FEATURE_TAKEAWAY_REQUESTS` off),
- * browsing still works — only the add action is disabled with an honest
- * message, never a broken page.
+ * **The takeaway add action is gated on `takeawayEnabled`, resolved on the
+ * server from `FEATURE_TAKEAWAY_REQUESTS`.** The cart/review destination it
+ * would lead to is not built yet (tracked separately), so with the flag off
+ * — its state for this release — the control is not rendered at all and an
+ * honest note says ordering is unavailable while browsing still works. The
+ * whole rest of the carousel (category tabs, item rail, prices, imagery) is
+ * unaffected: this is a browsing feature that can optionally order, not an
+ * ordering feature.
+ *
+ * That gate is deliberately the single switch for the journey. Disabling
+ * the button only when a bootstrap request happens to fail would leave a
+ * real dead end the moment the flag was switched on ahead of the cart page:
+ * a guest could add items and watch a subtotal climb with nowhere to submit
+ * it.
+ *
+ * When enabled, "Add to takeaway order" posts to `POST
+ * /api/takeaway/cart/items` — the same endpoint the cart review page will
+ * use — and bootstraps its CSRF token from `GET /api/takeaway/cart`
+ * (returns `{cart, totals, csrfToken}` in one call) rather than the generic
+ * `/api/session/csrf`, matching that route's own documented intent.
  */
 
 import { useEffect, useState } from 'react';
@@ -38,6 +48,12 @@ import { FeaturedItemDetails } from './featured-item-details';
 
 export interface MenuFeatureCarouselProps {
   readonly categories: readonly MenuViewCategory[];
+  /**
+   * Whether the takeaway journey is part of this release. Resolved on the
+   * server from FEATURE_TAKEAWAY_REQUESTS so the add affordance never
+   * appears without somewhere for it to lead.
+   */
+  readonly takeawayEnabled: boolean;
   readonly locale: Locale;
 }
 
@@ -55,17 +71,41 @@ async function parseApiError(response: Response): Promise<string | null> {
   }
 }
 
-export function MenuFeatureCarousel({ categories, locale }: MenuFeatureCarouselProps) {
+export function MenuFeatureCarousel({
+  categories,
+  takeawayEnabled,
+  locale,
+}: MenuFeatureCarouselProps) {
   const [categoryIndex, setCategoryIndex] = useState(0);
   const [itemIndex, setItemIndex] = useState(0);
   const [variantId, setVariantId] = useState<string | null>(null);
   const [csrfToken, setCsrfToken] = useState<string | null>(null);
-  const [cartAvailable, setCartAvailable] = useState(true);
+  // Seeded from the server-resolved gate rather than assumed available and
+  // corrected later, so the "ordering isn't available" note is correct on
+  // first paint instead of appearing a moment after hydration.
+  const [cartAvailable, setCartAvailable] = useState(takeawayEnabled);
   const [totals, setTotals] = useState<CartTotalsState | null>(null);
   const [confirmation, setConfirmation] = useState<string | null>(null);
   const [addError, setAddError] = useState<string | null>(null);
 
   useEffect(() => {
+    /*
+     * When takeaway is not part of this release, the add affordance is off
+     * deterministically — decided on the server from
+     * `FEATURE_TAKEAWAY_REQUESTS` and passed in — rather than by letting a
+     * bootstrap request fail and inferring it. Two reasons that matters:
+     * the guest never sees an add control resolve from "maybe" to
+     * "unavailable", and the page makes no request it already knows will
+     * be refused.
+     *
+     * It also closes the real dead end: if the flag were switched on while
+     * the cart/review page is still unbuilt, a guest could add items and
+     * watch a subtotal climb with nowhere to submit it. `takeawayEnabled`
+     * is the single switch that turns the whole journey on, so it cannot
+     * come on before there is somewhere for it to lead.
+     */
+    if (!takeawayEnabled) return;
+
     let cancelled = false;
     fetch('/api/takeaway/cart')
       .then(async (response) => {
@@ -87,7 +127,7 @@ export function MenuFeatureCarousel({ categories, locale }: MenuFeatureCarouselP
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [takeawayEnabled]);
 
   if (categories.length === 0) return null;
 
@@ -161,6 +201,14 @@ export function MenuFeatureCarousel({ categories, locale }: MenuFeatureCarouselP
             selectedVariantId={variantId}
             onSelectVariant={setVariantId}
             onAddToOrder={() => void addToOrder()}
+            /*
+             * Hidden outright when takeaway is not in this release, rather
+             * than shown disabled. A permanently dead control is still an
+             * invitation — it suggests ordering is a thing this page nearly
+             * does — and the note below states the position in words
+             * instead. When the journey is on, it behaves exactly as before.
+             */
+            showAddToOrder={takeawayEnabled}
             addToOrderDisabled={!cartAvailable || !csrfToken}
             locale={locale}
           />

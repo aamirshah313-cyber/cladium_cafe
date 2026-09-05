@@ -2,6 +2,16 @@
 
 Newest decisions go first. Each entry stays short and points to authoritative evidence.
 
+## D-083 — The takeaway guest journey is hidden until its destination exists
+
+Found during the pre-release checkpoint, verified against the deployed site: `FEATURE_TAKEAWAY_REQUESTS` is **on** in production (`GET /api/takeaway/cart` returns a real cart), the menu carousel's "Add to takeaway order" control enables after hydration — and every candidate destination (`/takeaway`, `/cart`, `/takeaway/cart`, `/order`) is a 404. A guest could add items, watch a subtotal climb, and have nowhere to submit. That is a live dead end, pre-dating the redesign.
+
+Resolved by separating two questions that were conflated. `FEATURE_TAKEAWAY_REQUESTS` gates the **API and staff side**, which is complete and correctly switched on. A new `TAKEAWAY_GUEST_JOURNEY_COMPLETE` (`modules/takeaway/guest-journey.ts`) gates the **guest-facing affordance**, and is `false` because the cart/review page is not built. The menu page requires both, resolved on the server, so the add control is not rendered at all — not merely disabled, since a permanently dead control still implies a capability the site cannot honour. An honest note says ordering is unavailable while browsing still works.
+
+Nothing was removed or invented: no checkout flow was built, the takeaway API, cart store, state machine, staff queue and submission endpoints are untouched, and the concierge's own takeaway tools are unaffected. Activation is one constant, once the cart page exists.
+
+The gate is deliberately not "disable when the bootstrap request fails" — the previous behaviour. That inferred availability from a network error, which meant the dead end reappeared the moment the flag was on, and briefly showed an add control that then withdrew itself.
+
 ## D-082 — Public-site visual redesign (owner-supplied brief), Checkpoints A–D
 
 Implements `cladium-research/claude/CLAUDE_LUXURY_REDESIGN_PROMPT.md` and its audit. Not pushed: `master` auto-deploys, and the brief keeps publication a separate decision.
