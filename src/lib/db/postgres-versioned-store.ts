@@ -35,11 +35,21 @@
  * illegal transition throws here instead of returning `null`, which is
  * correct: a version mismatch is expected contention, whereas an illegal
  * transition is a bug.
+ *
+ * ## `session_id` is a real foreign key into `customer_sessions` (D-078)
+ *
+ * All three tables carry a `session_id` column referencing
+ * `customer_sessions(id)`; nothing in this codebase's guest-session layer
+ * has ever written that row. The optional `getSessionId` mapping, when
+ * supplied, calls `ensureCustomerSessionRow` before `create()`'s own
+ * insert — one shared fix for all three domains rather than three
+ * duplicated call sites.
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { assertServerOnly } from '../server-only';
 import type { VersionedRecord, VersionedStore } from '../domain/versioned-store';
+import { ensureCustomerSessionRow } from './postgres-customer-session';
 
 assertServerOnly('src/lib/db/postgres-versioned-store.ts');
 
@@ -66,12 +76,20 @@ export interface PostgresVersionedStoreOptions<T extends VersionedRecord, Row> {
   readonly toInsert: (record: T) => Record<string, unknown> | Promise<Record<string, unknown>>;
   /** Column patch for an update. Must never include `id` or `version`. */
   readonly toPatch: (patch: Partial<Omit<T, 'id' | 'version'>>) => Record<string, unknown>;
+  /**
+   * Extracts the guest session id from a record about to be `create()`d,
+   * when the table's `session_id` column is a real foreign key into
+   * `customer_sessions` — see this file's own doc comment (D-078). Omit
+   * for a table with no such column. A `null`/empty return skips the
+   * ensure-call (nothing to satisfy).
+   */
+  readonly getSessionId?: (record: T) => string | null;
 }
 
 export function createPostgresVersionedStore<T extends VersionedRecord, Row>(
   options: PostgresVersionedStoreOptions<T, Row>,
 ): VersionedStore<T> {
-  const { client, table, select, toRecord, toInsert, toPatch } = options;
+  const { client, table, select, toRecord, toInsert, toPatch, getSessionId } = options;
 
   return {
     async find(id) {
@@ -87,6 +105,8 @@ export function createPostgresVersionedStore<T extends VersionedRecord, Row>(
     },
 
     async create(record) {
+      const sessionId = getSessionId?.(record);
+      if (sessionId) await ensureCustomerSessionRow(client, sessionId);
       const { error } = await client.from(table).insert(await toInsert(record));
       if (error) {
         throw new Error(`${table} create failed: ${error.code ?? 'unknown'}`);

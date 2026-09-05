@@ -126,10 +126,33 @@ describe.skipIf(!configured)('createPostgresConfirmationTokenStore (real Postgre
     expect(results.filter((r) => r === null)).toHaveLength(9);
   });
 
-  it('rejects a token whose session does not exist, rather than writing an orphan row', async () => {
-    // Proves the FK is actually enforced through this adapter, and that a
-    // failed write throws instead of silently looking like success.
-    await expect(store.save(tokenRecord({ sessionId: randomUUID() }))).rejects.toThrow();
+  it('creates its own customer_sessions row when none exists yet — the real guest-request path, not a test fixture (D-078)', async () => {
+    // Every other test in this file relies on beforeAll's fixture session,
+    // masking whether save() is actually self-sufficient. This is the exact
+    // scenario that broke live on real staging: a session id with no
+    // pre-existing customer_sessions row at all, exercised through the real
+    // adapter, not a manually-inserted fixture.
+    const freshSessionId = randomUUID();
+    const record = tokenRecord({ sessionId: freshSessionId });
+    await expect(store.save(record)).resolves.toBeUndefined();
+
+    const found = await store.find(record.tokenHash);
+    expect(found).toEqual(record);
+
+    const { data: sessionRow } = await client
+      .from('customer_sessions')
+      .select('id')
+      .eq('id', freshSessionId)
+      .maybeSingle();
+    expect(sessionRow).not.toBeNull();
+    createdSessionIds.push(freshSessionId);
+  });
+
+  it('a second save for the same never-seen-before session still succeeds (the ensure-call is idempotent)', async () => {
+    const freshSessionId = randomUUID();
+    await store.save(tokenRecord({ sessionId: freshSessionId }));
+    await expect(store.save(tokenRecord({ sessionId: freshSessionId }))).resolves.toBeUndefined();
+    createdSessionIds.push(freshSessionId);
   });
 
   it('rejects a duplicate token hash rather than overwriting the original', async () => {

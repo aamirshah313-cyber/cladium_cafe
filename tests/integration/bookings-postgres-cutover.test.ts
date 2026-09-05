@@ -20,12 +20,21 @@
  * isolation, deliberately short of switching anything live. See that
  * function's own doc comment for why flipping the switch is a separate
  * decision.
+ *
+ * `newSession()` deliberately does NOT insert a `customer_sessions` row
+ * (D-078 follow-up) — it used to, and that is exactly what let this test
+ * pass 6/6 while the real application had never once written that row
+ * itself, until a real submission against real staging hit the foreign
+ * key `confirmation_tokens.session_id` carries. Every adapter with that
+ * same FK now ensures the row itself (`ensureCustomerSessionRow`), so this
+ * test proves the real gap is closed, not just re-masks it.
  */
 
 import { createClient } from '@supabase/supabase-js';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { randomBytes, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import { createPostgresBookingDeps } from '../../src/modules/bookings/deps';
+import { ensureCustomerSessionRow } from '../../src/lib/db/postgres-customer-session';
 import {
   prepareBookingRequest,
   submitBookingRequest,
@@ -55,14 +64,19 @@ describe.skipIf(!configured)('createPostgresBookingDeps (real Postgres, end to e
   const createdSessionIds: string[] = [];
   const createdRequestIds: string[] = [];
 
-  async function newSession(): Promise<string> {
+  /**
+   * Deliberately does NOT insert a `customer_sessions` row (D-078 follow-up):
+   * this test's whole point is proving the real, unmodified domain services
+   * work end-to-end, and the earlier version of this fixture manually
+   * inserting that row is exactly what masked the real gap that broke live
+   * on staging — `resolveCustomerSession` never writes it itself, only the
+   * adapters do now (`ensureCustomerSessionRow`, called from
+   * `postgres-confirmation-token-store.ts` and `postgres-versioned-store.ts`'s
+   * `getSessionId` hook). A session id here is just a fresh random UUID,
+   * exactly what the real cookie-based session layer actually produces.
+   */
+  function newSession(): string {
     const sessionId = randomUUID();
-    const { error } = await client.from('customer_sessions').insert({
-      id: sessionId,
-      token_hash: randomBytes(32).toString('hex'),
-      expires_at: new Date(Date.now() + 3_600_000).toISOString(),
-    });
-    if (error) throw new Error(`session fixture failed: ${error.message}`);
     createdSessionIds.push(sessionId);
     return sessionId;
   }
@@ -196,6 +210,11 @@ describe.skipIf(!configured)('createPostgresBookingDeps (real Postgres, end to e
     // requestStore.create() collides on the primary key and throws from
     // inside fn — the exact class of failure the fix targets.
     const sessionId = await newSession();
+    // This specific test needs a raw booking_requests insert (to force a
+    // primary-key collision), bypassing requestStore.create() entirely --
+    // so unlike every other test here, it must ensure the session row
+    // itself, the same way the real adapter now does.
+    await ensureCustomerSessionRow(client, sessionId);
     const collidingId = randomUUID();
     createdRequestIds.push(collidingId);
     const { error: seedError } = await client.from('booking_requests').insert({

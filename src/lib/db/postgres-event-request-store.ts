@@ -43,6 +43,11 @@
  *
  * `updated_at` (no domain equivalent) and `version` (owned by the
  * `set_row_updated()` trigger) are never written here.
+ *
+ * `session_id` is a real foreign key into `customer_sessions` — `getSessionId`
+ * (passed to `createPostgresVersionedStore`) makes `create()` call
+ * `ensureCustomerSessionRow` first, since nothing in this codebase's
+ * guest-session layer has ever written that row itself (D-078).
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -152,6 +157,7 @@ export function createPostgresEventRequestStore(
         created_at: record.createdAt,
       };
     },
+    getSessionId: (record) => record.sessionId,
     toPatch: (patch) => {
       refuseQuoteWrite(patch.quotedAmountPkr);
 

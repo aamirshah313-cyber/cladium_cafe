@@ -185,4 +185,21 @@ describe.skipIf(!configured)('createPostgresVersionedStore via booking_requests'
     const all = await store.list();
     expect(all.some((r) => r.id === created.id)).toBe(true);
   });
+
+  it('creates its own customer_sessions row when none exists yet — the real guest-request path, not a test fixture (D-078)', async () => {
+    // Every other test in this file relies on beforeAll's fixture session,
+    // masking whether create() is actually self-sufficient. This is the
+    // exact scenario that broke live on real staging.
+    const freshSessionId = randomUUID();
+    const created = record({ sessionId: freshSessionId });
+    await expect(store.create(created)).resolves.toBeUndefined();
+
+    const { data: sessionRow } = await client
+      .from('customer_sessions')
+      .select('id')
+      .eq('id', freshSessionId)
+      .maybeSingle();
+    expect(sessionRow).not.toBeNull();
+    await client.from('customer_sessions').delete().eq('id', freshSessionId);
+  });
 });

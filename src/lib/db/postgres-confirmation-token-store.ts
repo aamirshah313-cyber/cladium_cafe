@@ -23,6 +23,11 @@
  * produce. A swallowed *read* error would fail closed (every token would
  * look invalid) but would also hide a real outage completely, so reads
  * throw too.
+ *
+ * `session_id` is a real, `NOT NULL` foreign key into `customer_sessions`
+ * — `save()` calls `ensureCustomerSessionRow` first (D-078's own fix):
+ * nothing else in this codebase's guest-session layer has ever written
+ * that row, so this adapter cannot assume one already exists.
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -32,6 +37,7 @@ import type {
   ConfirmationTokenRecord,
   ConfirmationTokenStore,
 } from '../domain/confirmation-token';
+import { ensureCustomerSessionRow } from './postgres-customer-session';
 
 assertServerOnly('src/lib/db/postgres-confirmation-token-store.ts');
 
@@ -92,6 +98,7 @@ export function createPostgresConfirmationTokenStore(
 ): ConfirmationTokenStore {
   return {
     async save(record) {
+      await ensureCustomerSessionRow(client, record.sessionId);
       const { error } = await client.from(TABLE).insert({
         token_hash: record.tokenHash,
         session_id: record.sessionId,

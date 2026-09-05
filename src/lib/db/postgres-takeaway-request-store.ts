@@ -42,6 +42,11 @@
  * enforces `total_pkr = subtotal_pkr + adjustments_pkr`; the domain
  * supplies all three and an inconsistent trio is rejected rather than
  * quietly stored.
+ *
+ * `session_id` is a real foreign key into `customer_sessions` — `getSessionId`
+ * (passed to `createPostgresVersionedStore`) makes `create()` call
+ * `ensureCustomerSessionRow` first, since nothing in this codebase's
+ * guest-session layer has ever written that row itself (D-078).
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -149,6 +154,7 @@ export function createPostgresTakeawayRequestStore(
       assigned_staff_id: record.assignedStaffId,
       created_at: record.createdAt,
     }),
+    getSessionId: (record) => record.sessionId,
     toPatch: (patch) => {
       if (patch.menuVersionNumber !== undefined) {
         throw new Error(

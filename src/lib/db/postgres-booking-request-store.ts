@@ -23,6 +23,11 @@
  * `updated_at` has no domain equivalent (the record carries only
  * `createdAt`), and `version` is owned by the `set_row_updated()` trigger.
  * Neither is written by this module.
+ *
+ * `session_id` is a real foreign key into `customer_sessions` — `getSessionId`
+ * (passed to `createPostgresVersionedStore`) makes `create()` call
+ * `ensureCustomerSessionRow` first, since nothing in this codebase's
+ * guest-session layer has ever written that row itself (D-078).
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -108,6 +113,7 @@ export function createPostgresBookingRequestStore(
       assigned_staff_id: record.assignedStaffId,
       created_at: record.createdAt,
     }),
+    getSessionId: (record) => record.sessionId,
     toPatch: (patch) => {
       const columns: Record<string, unknown> = {};
       if (patch.state !== undefined) columns.state = patch.state;
