@@ -2,6 +2,20 @@
 
 Newest decisions go first. Each entry stays short and points to authoritative evidence.
 
+## D-085 — Durable outbox cutover: staff notifications survive the process
+
+Root cause: `modules/notifications/deps.ts` exported `createInMemoryOutboxStore()` unconditionally. All three domains and the dispatch route share that one object, so every staff notification lived in a single serverless instance's heap while the request itself was written durably to Postgres (D-080/D-081). Confirmed in production: `outbox_events` was **empty** despite real bookings having been submitted. `createPostgresBookingDeps` had documented this exact gap as the known cost of the partial cutover.
+
+Fixed by resolving the shared singleton to `createPostgresOutboxStore(createSupabaseAdminClient())` behind the same lazy `Proxy` the booking/event cutovers use, falling back to in-memory on construction failure. One object changed, so bookings, events and takeaway all become durable together — no per-domain duplication, which is what the shared-table architecture intends. Methods are bound to the resolved store so `this` is never the proxy.
+
+Test/dev isolation is preserved by construction: unit tests and the Playwright E2E run set no Supabase credentials, so they keep the in-memory store and no local run is forced onto live Postgres.
+
+Dispatch is scheduled by an **external scheduler**, not Vercel Cron: the project is on the Vercel **Hobby** plan, which limits crons to once daily (useless for a booking notification) and rejects sub-daily expressions at deploy time. `vercel.json` therefore carries no `crons` entry and is byte-identical to the deployed version, so this change cannot affect the deployment itself. The scheduler makes a `GET` to the production `/api/cron/outbox-dispatch` with `Authorization: Bearer <CRON_SECRET>` every five minutes — matching `staleClaimMs`, so a row abandoned by a dead instance becomes reclaimable at about the rate the next run arrives. Moving to Pro later swaps the scheduler for a `crons` entry with no code change. See `docs/outbox-dispatch-cron.md`. No migration was needed: `outbox_claim_batch`/`outbox_mark_retry`/`outbox_mark_terminal` already exist in production, with the post-fix claim body (materialised ids + `FOR UPDATE SKIP LOCKED`) confirmed by querying `pg_proc`.
+
+Proven on real Postgres (`tests/integration/outbox-cutover.test.ts`, 7 tests): a real booking, a real event and a real takeaway submission each leave exactly one durable row, read back through a separately constructed store over a separate client (the restart-semantics proof); the dispatcher drives a row to DELIVERED; a failing handler returns it to PENDING with the attempt incremented and an error recorded; a row at the attempt ceiling becomes terminal FAILED rather than looping; and two overlapping dispatch cycles never hand the same row to both workers, with neither exceeding its limit.
+
+**Not activated by this commit alone.** Delivery starts only once an external scheduler is calling the endpoint with the correct bearer token, and `CRON_SECRET` is set on the Vercel project — `verifyCronAuthHeader` fails closed, so an unset or wrong secret means every invocation is 401 and the job silently never runs (the two are indistinguishable from outside, both returning 401). The secret was neither created nor rotated here and appears nowhere in the repository. `docs/outbox-dispatch-cron.md` records the exact request and how to confirm delivery positively rather than assuming it.
+
 ## D-084 — Redesign release deployed to production and smoke-tested
 
 Pushed `2a8fa5f..848e800` (six commits) to `origin/master` on 2026-09-06; Vercel auto-deployed. Production commit: **848e800d85b8f6e28dcc17f1dc9978a07d93f2ca**.

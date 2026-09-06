@@ -15,14 +15,73 @@
  * notification store/handler), not the other way around: entity modules
  * (takeaway/bookings/events) depend on this module for the shared store,
  * and this module depends on staff — never the reverse, so no cycle forms.
+ *
+ * **Real Postgres when configured, in-memory otherwise (D-085).** Until
+ * this cutover the store was unconditionally in-memory, which meant a
+ * request could be written durably to Postgres while the notification
+ * telling staff about it lived only in one serverless instance's heap —
+ * lost on recycle, and invisible to any other instance the scheduled
+ * dispatcher happened to land on. `outbox_events` was empty in production
+ * despite real bookings having been submitted, which is exactly that
+ * failure. `createPostgresBookingDeps`'s own comment called this out as
+ * the one remaining gap in the partial cutover; this closes it for all
+ * three domains at once, because they share this object.
  */
 
 import { createInMemoryOutboxStore, type OutboxStore } from '../../lib/domain/outbox-store';
+import { createPostgresOutboxStore } from '../../lib/db/postgres-outbox-store';
+import { createSupabaseAdminClient } from '../integrations/supabase-admin-client';
+import { createLogger } from '../../lib/logging';
 import type { OutboxHandler } from '../../lib/domain/outbox-dispatcher';
 import { createStaffNotificationHandler } from '../staff/notification-handlers';
 import { staffNotifications } from '../staff/deps';
 
-export const outboxStore: OutboxStore = createInMemoryOutboxStore();
+let cachedOutboxStore: OutboxStore | null = null;
+
+/**
+ * Constructs the real store on first actual use, never at module import.
+ * Every entity `deps.ts` imports this module, so an import-time
+ * `createSupabaseAdminClient()` would throw for all of them in any
+ * environment without Supabase credentials — this sandbox's unit tests and
+ * the Playwright E2E run (`playwright.config.ts`'s `TEST_ENV`, which
+ * deliberately sets none) included. Those keep the in-memory store and
+ * keep passing, which is the intended test/dev isolation: nothing here
+ * forces a local test run to require live Postgres.
+ *
+ * Falls back to in-memory on **any** construction failure, matching
+ * `modules/bookings/deps.ts`'s `resolveBookingDeps` exactly, including its
+ * caveat: this catches construction, not a runtime query failure inside a
+ * later call. The `warn` below is the only signal that a
+ * meant-to-be-configured environment quietly lost durability; real
+ * alerting on it is the separate, still-open monitoring task.
+ */
+function resolveOutboxStore(): OutboxStore {
+  if (cachedOutboxStore) return cachedOutboxStore;
+  try {
+    cachedOutboxStore = createPostgresOutboxStore(createSupabaseAdminClient());
+  } catch (error) {
+    createLogger().warn('notifications.outbox.postgres_unavailable_using_in_memory', {
+      errorType: error instanceof Error ? error.constructor.name : typeof error,
+    });
+    cachedOutboxStore = createInMemoryOutboxStore();
+  }
+  return cachedOutboxStore;
+}
+
+/**
+ * The stable import every caller already uses unchanged — all three entity
+ * `deps.ts` files and the dispatch route. The `Proxy` defers resolving
+ * which implementation backs it until the first real property access,
+ * which only happens inside request-time or job-time code. Methods are
+ * bound to the resolved store so `this` can never be the proxy itself.
+ */
+export const outboxStore: OutboxStore = new Proxy({} as OutboxStore, {
+  get(_target, prop, receiver) {
+    const store = resolveOutboxStore();
+    const value = Reflect.get(store, prop, receiver);
+    return typeof value === 'function' ? value.bind(store) : value;
+  },
+});
 
 export const handlersByDestination: Readonly<Record<string, OutboxHandler>> = {
   staff_notification: createStaffNotificationHandler(staffNotifications),
