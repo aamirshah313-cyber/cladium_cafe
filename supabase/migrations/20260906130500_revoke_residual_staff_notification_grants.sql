@@ -1,0 +1,41 @@
+-- Strip residual platform-default grants from `staff_notifications`.
+--
+-- Found by verifying the freshly-applied `20260906122500` against its
+-- neighbours in production rather than assuming it matched them:
+--
+--   outbox_events        authenticated: SELECT            anon: (none)
+--   webhook_events       authenticated: SELECT            anon: (none)
+--   staff_notifications  authenticated: SELECT,           anon: REFERENCES,
+--                        REFERENCES, TRIGGER, TRUNCATE          TRIGGER, TRUNCATE
+--
+-- `anon` is the role a guest's browser holds. `TRUNCATE` is a table-level
+-- privilege that **RLS does not restrict** — a row-level policy cannot stop
+-- it, because it removes every row at once rather than any particular row.
+-- So the two-layer grant+RLS model this project relies on had exactly one
+-- layer on this table for that operation.
+--
+-- Root cause is a latent gap in `20260830044140_fix_default_table_
+-- privileges.sql`, not a mistake unique to the previous migration. That
+-- migration fixed the platform default two ways: `ALTER DEFAULT PRIVILEGES
+-- ... REVOKE SELECT, INSERT, UPDATE, DELETE` for future tables, and
+-- `REVOKE ALL` on the tables existing at the time. The first list omits
+-- `REFERENCES`, `TRIGGER` and `TRUNCATE`, so tables created *before* it got
+-- the thorough `REVOKE ALL` treatment while every table created *after* it
+-- silently inherits those three. `staff_notifications` is simply the first
+-- new table since, and every future one inherits the same three until the
+-- default privileges themselves are widened — tracked separately rather
+-- than changed here, because altering database-wide defaults is a broader
+-- change than this table's own correction.
+--
+-- Additive-safe: this only removes privileges, and re-grants exactly the
+-- one the design calls for. Nothing reads or writes this table as `anon` or
+-- as `authenticated` — the dispatcher and the staff API both act through
+-- `service_role`, whose grants are untouched — so nothing working today
+-- depends on what is revoked here.
+
+revoke all on staff_notifications from anon, authenticated;
+
+-- Restored verbatim from `20260906122500`, so the end state is exactly the
+-- intended one rather than a computed diff: signed-in staff may read, and
+-- the row-level policy (`is_staff()`) still decides which rows.
+grant select on staff_notifications to authenticated;
