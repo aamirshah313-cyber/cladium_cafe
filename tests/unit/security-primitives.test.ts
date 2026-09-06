@@ -219,6 +219,27 @@ describe('headers and redaction', () => {
     }
   });
 
+  /**
+   * `frame-src` exists solely for the Visit page's click-to-load map. It is
+   * the one place this site frames a third party, so the allowance is
+   * pinned to exactly that origin — a regression that widened it to `https:`
+   * or `*` would let any embedded frame through and would not otherwise
+   * fail a test.
+   */
+  it('frames only the one Google Maps origin the visit map needs, and nothing wider', () => {
+    for (const options of [{}, { nonce: 'x' }, { allowEval: true }]) {
+      const csp = buildContentSecurityPolicy(options);
+      const frameSrc = csp
+        .split(';')
+        .map((d) => d.trim())
+        .find((d) => d.startsWith('frame-src'));
+      expect(frameSrc).toBe("frame-src 'self' https://www.google.com");
+      expect(frameSrc).not.toContain('*');
+      // `https:` alone would permit every origin on the web.
+      expect(frameSrc).not.toMatch(/\shttps:(\s|$)/);
+    }
+  });
+
   it('removes PII, authorization, chat content, and webhook signatures from logs', () => {
     expect(
       redactFields({

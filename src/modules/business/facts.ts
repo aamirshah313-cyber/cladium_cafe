@@ -32,13 +32,27 @@ export const ADDRESS_DISPLAY =
 
 export const GOOGLE_MAPS_URL = 'https://maps.app.goo.gl/rHvGG5a82LGkTLLY6?g_st=ic';
 
+/**
+ * The venue's confirmed coordinates, transcribed from
+ * `business-profile.json`'s `coordinates` block — the same approved source
+ * as the address and hours above, not read off a map by eye.
+ *
+ * Used to build the embedded map's `q=` parameter. The short
+ * `GOOGLE_MAPS_URL` above stays the canonical "open in Google Maps"
+ * destination for anyone who wants directions; these are only for framing
+ * the on-page preview at the right place.
+ */
+export const MAP_LATITUDE = 34.2406216;
+export const MAP_LONGITUDE = 73.2544366;
+
 export const WHATSAPP_DISPLAY = '+92 312 3978889';
 export const WHATSAPP_URL = 'https://wa.me/923123978889';
 
 /**
- * The café's official social profiles, both opened and visually confirmed
- * as Cladium's own during the 5 September 2026 design audit
- * (`design/LUXURY_REDESIGN_AUDIT_AND_PLAN.md`).
+ * The café's official social profiles. Facebook and Instagram were opened
+ * and visually confirmed as Cladium's own during the 5 September 2026
+ * design audit (`design/LUXURY_REDESIGN_AUDIT_AND_PLAN.md`); the TikTok
+ * handle was supplied directly by the owner afterwards.
  *
  * Links only. Nothing on the site embeds a live social feed, hotlinks a
  * social CDN URL (those expire), or republishes a collaborator's or a
@@ -52,6 +66,7 @@ export const WHATSAPP_URL = 'https://wa.me/923123978889';
  */
 export const FACEBOOK_URL = 'https://www.facebook.com/people/CladiumCafeResort/61590768862564/';
 export const INSTAGRAM_URL = 'https://www.instagram.com/cladium.cafe/';
+export const TIKTOK_URL = 'https://www.tiktok.com/@cladium_cafe';
 // Guest-facing click-to-WhatsApp links use `lib/business/whatsapp-link.ts`'s
 // `buildWhatsAppUrl(locale)` (Step 35), which appends a minimal, reviewed,
 // non-sensitive prefilled `?text=` message to this same verified URL —

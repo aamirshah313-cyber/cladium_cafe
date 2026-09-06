@@ -1782,3 +1782,43 @@ button[aria-pressed='true'] {
   font-size: var(--step-small);
   font-weight: 600;
 }
+
+/* ------------------------------------------------- visit map (D-086) */
+
+/*
+ * The placeholder and the loaded frame occupy the same box, so revealing
+ * the map does not shift the page around it.
+ */
+.map-placeholder,
+.map-frame {
+  width: 100%;
+  height: clamp(220px, 34vw, 300px);
+  border-radius: var(--radius-sm);
+  margin-block: 1rem;
+}
+
+.map-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0.625rem;
+  padding: 1.25rem;
+  background: var(--surface-atmosphere);
+  border: 1px dashed var(--border-subtle);
+}
+
+.map-placeholder-address {
+  margin: 0;
+  max-width: 34ch;
+  font-size: var(--step-small);
+}
+
+.map-placeholder .field-hint {
+  margin: 0;
+}
+
+.map-frame {
+  display: block;
+  border: 1px solid var(--border-subtle);
+}

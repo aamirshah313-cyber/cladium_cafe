@@ -143,6 +143,14 @@ export const chrome = {
   contactHeading: { en: 'Contact', ur: 'رابطہ' },
   whatsappCtaLabel: { en: 'Chat on WhatsApp', ur: 'واٹس ایپ پر بات کریں' },
   mapCtaLabel: { en: 'View on Google Maps', ur: 'گوگل میپس پر دیکھیں' },
+  // Click-to-load map. The notice is shown before the guest presses the
+  // button, not after, so the choice is made with the fact in view.
+  mapShowButtonLabel: { en: 'Show map', ur: 'نقشہ دکھائیں' },
+  mapThirdPartyNoticeText: {
+    en: 'The map is loaded from Google when you open it.',
+    ur: 'نقشہ کھولنے پر گوگل سے لوڈ ہوتا ہے۔',
+  },
+  mapFrameTitle: { en: 'Map showing Cladium Café & Resort', ur: 'کلیڈیم کیفے اینڈ ریزورٹ کا نقشہ' },
   goodToKnowHeading: { en: 'Good to know', ur: 'اہم معلومات' },
   homeVisitCtaLabel: { en: 'Plan your visit', ur: 'اپنا وزٹ پلان کریں' },
   navMenuLabel: { en: 'Menu', ur: 'مینو' },

@@ -31,6 +31,7 @@ import { buildWhatsAppUrl } from '../../../lib/business/whatsapp-link';
 import { venueHero } from '../../../modules/brand/asset-manifest';
 import { LocalizedProse } from '../localized-prose';
 import { TrackedWhatsAppLink } from '../tracked-whatsapp-link';
+import { MapEmbed } from './map-embed';
 import {
   ADDRESS_DISPLAY,
   BIRTHDAY_POLICY_TEXT,
@@ -102,12 +103,14 @@ export default async function VisitPage({ params }: { params: Promise<{ locale: 
             <dt>{chromeText('addressHeading', locale)}</dt>
             <dd>{ADDRESS_DISPLAY}</dd>
           </dl>
+          {/*
+           * An on-page map preview that loads only on request, plus the
+           * link to the verified listing for anyone who wants directions or
+           * would rather not load the embed at all. The link is the part
+           * that works without JavaScript.
+           */}
+          <MapEmbed locale={locale} />
           <div className="form-actions">
-            {/*
-             * A link to the verified listing, not an embedded map: an embed
-             * would block rendering and load third-party tracking for a
-             * destination a link already reaches.
-             */}
             <a
               href={GOOGLE_MAPS_URL}
               target="_blank"

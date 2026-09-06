@@ -63,6 +63,14 @@ export function buildContentSecurityPolicy(options: SecurityHeadersOptions = {})
     ['img-src', ["'self'", 'data:', 'https:']],
     ['font-src', ["'self'", 'data:']],
     ['connect-src', ["'self'", ...(options.connectSrc ?? [])]],
+    /*
+     * The Visit page's click-to-load map is the only third-party frame this
+     * site embeds, so exactly one origin is allowed and everything else
+     * still falls back to `default-src 'self'`. Without this the frame is
+     * blocked outright; with it, nothing loads from Google until a guest
+     * presses the button (`visit/map-embed.tsx`).
+     */
+    ['frame-src', ["'self'", 'https://www.google.com']],
     ['frame-ancestors', ["'none'"]],
     ['base-uri', ["'self'"]],
     ['form-action', ["'self'"]],

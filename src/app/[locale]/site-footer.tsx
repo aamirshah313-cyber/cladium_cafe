@@ -33,6 +33,7 @@ import {
   FACEBOOK_URL,
   GOOGLE_MAPS_URL,
   INSTAGRAM_URL,
+  TIKTOK_URL,
   WHATSAPP_DISPLAY,
 } from '../../modules/business/facts';
 
@@ -113,6 +114,9 @@ export function SiteFooter({ locale }: SiteFooterProps) {
               </a>
               <a href={FACEBOOK_URL} target="_blank" rel="noopener noreferrer">
                 Facebook
+              </a>
+              <a href={TIKTOK_URL} target="_blank" rel="noopener noreferrer">
+                TikTok
               </a>
             </div>
           </div>
