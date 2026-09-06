@@ -2,6 +2,28 @@
 
 Newest decisions go first. Each entry stays short and points to authoritative evidence.
 
+## D-087 — Durable staff notifications: the last in-memory leg
+
+D-085 made the outbox durable, but the sink it delivered into was `createInMemoryStaffNotificationStore()` — a per-process `Map`. A notification marked `DELIVERED` therefore lived in one serverless instance's heap: gone on recycle, invisible to every other instance, deployment and staff session. `DELIVERED` meant "marked delivered internally", not "staff can see it", which is exactly the distinction the production verification flagged.
+
+New `staff_notifications` table (`20260906122500`), purely additive — one table, one index, one trigger, one policy, two grants. No existing object altered or dropped.
+
+**Idempotency is the primary key.** The handler already passed the outbox event id as the notification id and upserted; making that the PK turns the existing contract into a database guarantee, so a dispatcher that dies after the handler succeeded but before marking `DELIVERED` retries into the same row instead of duplicating. An in-memory seen-set could never survive that. `read_at` is excluded from the upsert so a redelivery cannot resurrect an already-read notification as unread.
+
+No FK to `outbox_events`: notifications must outlive the operational rows they came from, so pruning the outbox can never delete or block deleting something staff are reading. `entity_type`/`entity_id` carry the source link without a FK, as `outbox_events` itself does (the target is polymorphic across three tables).
+
+**Permissions.** `select` to `authenticated` gated by the existing `is_staff()` predicate (any signed-in ACTIVE staff member — a new request is relevant across roles, matching the route's documented intent and excluding suspended accounts). No insert/update/delete policy at all: writes go through the service role, the same worker-owned posture `outbox_events` and `webhook_events` use. `anon` is named in neither grant nor policy, so a guest faces two independent layers.
+
+A missing `service_role` grant was caught by the tests as `42501`, not at deploy: `20260830044140` deliberately revokes default privileges for *every* role on future tables, so each role must be named explicitly. Fixed in the same (unmerged) migration.
+
+Wired via the same lazy `Proxy` as D-077/D-080/D-081/D-085, so unit tests and the Playwright E2E run — which set no Supabase credentials — keep the in-memory store and no local test is forced onto live Postgres.
+
+The existing dashboard notification list was wired to the durable store rather than replaced: it now shows read/unread state in words (not colour alone), a readable summary, a localised timestamp, and a link into the relevant staff queue where that route exists. A new `POST /api/staff/notifications/[id]/read` persists read state, which only became meaningful once the store was durable.
+
+Proven on real Postgres (12 tests): round-trip, survival across a separately constructed store/client, single row on repeated upsert, read state preserved across redelivery, durable mark-read, newest-first ordering, one notification per dispatch for booking/event/takeaway, no duplicate on repeated dispatch, and zero rows visible to the anon role. Full RLS matrix passes against a clean database.
+
+**Not yet operational end to end:** the external scheduler still is not authenticating (D-085), so nothing drains the outbox. Notifications now accumulate durably and will be delivered once it does.
+
 ## D-085 — Durable outbox cutover: staff notifications survive the process
 
 Root cause: `modules/notifications/deps.ts` exported `createInMemoryOutboxStore()` unconditionally. All three domains and the dispatch route share that one object, so every staff notification lived in a single serverless instance's heap while the request itself was written durably to Postgres (D-080/D-081). Confirmed in production: `outbox_events` was **empty** despite real bookings having been submitted. `createPostgresBookingDeps` had documented this exact gap as the known cost of the partial cutover.

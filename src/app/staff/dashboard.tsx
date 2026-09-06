@@ -33,6 +33,25 @@ interface StaffNotification {
   readonly entityType: string;
   readonly entityId: string;
   readonly deliveredAt: string;
+  readonly readAt: string | null;
+}
+
+/**
+ * The staff queue route each notification's source request lives on. Only
+ * the three request types have a queue; anything else (a menu version, a
+ * feature flag) is still listed but not linked, rather than pointing at a
+ * route that does not exist.
+ */
+const ENTITY_ROUTE: Readonly<Record<string, string>> = {
+  TAKEAWAY_REQUEST: 'takeaway',
+  BOOKING_REQUEST: 'bookings',
+  EVENT_REQUEST: 'events',
+};
+
+/** `booking_request.requested` reads as "Booking request requested" rather than as a wire identifier. */
+function describeEventType(eventType: string): string {
+  const words = eventType.replace(/[._]/g, ' ').trim();
+  return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
 async function fetchSession(): Promise<StaffSession | null> {
@@ -329,6 +348,18 @@ export function StaffDashboard() {
     };
   }, []);
 
+  /**
+   * Marks one notification read and reflects it locally, so the row updates
+   * without a full refetch. The write is durable server-side; this only
+   * avoids re-fetching the whole list to show one state change.
+   */
+  async function handleMarkRead(id: string) {
+    const response = await fetch(`/api/staff/notifications/${id}/read`, { method: 'POST' });
+    if (!response.ok) return;
+    const readAt = new Date().toISOString();
+    setNotifications((prior) => (prior ?? []).map((n) => (n.id === id ? { ...n, readAt } : n)));
+  }
+
   useEffect(() => {
     if (!session || session === 'loading') return;
     let cancelled = false;
@@ -407,13 +438,37 @@ export function StaffDashboard() {
         {!notifications || notifications.length === 0 ? (
           <p>No notifications yet.</p>
         ) : (
-          <ul>
-            {notifications.map((notification) => (
-              <li key={notification.id}>
-                {notification.deliveredAt}: {notification.eventType} ({notification.entityType}{' '}
-                {notification.entityId})
-              </li>
-            ))}
+          <ul className="staff-notification-list">
+            {notifications.map((notification) => {
+              const queue = ENTITY_ROUTE[notification.entityType];
+              const unread = notification.readAt === null;
+              return (
+                <li
+                  key={notification.id}
+                  className={unread ? 'staff-notification is-unread' : 'staff-notification'}
+                >
+                  {/* Read state is stated in words, not carried by styling
+                      alone, so it survives for a screen-reader user. */}
+                  <span className="staff-notification-state">{unread ? 'Unread' : 'Read'}</span>
+                  <span className="staff-notification-summary">
+                    {describeEventType(notification.eventType)}
+                  </span>
+                  <time dateTime={notification.deliveredAt} className="staff-notification-time">
+                    {new Date(notification.deliveredAt).toLocaleString()}
+                  </time>
+                  <span className="staff-notification-actions">
+                    {queue ? (
+                      <Link href={`/staff/${queue}/${notification.entityId}`}>Open</Link>
+                    ) : null}
+                    {unread ? (
+                      <button type="button" onClick={() => void handleMarkRead(notification.id)}>
+                        Mark read
+                      </button>
+                    ) : null}
+                  </span>
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>

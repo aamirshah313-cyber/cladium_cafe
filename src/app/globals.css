@@ -1822,3 +1822,55 @@ button[aria-pressed='true'] {
   display: block;
   border: 1px solid var(--border-subtle);
 }
+
+/* ------------------------------------- staff notifications (D-087) */
+
+.staff-notification-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.staff-notification {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+}
+
+/* Unread is marked by a rule and by the word "Unread" in the row — never
+   by colour alone (WCAG 1.4.1). */
+.staff-notification.is-unread {
+  border-inline-start: 3px solid var(--accent-gold);
+  font-weight: 600;
+}
+
+.staff-notification-state {
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.staff-notification-summary {
+  flex: 1 1 12rem;
+  font-weight: 600;
+}
+
+.staff-notification-time {
+  font-size: var(--step-small);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.staff-notification-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
