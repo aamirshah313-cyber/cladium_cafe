@@ -62,6 +62,31 @@ test('blocks unacknowledged destructive DDL', () => {
   assert.match(errors[0], /expand\/migrate\/contract/);
 });
 
+test('does not read a migration comment as the DDL it describes', () => {
+  // The real shape that tripped this: a privilege-only migration whose
+  // comment explains why TRUNCATE is dangerous. Acknowledging it as
+  // destructive would have been a false statement about the migration.
+  const errors = checkNoUnacknowledgedDestructiveDdl([
+    {
+      name: '20260906130500_revoke_residual_staff_notification_grants.sql',
+      sql: [
+        '-- TRUNCATE is a table-level privilege that RLS does not restrict.',
+        '/* drop table is mentioned here only as prose. */',
+        'revoke all on staff_notifications from anon, authenticated;',
+      ].join('\n'),
+    },
+  ]);
+  assert.deepEqual(errors, []);
+});
+
+test('still catches destructive DDL on a line that also carries a comment', () => {
+  const errors = checkNoUnacknowledgedDestructiveDdl([
+    { name: '20260824120007_oops.sql', sql: 'truncate menu_items; -- clear it out' },
+  ]);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /expand\/migrate\/contract/);
+});
+
 test('allows destructive DDL that is explicitly acknowledged', () => {
   const errors = checkNoUnacknowledgedDestructiveDdl([
     {

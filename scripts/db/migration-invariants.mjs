@@ -19,6 +19,31 @@ const DESTRUCTIVE = [
 /** Opt-out marker for a reviewed destructive migration. */
 const DESTRUCTIVE_ACK = /--\s*allow-destructive:/i;
 
+/**
+ * Strip SQL comments so the destructive-DDL scan reads statements only.
+ *
+ * The scan is a plain text search, and a migration's own comment explaining
+ * *why* something is dangerous contains the same words as the dangerous
+ * thing. `20260906130500_revoke_residual_staff_notification_grants.sql` is
+ * exactly that case: it revokes privileges — it executes no destructive DDL
+ * at all — but its comment explains that `TRUNCATE` bypasses RLS, and the
+ * word alone tripped the check.
+ *
+ * Acknowledging it with `-- allow-destructive:` would have been the wrong
+ * fix twice over: it would assert that a non-destructive migration is
+ * destructive, and it would leave the next author who documents a hazard
+ * hitting the same wall.
+ *
+ * Comments are replaced with a space rather than removed, so a line comment
+ * cannot glue the token before it to the token after and manufacture a new
+ * match. Single-quoted literals are left alone: they are rare in this
+ * project's migrations, and treating a literal as inert is the kind of
+ * assumption that lets a real statement hide inside one.
+ */
+function stripSqlComments(sql) {
+  return sql.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/--[^\n]*/g, ' ');
+}
+
 export function checkFilenames(filenames) {
   const errors = [];
   const migrations = [];
@@ -71,9 +96,12 @@ export function checkRowLevelSecurity(combinedSql) {
 export function checkNoUnacknowledgedDestructiveDdl(files) {
   const errors = [];
   for (const { name, sql } of files) {
+    // The acknowledgement marker is itself a comment, so it is matched
+    // against the raw text before comments are stripped for the scan.
     if (DESTRUCTIVE_ACK.test(sql)) continue;
+    const statements = stripSqlComments(sql);
     for (const pattern of DESTRUCTIVE) {
-      if (pattern.test(sql)) {
+      if (pattern.test(statements)) {
         errors.push(
           `${name} contains destructive DDL (${pattern.source}). Use an expand/migrate/contract release, and mark the reviewed migration with "-- allow-destructive: <reason>".`,
         );
