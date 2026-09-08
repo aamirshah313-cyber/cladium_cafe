@@ -48,9 +48,20 @@ export default async function ConciergePage({ params }: { params: Promise<{ loca
 
   return (
     <div>
+      {/*
+       * The heading only. `conciergePageLede` said "Ask about the menu,
+       * hours, directions, seating or celebrations" and `conciergeIntro`,
+       * rendered a few pixels below it inside the chat panel, said "Ask
+       * about the menu, hours, directions, or start a table or event
+       * request" — two greetings competing to be the welcome. The one
+       * inside the panel wins: it belongs to the thing it introduces, and
+       * it is the one that also names the WhatsApp fallback.
+       *
+       * `conciergePageLede` is kept in `chrome.ts` because it is still the
+       * page's meta description; it is just no longer rendered twice over.
+       */}
       <div className="page-header">
         <h1>{chromeText('conciergePageHeading', locale)}</h1>
-        <p className="u-lede">{chromeText('conciergePageLede', locale)}</p>
       </div>
       {voiceAvailable ? <ConciergeModeToggle locale={locale} /> : <ConciergeChat locale={locale} />}
     </div>

@@ -103,12 +103,26 @@ export const chrome = {
   homeSeatingHeading: { en: 'Garden and treehouse seating', ur: 'باغ اور ٹری ہاؤس کی نشست' },
   homeCelebrationsHeading: { en: 'Birthdays and events', ur: 'سالگرہ اور تقریبات' },
   homeDiningHeading: { en: 'From the kitchen', ur: 'باورچی خانے سے' },
+  /*
+   * Reworded now that there are photographs beneath it. "each category"
+   * described a per-category set that never existed on this section; what
+   * is actually shown is four plates photographed at Cladium, none of which
+   * anyone has matched to a menu row. The caption has to say that, because
+   * it sits directly above a link into the menu.
+   */
   homeDiningCaption: {
-    en: 'Photographs show each category, not a specific dish.',
-    ur: 'تصاویر ہر زمرے کی نمائندگی کرتی ہیں، کسی مخصوص ڈش کی نہیں۔',
+    en: 'Photographs of food served at Cladium. They do not show specific menu items.',
+    ur: 'کلیڈیم میں پیش کیے جانے والے کھانے کی تصاویر۔ یہ کسی مخصوص مینو آئٹم کو ظاہر نہیں کرتیں۔',
   },
+  homeGalleryHeading: { en: 'Around the garden', ur: 'باغ کے اطراف' },
   homeVisitHeading: { en: 'Finding us', ur: 'ہم تک پہنچنا' },
-  homeClosingHeading: { en: 'Reserve your table', ur: 'اپنی میز محفوظ کریں' },
+  /*
+   * "Reserve your table" was inaccurate: nothing on this site reserves
+   * anything. A guest sends a request and staff confirm it, and the
+   * heading now says that — the same correction CLAUDE.md's
+   * request-accurate CTA rule already applies to every button.
+   */
+  homeClosingHeading: { en: 'Request your table', ur: 'اپنی میز کی درخواست کریں' },
   // Per-page search-result and link-preview summaries. Each describes only
   // what the page actually offers — never availability, a confirmed
   // booking, delivery, or a facility the venue has not confirmed.
@@ -190,6 +204,13 @@ export const chrome = {
     en: "Ordering isn't available right now — browsing still works.",
     ur: 'ابھی آرڈر کرنا دستیاب نہیں — براؤزنگ اب بھی کام کرتی ہے۔',
   },
+  carouselCategoryPhotoCaption: {
+    en: 'Photograph of this category, not of the selected dish',
+    ur: 'اس زمرے کی تصویر، منتخب کردہ ڈش کی نہیں',
+  },
+  carouselViewDishDetailsLabel: { en: 'View dish details', ur: 'ڈش کی تفصیلات دیکھیں' },
+  carouselPreviousCategoryLabel: { en: 'Previous categories', ur: 'پچھلے زمرے' },
+  carouselNextCategoryLabel: { en: 'More categories', ur: 'مزید زمرے' },
   navBookLabel: { en: 'Request a Table', ur: 'میز کی درخواست' },
   bookPageHeading: { en: 'Request a Table', ur: 'میز کی درخواست' },
   treehouseSeatingCtaLabel: { en: 'Request Treehouse Seating', ur: 'ٹری ہاؤس نشست کی درخواست' },

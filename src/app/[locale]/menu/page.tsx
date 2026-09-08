@@ -184,7 +184,15 @@ export default async function MenuPage({ params, searchParams }: MenuPageProps) 
             </h2>
             <ul className="menu-items">
               {category.items.map((item) => (
-                <li key={item.id} className="menu-item">
+                /*
+                 * The anchor target for the carousel's "View dish details"
+                 * link. `tabIndex={-1}` so the browser moves focus here on
+                 * the jump, not just the scroll position — otherwise a
+                 * keyboard user lands visually on the row while focus stays
+                 * where the link was, and the next Tab goes somewhere they
+                 * are no longer looking.
+                 */
+                <li key={item.id} id={`menu-item-${item.id}`} tabIndex={-1} className="menu-item">
                   <div className="menu-item-head">
                     <span className="menu-item-name">
                       {item.name}

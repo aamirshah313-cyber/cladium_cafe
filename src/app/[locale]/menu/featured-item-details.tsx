@@ -5,17 +5,29 @@
  * `FeaturedItemDetails`. Category label, item name, current price (or a
  * "Select size or option" prompt when a required variant isn't chosen
  * yet — never a guessed/calculated price), availability, a variant
- * picker when the item has more than one option, and the single primary
- * action.
+ * picker when the item has more than one option, and the primary action.
  *
  * `shortDescription` from the spec is never rendered: neither
  * `menu.json` nor the `menu_items` schema has a populated description
  * field for any item today, so there is nothing approved to show — the
  * spec itself marks it optional.
  *
- * The action is always "Add to takeaway order" — the spec's alternate
- * "View dish" state would need an item-detail page this project doesn't
- * have; building one was out of scope for this pass (see the plan).
+ * ## The panel always offers a real action
+ *
+ * Previously the only action was "Add to takeaway order", which is hidden
+ * for this release because the cart/review screen a guest would need next
+ * does not exist (`modules/takeaway/guest-journey.ts`). That left the panel
+ * with no action at all — an editorial feature that showed a dish and then
+ * asked nothing of the reader.
+ *
+ * So the spec's alternate "View dish" state is implemented here, as a link
+ * into the item's row in the full menu list further down the same page.
+ * That is a destination that genuinely exists rather than an item-detail
+ * page this project still does not have, and it works with JavaScript off,
+ * is linkable, and keeps the carousel honest about what it can do.
+ *
+ * When the takeaway journey is complete, both actions are offered: adding
+ * is the primary, viewing the row is the quieter secondary.
  */
 
 import { chromeText } from '../../../lib/i18n/chrome';
@@ -35,6 +47,8 @@ export interface FeaturedItemDetailsProps {
   /** False when takeaway is not part of this release — the control is then not rendered at all. */
   readonly showAddToOrder: boolean;
   readonly addToOrderDisabled: boolean;
+  /** Anchor into this item's row in the full menu list below. */
+  readonly viewDetailsHref: string;
   readonly locale: Locale;
 }
 
@@ -48,6 +62,7 @@ export function FeaturedItemDetails({
   onAddToOrder,
   showAddToOrder,
   addToOrderDisabled,
+  viewDetailsHref,
   locale,
 }: FeaturedItemDetailsProps) {
   const selectedVariant = item.variants.find((variant) => variant.id === selectedVariantId) ?? null;
@@ -79,7 +94,11 @@ export function FeaturedItemDetails({
       </p>
 
       {item.variants.length > 0 ? (
-        <div role="radiogroup" aria-label={chromeText('carouselSelectSizeLabel', locale)}>
+        <div
+          role="radiogroup"
+          aria-label={chromeText('carouselSelectSizeLabel', locale)}
+          className="menu-carousel-variants"
+        >
           {item.variants.map((variant) => (
             <button
               key={variant.id}
@@ -95,18 +114,34 @@ export function FeaturedItemDetails({
         </div>
       ) : null}
 
-      {showAddToOrder ? (
-        <button
-          type="button"
-          className="menu-carousel-add-button"
-          disabled={
-            addToOrderDisabled || requiresVariantChoice || item.availability === 'UNAVAILABLE'
-          }
-          onClick={onAddToOrder}
+      <div className="menu-carousel-actions">
+        {showAddToOrder ? (
+          <button
+            type="button"
+            className="u-button u-button--primary"
+            disabled={
+              addToOrderDisabled || requiresVariantChoice || item.availability === 'UNAVAILABLE'
+            }
+            onClick={onAddToOrder}
+          >
+            {chromeText('carouselAddToOrderLabel', locale)}
+          </button>
+        ) : null}
+
+        {/*
+         * A plain anchor, not a button: it navigates to a real fragment in
+         * the list below, so it survives JavaScript being off, can be
+         * opened in a new tab, and can be copied as a link. The href drops
+         * any active search/filter query deliberately — the target row is
+         * only guaranteed to be on the page in the unfiltered list.
+         */}
+        <a
+          href={viewDetailsHref}
+          className={showAddToOrder ? 'u-button u-button--secondary' : 'u-button u-button--primary'}
         >
-          {chromeText('carouselAddToOrderLabel', locale)}
-        </button>
-      ) : null}
+          {chromeText('carouselViewDishDetailsLabel', locale)}
+        </a>
+      </div>
     </div>
   );
 }

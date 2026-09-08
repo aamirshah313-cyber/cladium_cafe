@@ -3,9 +3,8 @@
 /**
  * Menu feature carousel — `design/menu-carousel-reference.md`'s
  * `MenuFeatureCarousel`, wiring `CategoryTabs`, `FeaturedItemDetails`,
- * `ItemSelectorRail`, and the already-built `FeatureMediaStage`
- * (`modules/menu/media-mapping.ts`, previously staff-only, live to guests
- * for the first time here) together over the real published menu.
+ * `ItemSelectorRail`, and `FeatureMediaStage` together over the real
+ * published menu.
  *
  * An editorial discovery feature, not the sole way to browse — `menu/
  * page.tsx` renders this above its own existing search/filter list, which
@@ -13,14 +12,39 @@
  * the text-search-filtered list, since this has its own independent
  * category-tab browsing model.
  *
- * **The takeaway add action is gated on `takeawayEnabled`, resolved on the
- * server from `FEATURE_TAKEAWAY_REQUESTS`.** The cart/review destination it
- * would lead to is not built yet (tracked separately), so with the flag off
- * — its state for this release — the control is not rendered at all and an
- * honest note says ordering is unavailable while browsing still works. The
- * whole rest of the carousel (category tabs, item rail, prices, imagery) is
- * unaffected: this is a browsing feature that can optionally order, not an
- * ordering feature.
+ * ## Layout, and what was actually borrowed from the reference clip
+ *
+ * The clip's grammar is: a category strip across the top, a written panel
+ * on the left at roughly 45% of the width, a row of round selectors beneath
+ * it, and one dominant photograph on the right at roughly 55%. That
+ * arrangement is what this now follows, and the proportion is the point —
+ * the picture reads as dominant because of the space and the calm backdrop
+ * around it, not because it was enlarged.
+ *
+ * Nothing else was taken. The clip's name, food photography, copy,
+ * watermark and artwork are all its own (CLAUDE.md: interaction
+ * inspiration only), and Cladium's photographs are rectangular scenes
+ * rather than round plates shot from above, which is why the selectors are
+ * round *controls* holding a square crop rather than circular dish cutouts.
+ *
+ * ## Transitions are declarative, so reduced motion is honoured for free
+ *
+ * Changing category or item remounts the panel and the stage via `key`,
+ * replaying a short CSS fade/rise. There is no timer, no transition state
+ * in React, and nothing to leave stuck if a click lands mid-animation —
+ * rapid clicking simply restarts it. `@media (prefers-reduced-motion:
+ * reduce)` in the stylesheet turns the animation off, and because the
+ * effect lives entirely in CSS there is no JavaScript path that can ignore
+ * that preference.
+ *
+ * ## The takeaway add action
+ *
+ * Gated on `takeawayEnabled`, resolved on the server from
+ * `FEATURE_TAKEAWAY_REQUESTS` **and** `TAKEAWAY_GUEST_JOURNEY_COMPLETE`.
+ * The cart/review destination it would lead to is not built yet, so with
+ * the gate closed the control is not rendered at all. The panel is not left
+ * actionless: "View dish details" links into the item's row in the full
+ * list below, which is a destination that genuinely exists.
  *
  * That gate is deliberately the single switch for the journey. Disabling
  * the button only when a bootstrap request happens to fail would leave a
@@ -40,18 +64,19 @@ import { chromeText } from '../../../lib/i18n/chrome';
 import type { Locale } from '../../../lib/i18n/locale';
 import { formatPkr } from '../../../lib/business/money';
 import type { MenuViewCategory } from '../../../modules/menu/menu-view';
-import { resolveCategoryMedia } from '../../../modules/menu/media-mapping';
-import { FeatureMediaStage } from './feature-media-stage';
+import { resolveCategoryMedia, resolveItemThumb } from '../../../modules/menu/media-mapping';
+import { FeatureMediaStage, categoryFeatureMedia } from './feature-media-stage';
 import { CategoryTabs } from './category-tabs';
 import { ItemSelectorRail } from './item-selector-rail';
 import { FeaturedItemDetails } from './featured-item-details';
+import { useOverflowControls } from './use-overflow-controls';
 
 export interface MenuFeatureCarouselProps {
   readonly categories: readonly MenuViewCategory[];
   /**
    * Whether the takeaway journey is part of this release. Resolved on the
-   * server from FEATURE_TAKEAWAY_REQUESTS so the add affordance never
-   * appears without somewhere for it to lead.
+   * server from FEATURE_TAKEAWAY_REQUESTS and the guest-journey constant so
+   * the add affordance never appears without somewhere for it to lead.
    */
   readonly takeawayEnabled: boolean;
   readonly locale: Locale;
@@ -87,6 +112,20 @@ export function MenuFeatureCarousel({
   const [totals, setTotals] = useState<CartTotalsState | null>(null);
   const [confirmation, setConfirmation] = useState<string | null>(null);
   const [addError, setAddError] = useState<string | null>(null);
+  /*
+   * Destructured rather than held as an object: once `ref` is handed to a
+   * DOM node, `react-hooks/refs` treats every later read on the same object
+   * as a ref access during render, including the plain `useState` booleans
+   * beside it. Pulling the values out keeps the rule satisfied without
+   * suppressing it.
+   */
+  const {
+    ref: tabsScrollerRef,
+    overflowing: tabsOverflowing,
+    canScrollStart: tabsCanScrollStart,
+    canScrollEnd: tabsCanScrollEnd,
+    scrollByPage: scrollTabsByPage,
+  } = useOverflowControls();
 
   useEffect(() => {
     /*
@@ -97,12 +136,6 @@ export function MenuFeatureCarousel({
      * the guest never sees an add control resolve from "maybe" to
      * "unavailable", and the page makes no request it already knows will
      * be refused.
-     *
-     * It also closes the real dead end: if the flag were switched on while
-     * the cart/review page is still unbuilt, a guest could add items and
-     * watch a subtotal climb with nowhere to submit it. `takeawayEnabled`
-     * is the single switch that turns the whole journey on, so it cannot
-     * come on before there is somewhere for it to lead.
      */
     if (!takeawayEnabled) return;
 
@@ -180,20 +213,67 @@ export function MenuFeatureCarousel({
 
   const tabId = `menu-carousel-tab-${category.id}`;
   const panelId = `menu-carousel-panel-${category.id}`;
+  const media = categoryFeatureMedia(resolveCategoryMedia(category.mediaKey));
 
   return (
     <section aria-label={chromeText('navMenuLabel', locale)} className="menu-carousel">
-      <CategoryTabs
-        categories={categories}
-        selectedIndex={categoryIndex}
-        onSelect={selectCategory}
-        detailsPanelId={panelId}
-        locale={locale}
-      />
+      <div className="menu-carousel-tabs">
+        {/*
+         * Edge controls render only when the strip genuinely overflows, and
+         * they are hidden from assistive technology: they scroll a region a
+         * keyboard user already traverses with the tablist's own arrow
+         * keys, so exposing them would add two redundant stops between the
+         * tabs and the panel without reaching anything new.
+         */}
+        {tabsOverflowing ? (
+          <button
+            type="button"
+            className="menu-carousel-tabs-edge menu-carousel-tabs-edge--start"
+            aria-hidden="true"
+            tabIndex={-1}
+            disabled={!tabsCanScrollStart}
+            onClick={() => scrollTabsByPage(-1)}
+          >
+            <span className="menu-carousel-tabs-edge-glyph">&#8249;</span>
+          </button>
+        ) : null}
+
+        <div className="menu-carousel-tabs-scroller" ref={tabsScrollerRef}>
+          <CategoryTabs
+            categories={categories}
+            selectedIndex={categoryIndex}
+            onSelect={selectCategory}
+            detailsPanelId={panelId}
+            locale={locale}
+          />
+        </div>
+
+        {tabsOverflowing ? (
+          <button
+            type="button"
+            className="menu-carousel-tabs-edge menu-carousel-tabs-edge--end"
+            aria-hidden="true"
+            tabIndex={-1}
+            disabled={!tabsCanScrollEnd}
+            onClick={() => scrollTabsByPage(1)}
+          >
+            <span className="menu-carousel-tabs-edge-glyph">&#8250;</span>
+          </button>
+        ) : null}
+      </div>
 
       <div className="menu-carousel-stage">
         <div className="menu-carousel-panel">
+          {/*
+           * `key` on the details and the stage is what drives the
+           * transition: a new selection remounts them, replaying the CSS
+           * entry animation. The details are keyed on the item, the stage
+           * on the category, because the photograph only changes when the
+           * category does — re-fading an identical image on every item
+           * click would be movement that means nothing.
+           */}
           <FeaturedItemDetails
+            key={item.id}
             panelId={panelId}
             tabId={tabId}
             categoryName={category.name}
@@ -205,28 +285,50 @@ export function MenuFeatureCarousel({
              * Hidden outright when takeaway is not in this release, rather
              * than shown disabled. A permanently dead control is still an
              * invitation — it suggests ordering is a thing this page nearly
-             * does — and the note below states the position in words
-             * instead. When the journey is on, it behaves exactly as before.
+             * does — and "View dish details" gives the panel a real action
+             * in its place. When the journey is on, it behaves as before.
              */
             showAddToOrder={takeawayEnabled}
             addToOrderDisabled={!cartAvailable || !csrfToken}
+            viewDetailsHref={`/${locale}/menu#menu-item-${item.id}`}
             locale={locale}
           />
 
+          {/*
+           * Keyed on the category so a category change remounts the rail.
+           * Without it the rail kept the previous category's scroll offset
+           * while the selection reset to the first item, leaving the
+           * selected dish parked off the left edge with no indication that
+           * it was there.
+           */}
           <ItemSelectorRail
+            key={category.id}
             items={items}
             selectedIndex={itemIndex}
             onSelect={selectItem}
+            thumbFor={(railItem) => resolveItemThumb(railItem.id)}
             locale={locale}
           />
 
-          {!cartAvailable ? (
-            <p role="status">{chromeText('carouselOrderingUnavailableText', locale)}</p>
+          {/*
+           * Only worth saying when ordering was actually expected to work.
+           * With the journey gated off there is no add control on screen,
+           * so announcing that ordering is unavailable would be answering a
+           * question the page never raised.
+           */}
+          {takeawayEnabled && !cartAvailable ? (
+            <p role="status" className="menu-carousel-note">
+              {chromeText('carouselOrderingUnavailableText', locale)}
+            </p>
           ) : null}
-          {addError ? <p role="alert">{addError}</p> : null}
+          {addError ? (
+            <p role="alert" className="menu-carousel-note">
+              {addError}
+            </p>
+          ) : null}
           {totals ? (
-            <p role="status" aria-live="polite">
-              {chromeText('carouselOrderItemCountLabel', locale)}: {totals.lineCount} ·{' '}
+            <p role="status" aria-live="polite" className="menu-carousel-note">
+              {chromeText('carouselOrderItemCountLabel', locale)}: {totals.lineCount} &middot;{' '}
               {chromeText('carouselOrderSubtotalLabel', locale)}: {formatPkr(totals.subtotalPkr)}
             </p>
           ) : null}
@@ -238,10 +340,7 @@ export function MenuFeatureCarousel({
         </div>
 
         <div className="menu-carousel-media">
-          <FeatureMediaStage
-            categoryName={category.name}
-            media={resolveCategoryMedia(category.mediaKey)}
-          />
+          <FeatureMediaStage key={category.id} media={media} locale={locale} />
         </div>
       </div>
     </section>

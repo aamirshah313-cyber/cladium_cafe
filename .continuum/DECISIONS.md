@@ -2,6 +2,24 @@
 
 Newest decisions go first. Each entry stays short and points to authoritative evidence.
 
+## D-088 — Image provenance is a contract, not a caption
+
+- Decision: every site photograph carries an explicit `venue | category | item`
+  provenance (`modules/brand/media-manifest.ts`). Only `item` may be presented
+  as a specific dish; `category` must show a visible caption wherever a dish
+  name appears beside it, because alt text alone does not reach the sighted
+  reader who is being misled.
+- Why: nobody has confirmed which menu row any photographed plate depicts, and
+  choosing one by eye would invent a fact about published food — the same class
+  of invention D-004 already forbids for imagery and reviews. No asset is
+  `item` today, so the item rail shows lettered medallions rather than
+  repeating one category photograph behind five differently-named dishes.
+- Also decided: photographs are never displayed above their real pixel size.
+  The carousel's soft appearance was enlargement (a 211x144 crop shown at
+  ~418x523), not compression, and re-exporting the same pixels larger would
+  have hidden the cause rather than fixed it. Intrinsic dimensions are recorded
+  in the manifest and in `menuCategoryMedia` so this stays structural.
+
 ## D-087 — Durable staff notifications: the last in-memory leg
 
 D-085 made the outbox durable, but the sink it delivered into was `createInMemoryStaffNotificationStore()` — a per-process `Map`. A notification marked `DELIVERED` therefore lived in one serverless instance's heap: gone on recycle, invisible to every other instance, deployment and staff session. `DELIVERED` meant "marked delivered internally", not "staff can see it", which is exactly the distinction the production verification flagged.

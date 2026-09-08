@@ -167,6 +167,18 @@ p {
   padding-block: var(--section-gap);
 }
 
+/*
+ * Two adjacent sections each contributed a full `--section-gap`, so the
+ * space between them was twice the intended rhythm — at 1440px that is
+ * 240px of empty canvas between one paragraph and the next, which is what
+ * made the homepage read as sparse rather than generous. Dropping the
+ * second section's leading padding leaves exactly one gap between any two
+ * sections while the first and last keep their full breathing room.
+ */
+.u-section + .u-section {
+  padding-block-start: 0;
+}
+
 .u-muted {
   color: var(--text-muted);
 }
@@ -293,38 +305,93 @@ button[aria-pressed='true'] {
 }
 
 /*
- * Menu carousel media stage (`FeatureMediaStage`, Step 18 preparation,
- * D-022 follow-up) — `design/menu-carousel-reference.md`'s "airy sage/mist
- * image stage." Reuses the existing `--surface-atmosphere`/`--accent-gold`/
- * `--border-subtle` tokens (theme-mode.md) rather than the reference doc's
- * own speculative `--cladium-menu-canvas`/`--cladium-menu-panel` names —
- * theme-mode.md is the later, actually-implemented source of truth, and
- * introducing a second, parallel token set for the same roles would be a
- * real drift risk. Correct in both Day and Night automatically, since the
- * underlying tokens already vary — no new theme-conditional block needed
- * here.
+ * Menu carousel media stage (`FeatureMediaStage`).
+ *
+ * Reuses the existing `--surface-atmosphere`/`--accent-gold`/`--border-subtle`
+ * tokens (theme-mode.md) rather than the reference doc's own speculative
+ * `--cladium-menu-canvas`/`--cladium-menu-panel` names — theme-mode.md is the
+ * later, actually-implemented source of truth, and a second parallel token
+ * set for the same roles would be a real drift risk. Correct in both Day
+ * and Night automatically, since the underlying tokens already vary.
+ *
+ * ## The stage carries the picture; it does not stretch it
+ *
+ * The previous rule forced `aspect-ratio: 4 / 5` with `object-fit: cover`,
+ * which cropped hard into small source photographs *and* enlarged them —
+ * the 211x144 sandwich crop was presented at roughly 418x523. That is what
+ * made the menu look soft, and no re-export could have fixed it.
+ *
+ * Now the picture keeps its own aspect ratio and is never displayed wider
+ * than its real pixels (`max-width: 100%` plus `height: auto` against the
+ * intrinsic `width`/`height` attributes, with no `width: 100%` anywhere to
+ * push it past 1x). Presence comes from the arched sage field and the space
+ * around it instead — which is the reference clip's own trick.
  */
 .menu-media-stage {
-  position: relative;
-  aspect-ratio: 4 / 5;
-  overflow: hidden;
-  border-radius: 0.5rem;
-  background: var(--surface-atmosphere);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: clamp(1rem, 4vw, 2rem);
+  min-height: 14rem;
+  /*
+   * An arch, not a rectangle: a wide top radius with a small bottom one
+   * reads as a curved field the plate sits inside. Percentages on the
+   * vertical axis keep the curve proportional instead of tightening into a
+   * circle as the column narrows.
+   */
+  border-radius: 50% 50% 0.75rem 0.75rem / 26% 26% 0.75rem 0.75rem;
+  background:
+    radial-gradient(72% 55% at 50% 32%, var(--surface-raised), transparent 78%),
+    var(--surface-atmosphere);
+  border: 1px solid var(--border-subtle);
 }
 
-.menu-media-stage-image {
-  object-fit: cover;
-}
-
-.menu-media-stage-fallback {
+.menu-media-stage-frame {
   display: flex;
   align-items: center;
   justify-content: center;
+  max-width: 100%;
+}
+
+/*
+ * `height: auto` against the element's real `width`/`height` attributes:
+ * the browser lays out at the file's own size and only ever scales *down*
+ * to fit. There is deliberately no `width: 100%` — that single declaration
+ * is what would silently reintroduce the enlargement this stage exists to
+ * stop.
+ */
+.menu-media-stage-image {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 28px -18px rgb(0 0 0 / 55%);
+}
+
+/*
+ * Stated in words, not implied by styling. The dish name is rendered right
+ * beside this picture, and the picture is category-level — a sighted
+ * visitor would otherwise reasonably read it as a photograph of that exact
+ * dish, which nobody has confirmed.
+ */
+.menu-media-stage-caption {
+  margin: 0;
+  max-width: 24ch;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+.menu-media-stage-fallback {
+  min-height: 14rem;
 }
 
 .menu-media-stage-monogram {
   width: 40%;
   height: 40%;
+  max-width: 8rem;
 }
 
 .menu-media-stage-monogram-ring {
@@ -341,30 +408,66 @@ button[aria-pressed='true'] {
 }
 
 /*
- * Menu feature carousel (Step 18, `design/menu-carousel-reference.md`).
- * Reuses the same existing semantic tokens as `.menu-media-stage` above,
- * for the same reason: theme-mode.md's tokens are the actually-implemented
- * source of truth, not the design doc's own speculative
- * `--cladium-menu-canvas`/`--cladium-menu-panel` names. Two-column desktop
- * / one-column mobile at 768px, matching `FeatureMediaStage`'s own
- * existing breakpoint. Motion is colour/opacity/transform only, 200ms, and
- * skipped entirely for reduced motion — same guard `body`/`a`/`button`
- * already use above.
+ * Menu feature carousel (`design/menu-carousel-reference.md`).
+ *
+ * Same token reasoning as the stage above. Two columns at 768px and up in
+ * roughly the reference clip's 45/55 split — written panel first, dominant
+ * photograph second — collapsing to one column below that, which is also
+ * where `FeatureMediaStage` already breaks.
  */
 .menu-carousel {
   margin-block: 1.5rem;
-  padding: 1rem;
+  padding: clamp(0.875rem, 3vw, 1.5rem);
   background: var(--surface-raised);
   border: 1px solid var(--border-subtle);
   border-radius: 0.75rem;
 }
 
+/* --- category strip ------------------------------------------------- */
+
+.menu-carousel-tabs {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+/*
+ * The scroll container is the wrapper, not the tablist: the tablist is
+ * `width: max-content` so it can be wider than the box, and this element is
+ * what actually scrolls. `minmax(0, …)`-equivalent `min-width: 0` is required
+ * on a flex item for that to work at all — its default `auto` floor is
+ * min-content, which would widen the whole carousel instead of scrolling.
+ */
+.menu-carousel-tabs-scroller {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-x: auto;
+}
+
+/*
+ * The strips still scroll — by wheel, trackpad, touch, keyboard and the
+ * edge controls — but the native bars are hidden. Two raw horizontal
+ * scrollbars stacked inside one card is the "prominent raw desktop
+ * scrollbars" treatment the edge controls were added to replace, and
+ * hiding a scrollbar is only acceptable *because* those controls, and the
+ * arrow-key navigation both strips already had, make the same content
+ * reachable without it.
+ */
+.menu-carousel-tabs-scroller,
+.menu-carousel-item-rail {
+  scrollbar-width: none;
+}
+
+.menu-carousel-tabs-scroller::-webkit-scrollbar,
+.menu-carousel-item-rail::-webkit-scrollbar {
+  display: none;
+}
+
 .menu-carousel-tablist {
   display: flex;
   gap: 0.5rem;
-  overflow-x: auto;
+  width: max-content;
   padding-block-end: 0.5rem;
-  min-width: 0;
 }
 
 .menu-carousel-tab {
@@ -378,23 +481,53 @@ button[aria-pressed='true'] {
   border-color: var(--action-primary);
 }
 
+.menu-carousel-tabs-edge {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border-radius: 50%;
+  line-height: 1;
+}
+
+.menu-carousel-tabs-edge:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/*
+ * The chevrons are drawn glyphs, so they point at a physical direction. In
+ * Urdu the strip scrolls the other way and the buttons swap sides with the
+ * flex direction, so the glyphs have to be mirrored too or they would point
+ * away from the content they reach.
+ */
+[dir='rtl'] .menu-carousel-tabs-edge-glyph {
+  display: inline-block;
+  transform: scaleX(-1);
+}
+
+/* --- stage ---------------------------------------------------------- */
+
 /*
  * `minmax(0, …)` rather than a bare `1fr`. A bare `1fr` is `minmax(auto,
- * 1fr)`, and that `auto` floor is min-content — so the long item-selector
- * rail inside pushed the column past the viewport and took the whole page
- * with it (measured at 390px: a 657px panel and 308px of page overflow,
- * which is also why the rail's own `overflow-x: auto` never engaged — an
- * element cannot scroll inside a track that grew to fit it).
+ * 1fr)`, and that `auto` floor is min-content — so the long
+ * item-selector rail inside pushed the column past the viewport and took
+ * the whole page with it (measured at 390px: a 657px panel and 308px of
+ * page overflow, which is also why the rail's own `overflow-x: auto` never
+ * engaged — an element cannot scroll inside a track that grew to fit it).
  */
 .menu-carousel-stage {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 1rem;
+  gap: clamp(1rem, 3vw, 2rem);
+  align-items: center;
 }
 
 @media (min-width: 768px) {
   .menu-carousel-stage {
-    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    grid-template-columns: minmax(0, 45fr) minmax(0, 55fr);
   }
 }
 
@@ -406,21 +539,49 @@ button[aria-pressed='true'] {
   min-width: 0;
 }
 
+/*
+ * The coordinated entry. Both the details panel and the media stage are
+ * remounted by `key` when the selection changes, so this replays on each
+ * change with no JavaScript timer to get stuck. Reduced motion removes it
+ * outright rather than shortening it — and because the whole effect lives
+ * here, there is no script path that can ignore the preference.
+ */
 @media (prefers-reduced-motion: no-preference) {
-  .menu-carousel-details {
-    transition:
-      opacity 200ms ease,
-      transform 200ms ease;
+  .menu-carousel-details,
+  .menu-carousel-media > * {
+    animation: menu-carousel-enter 240ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
   }
+}
+
+@keyframes menu-carousel-enter {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.menu-carousel-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
 .menu-carousel-category-label {
   color: var(--text-muted);
   margin: 0;
+  font-size: 0.8125rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .menu-carousel-item-name {
   font-family: var(--font-serif), Georgia, 'Times New Roman', serif;
+  font-size: clamp(1.35rem, 3.5vw, 1.9rem);
+  line-height: 1.2;
   margin: 0;
 }
 
@@ -433,6 +594,7 @@ button[aria-pressed='true'] {
 .menu-carousel-price {
   color: var(--text-primary);
   font-weight: 600;
+  font-size: 1.125rem;
   font-variant-numeric: tabular-nums;
   margin: 0;
 }
@@ -440,10 +602,13 @@ button[aria-pressed='true'] {
 .menu-carousel-availability {
   color: var(--text-muted);
   margin: 0;
+  font-size: 0.875rem;
 }
 
-.menu-carousel-variant-option {
-  margin-inline-end: 0.5rem;
+.menu-carousel-variants {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
 .menu-carousel-variant-option[aria-checked='true'] {
@@ -451,40 +616,132 @@ button[aria-pressed='true'] {
   outline: 2px solid var(--accent-gold);
 }
 
-.menu-carousel-add-button {
-  background: var(--action-primary);
-  color: var(--action-on-primary);
-  border-color: var(--action-primary);
-  border-radius: 0.5rem;
-  padding-block: 0.6rem;
+.menu-carousel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-block-start: 0.25rem;
 }
 
-.menu-carousel-add-button:disabled {
-  opacity: 0.6;
+.menu-carousel-note {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+/* --- circular item selectors ---------------------------------------- */
+
+.menu-carousel-rail-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 0;
 }
 
 .menu-carousel-item-rail {
   display: flex;
-  gap: 0.5rem;
+  flex: 1 1 auto;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0.25rem 0 0.5rem;
+  list-style: none;
   overflow-x: auto;
   scroll-snap-type: x proximity;
-  padding-block: 0.25rem;
   /* Lets the rail actually scroll rather than widening its parent. */
   min-width: 0;
 }
 
-.menu-carousel-item-selector {
+.menu-carousel-item-slot {
+  flex: 0 0 auto;
   scroll-snap-align: start;
-  white-space: nowrap;
 }
 
-.menu-carousel-item-selector[aria-selected='true'] {
+.menu-carousel-item-selector {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.375rem;
+  width: 5.25rem;
+  padding: 0.25rem;
+  background: none;
+  border: 0;
+  border-radius: 0.5rem;
+  color: inherit;
+  cursor: pointer;
+}
+
+/*
+ * The circle is the control's shape, filled with a centred square crop —
+ * not a circular cutout of the dish. Cladium's food photographs are
+ * ordinary rectangular scenes, and masking one into a circle would slice
+ * through the subject; the reference clip could do it only because its
+ * plates were shot from directly above.
+ */
+.menu-carousel-thumb {
+  display: grid;
+  place-items: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  overflow: hidden;
+  border-radius: 50%;
+  background: var(--surface-atmosphere);
+  border: 1px solid var(--border-subtle);
+}
+
+.menu-carousel-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.menu-carousel-thumb-initial {
+  font-family: var(--font-serif), Georgia, 'Times New Roman', serif;
+  font-size: 1.25rem;
+  color: var(--text-muted);
+}
+
+.menu-carousel-thumb-name {
+  font-size: 0.75rem;
+  line-height: 1.25;
+  text-align: center;
+  color: var(--text-muted);
+  /* Two lines, then ellipsis — a third line would misalign the whole row. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/*
+ * Selection and focus are deliberately different marks: selection is a gold
+ * ring drawn on the circle, focus is the shared `:focus-visible` outline on
+ * the button itself. A keyboard user moving through the options can
+ * therefore always tell where focus is versus what is chosen.
+ *
+ * The weight change on the name carries the same information without
+ * colour, since gold-versus-not is exactly the distinction someone with a
+ * colour vision deficiency may not see.
+ */
+.menu-carousel-item-selector[aria-selected='true'] .menu-carousel-thumb {
   border-color: var(--accent-gold);
-  outline: 2px solid var(--accent-gold);
+  box-shadow: 0 0 0 2px var(--accent-gold);
+}
+
+.menu-carousel-item-selector[aria-selected='true'] .menu-carousel-thumb-name {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .menu-carousel-thumb {
+    transition:
+      border-color 200ms ease,
+      box-shadow 200ms ease;
+  }
 }
 
 .menu-carousel-media {
-  min-height: 12rem;
+  min-width: 0;
 }
 
 /* Visually hidden but still announced by assistive tech — the standard accessible "sr-only" pattern. */
@@ -525,13 +782,13 @@ button[aria-pressed='true'] {
   display: flex;
   align-items: center;
   gap: 1rem;
-  min-height: 72px;
+  min-height: 76px;
   padding-block: 0.75rem;
 }
 
 @media (min-width: 1024px) {
   .site-header-inner {
-    min-height: 88px;
+    min-height: 104px;
   }
 }
 
@@ -544,10 +801,18 @@ button[aria-pressed='true'] {
   margin-inline-end: auto;
 }
 
+/*
+ * The crest carries the wordmark, the illustration and the tagline, and at
+ * 48/60px none of that was legible — it read as a dark square rather than
+ * as the venue's mark. It is the only brand element in the header now that
+ * the name is no longer set again in type beside it, so it gets the space
+ * that buys. The artwork itself is untouched: same file, same aspect ratio,
+ * `contain`, never recoloured or mirrored.
+ */
 .site-brand-mark {
   display: block;
-  width: 48px;
-  height: 48px;
+  width: 56px;
+  height: 56px;
   border-radius: var(--radius-sm);
   /* The crest is supplied artwork on its own forest field: never recoloured,
      never cropped to a circle, never mirrored under RTL. */
@@ -556,8 +821,8 @@ button[aria-pressed='true'] {
 
 @media (min-width: 1024px) {
   .site-brand-mark {
-    width: 60px;
-    height: 60px;
+    width: 84px;
+    height: 84px;
   }
 }
 
@@ -1209,6 +1474,147 @@ button[aria-pressed='true'] {
   margin-top: 1.75rem;
 }
 
+/*
+ * A photograph at the top of a supporting panel — booking and events use
+ * this to give an otherwise identical form/policy pair its own sense of
+ * place. Sized well under the sources' ~335-415px so it stays sharp, and
+ * `cover` because these are atmosphere: losing the edge of a lawn costs
+ * nothing, unlike the menu stage, which has to show a whole plate.
+ */
+.panel-photo {
+  width: 100%;
+  height: clamp(8rem, 20vw, 11rem);
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  margin-block-end: 1.25rem;
+  display: block;
+}
+
+/* ------------------------------------------------- homepage photography */
+
+/*
+ * The editorial story block: copy and one portrait, side by side on wide
+ * screens and stacked below 768px. The picture column is capped at the
+ * file's real width (415px) because that is genuinely all it has —
+ * `minmax` would happily stretch it, and a stretched photograph is the
+ * defect this whole pass is removing.
+ */
+.home-story {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(1.5rem, 4vw, 3rem);
+  align-items: center;
+}
+
+@media (min-width: 768px) {
+  .home-story {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 24rem);
+  }
+}
+
+.home-story-copy .u-lede {
+  max-width: 54ch;
+}
+
+/*
+ * Capped in height as well as width. At its full 415x739 the portrait made
+ * a 900px-tall section out of a heading and one paragraph — the picture
+ * stopped supporting the copy and started dwarfing it. `cover` inside the
+ * shorter box keeps the pavilion in frame while the block stays in
+ * proportion to what it actually says.
+ */
+.home-story-photo {
+  width: 100%;
+  max-width: 22rem;
+  height: clamp(16rem, 32vw, 24rem);
+  border-radius: var(--radius-md);
+  object-fit: cover;
+  justify-self: center;
+}
+
+/*
+ * A wide, shallow band across the top of each experience card. `cover` is
+ * right here and wrong on the menu stage, and the difference is what the
+ * picture has to do: these are atmosphere, where losing the edges of a
+ * garden costs nothing, while the menu stage has to show a whole plate.
+ * The focal point from the manifest keeps the subject inside the band.
+ */
+.home-card-photo {
+  width: 100%;
+  height: clamp(9rem, 22vw, 12rem);
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  margin-block-end: 1.25rem;
+}
+
+/*
+ * Food thumbnails, sized well under their sources' ~335-515px so they stay
+ * sharp on a 2x display. They are a taste of the kitchen next to a link to
+ * the real menu — never a substitute for it, and never captioned with a
+ * dish name, since no one has confirmed which menu row any of them is.
+ */
+.home-dining-thumbs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 1.75rem 0 1rem;
+  padding: 0;
+  list-style: none;
+}
+
+@media (min-width: 640px) {
+  .home-dining-thumbs {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.home-dining-thumb {
+  width: 100%;
+  height: clamp(7rem, 18vw, 10rem);
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  display: block;
+}
+
+/* --- gallery ----------------------------------------------------------- */
+
+.site-photo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  gap: clamp(0.75rem, 2vw, 1.25rem);
+  margin: 1.75rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.site-photo-figure {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  height: 100%;
+}
+
+/*
+ * A consistent band height across the grid, so six photographs of different
+ * shapes still read as one composition. The tallest source is 739px and the
+ * shortest 516px, both comfortably above this, so none is enlarged to fill
+ * its cell.
+ */
+.site-photo-grid-image {
+  width: 100%;
+  height: clamp(11rem, 26vw, 15rem);
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  display: block;
+}
+
+.site-photo-caption {
+  font-size: var(--step-small);
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
 /* The blurred placeholder painted behind the real photograph. */
 .home-hero {
   background-size: cover;
@@ -1564,6 +1970,74 @@ button[aria-pressed='true'] {
   }
 }
 
+/*
+ * Route-level loading geometry (`[locale]/loading.tsx`).
+ *
+ * Shapes that approximate what every route opens with — heading, one line
+ * of supporting text, a panel — so the arriving page shifts into place
+ * rather than replacing an empty column. Sized in `rem` and `clamp` so the
+ * reserved area tracks the real type scale at every width.
+ */
+.route-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding-block: clamp(1.5rem, 4vw, 2.5rem);
+}
+
+.route-skeleton-shapes {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.route-skeleton-block {
+  display: block;
+  border-radius: var(--radius-md);
+  background: var(--surface-atmosphere);
+}
+
+.route-skeleton-block--title {
+  height: clamp(2.25rem, 5vw, 3rem);
+  width: min(20ch, 70%);
+}
+
+.route-skeleton-block--lede {
+  height: 1.25rem;
+  width: min(46ch, 90%);
+}
+
+.route-skeleton-block--panel {
+  height: clamp(10rem, 28vh, 18rem);
+  width: 100%;
+}
+
+.route-skeleton-label {
+  margin: 0;
+}
+
+/*
+ * A slow, low-contrast sweep — enough to read as "working", far short of
+ * the strobing shimmer that makes a skeleton harder to look at than an
+ * empty box. Purely decorative: the live status line beside it carries the
+ * actual message.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .route-skeleton-block {
+    animation: route-skeleton-pulse 1600ms ease-in-out infinite;
+  }
+}
+
+@keyframes route-skeleton-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
 /* ------------------------------------------------------- concierge */
 
 .chat {
@@ -1593,6 +2067,26 @@ button[aria-pressed='true'] {
   flex-direction: column;
   gap: 1rem;
   min-height: 8rem;
+}
+
+/*
+ * Before the first message the transcript is empty, and an empty flex
+ * column is a thin line with the composer pressed up against it. Giving it
+ * a resting shape — a soft inset field roughly two exchanges tall — means
+ * the panel looks composed while it waits and the composer does not jump
+ * downward the moment a reply arrives.
+ */
+.chat-log[data-empty] {
+  min-height: clamp(10rem, 26vh, 16rem);
+  border: 1px dashed var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-atmosphere);
+  opacity: 0.55;
+}
+
+.chat-welcome {
+  margin: 0;
+  max-width: 54ch;
 }
 
 .chat-log li {

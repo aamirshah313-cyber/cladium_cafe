@@ -11,10 +11,17 @@
  * nav item to get wrong.
  *
  * Order matches `design/site-map.md`'s top-level nodes (Home, Menu, Visit,
- * Concierge), with `/book` and `/event` inserted after Menu — the site map
- * lists "Request a table"/décor enquiries as Home-page CTAs rather than
- * their own top-level nodes, but Steps 22–23 need them reachable from every
- * page, not just Home. Menu is included even though it currently renders an
+ * Concierge), with `/event` inserted after Menu — the site map lists
+ * décor enquiries as a Home-page CTA rather than its own top-level node,
+ * but Steps 22–23 need it reachable from every page, not just Home.
+ *
+ * `/book` is deliberately **not** listed here. It was appearing twice in
+ * the same header row — once as a nav link and again as the primary
+ * "Request a Table" button immediately beside it — which is what made the
+ * desktop composition read as cluttered. The route is not hidden: the
+ * button is the more prominent of the two, is present at every width
+ * including inside the drawer, and is the one carrying the request-accurate
+ * label. Removing the quieter duplicate loses no destination. Menu is included even though it currently renders an
  * honest "not published yet" state (`menu/page.tsx`) rather than being
  * hidden — it is a real, working route, not an unbuilt one. Concierge
  * (Step 28) is last, matching the site map's own top-level ordering.
@@ -34,7 +41,6 @@ interface NavItem {
 const ITEMS: readonly NavItem[] = [
   { path: '', labelKey: 'navHomeLabel' },
   { path: '/menu', labelKey: 'navMenuLabel' },
-  { path: '/book', labelKey: 'navBookLabel' },
   { path: '/event', labelKey: 'navPlanBirthdayLabel' },
   { path: '/visit', labelKey: 'navVisitLabel' },
   { path: '/concierge', labelKey: 'navConciergeLabel' },

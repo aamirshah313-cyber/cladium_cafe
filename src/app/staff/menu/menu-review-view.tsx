@@ -20,7 +20,7 @@
  */
 
 import { useEffect, useState } from 'react';
-import { FeatureMediaStage } from '../../[locale]/menu/feature-media-stage';
+import { FeatureMediaStage, categoryFeatureMedia } from '../../[locale]/menu/feature-media-stage';
 import type { MenuCategoryMedia } from '../../../modules/menu/media-mapping';
 
 interface MenuVersionSummary {
@@ -280,8 +280,8 @@ export function MenuReviewView() {
               <li key={category.stableId}>
                 <div style={{ width: 160 }}>
                   <FeatureMediaStage
-                    categoryName={category.name}
-                    media={detail.photosByCategory[category.stableId] ?? null}
+                    media={categoryFeatureMedia(detail.photosByCategory[category.stableId] ?? null)}
+                    locale="en"
                   />
                 </div>
                 <strong>{category.name}</strong>

@@ -20,7 +20,9 @@ import {
   CAKE_POLICY_TEXT,
   OUTSIDE_FOOD_POLICY_TEXT,
 } from '../../../modules/business/facts';
+import { venueMedia } from '../../../modules/brand/media-manifest';
 import { LocalizedProse } from '../localized-prose';
+import { SitePhoto } from '../site-photo';
 import { EventForm } from './event-form';
 
 export async function generateMetadata({
@@ -60,6 +62,15 @@ export default async function EventPage({ params }: { params: Promise<{ locale: 
          * never rewritten into an inclusions list or a package.
          */}
         <aside className="panel" aria-labelledby="event-good-to-know-heading">
+          {/*
+           * The terrace under its own string lights — an evening at
+           * Cladium as it already is, not a decorated party. A photograph
+           * of a set-up celebration here would imply an arrangement is
+           * included, which the approved policy (décor *from* PKR 8,000,
+           * final quote and availability staff-confirmed) explicitly does
+           * not say.
+           */}
+          <SitePhoto asset={venueMedia.terraceStringLightsNight} className="panel-photo" />
           <h2
             id="event-good-to-know-heading"
             className="u-display"

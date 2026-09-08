@@ -26,6 +26,17 @@
  * (occasionally two) representative photos per category/sub-group. Alt
  * text describes the category's food style honestly; it never claims to
  * depict one specific dish.
+ *
+ * ## Intrinsic dimensions are recorded, and they are small
+ *
+ * Each entry carries the file's real pixel size, measured from the file
+ * rather than assumed. They range from 176x201 to 882x144 — these are
+ * crops out of a printed menu page, and that is all the resolution that
+ * exists. Recording the true size is what lets `FeatureMediaStage` reserve
+ * a correct box and refuse to display any of them larger than 1x.
+ * Presenting the 211x144 sandwich crop at roughly 418x523, as the carousel
+ * previously did, is what made the menu look soft; no re-export can add
+ * detail that was never captured.
  */
 
 export interface MenuCategoryMedia {
@@ -33,39 +44,115 @@ export interface MenuCategoryMedia {
   readonly assetPath: string;
   /** Describes the category's food style honestly — never claims to depict one specific dish when the source photo is category-level. */
   readonly alt: string;
+  /** The file's real width in pixels — a fact about the file, never a target display size. */
+  readonly width: number;
+  /** The file's real height in pixels. */
+  readonly height: number;
 }
 
 export const menuCategoryMedia: Readonly<Record<string, MenuCategoryMedia | null>> = {
-  sandwiches: { assetPath: '/menu/sandwiches.jpg', alt: 'A Cladium sandwich platter' },
-  steaks: { assetPath: '/menu/steaks.jpg', alt: 'A grilled steak platter with vegetables' },
+  sandwiches: {
+    assetPath: '/menu/sandwiches.jpg',
+    alt: 'A Cladium sandwich platter',
+    width: 211,
+    height: 144,
+  },
+  steaks: {
+    assetPath: '/menu/steaks.jpg',
+    alt: 'A grilled steak platter with vegetables',
+    width: 221,
+    height: 372,
+  },
   'desi-cuisine': {
     assetPath: '/menu/desi-cuisine.jpg',
     alt: 'A traditional karahi dish served in a copper pot',
+    width: 196,
+    height: 371,
   },
   'exclusive-beef-entree': {
     assetPath: '/menu/exclusive-beef-entree.jpg',
     alt: "Cladium's signature grilled beef entree, close-up",
+    width: 882,
+    height: 144,
   },
   italian: {
     assetPath: '/menu/italian.jpg',
     alt: 'A bowl of penne pasta with chicken and broccoli',
+    width: 181,
+    height: 208,
   },
-  chinese: { assetPath: '/menu/chinese.jpg', alt: 'A wok of fried rice with vegetables' },
+  chinese: {
+    assetPath: '/menu/chinese.jpg',
+    alt: 'A wok of fried rice with vegetables',
+    width: 181,
+    height: 216,
+  },
   'extra-side': {
     assetPath: '/menu/extra-side.jpg',
     alt: 'A fresh salad with tomato, feta, and mint',
+    width: 176,
+    height: 201,
   },
-  starters: { assetPath: '/menu/starters.jpg', alt: 'A mixed starters platter with dips' },
-  soup: { assetPath: '/menu/soup.jpg', alt: 'A bowl of chicken corn soup' },
-  burgers: { assetPath: '/menu/burgers.jpg', alt: 'A grilled chicken burger on a wooden board' },
+  starters: {
+    assetPath: '/menu/starters.jpg',
+    alt: 'A mixed starters platter with dips',
+    width: 196,
+    height: 259,
+  },
+  soup: {
+    assetPath: '/menu/soup.jpg',
+    alt: 'A bowl of chicken corn soup',
+    width: 196,
+    height: 209,
+  },
+  burgers: {
+    assetPath: '/menu/burgers.jpg',
+    alt: 'A grilled chicken burger on a wooden board',
+    width: 235,
+    height: 201,
+  },
   'bar-menu': {
     assetPath: '/menu/bar-menu.jpg',
     alt: 'A selection of fruit chillers, shakes, and iced drinks',
+    width: 206,
+    height: 359,
   },
-  bbq: { assetPath: '/menu/bbq.jpg', alt: 'A mixed platter of grilled chicken and beef skewers' },
+  bbq: {
+    assetPath: '/menu/bbq.jpg',
+    alt: 'A mixed platter of grilled chicken and beef skewers',
+    width: 216,
+    height: 330,
+  },
 };
 
 /** `null` when no approved image exists yet for this category — callers must render the graceful fallback (`FeatureMediaStage`), never a broken image or an invented photo. */
 export function resolveCategoryMedia(categoryId: string): MenuCategoryMedia | null {
   return menuCategoryMedia[categoryId] ?? null;
+}
+
+/**
+ * Per-item photography — deliberately empty.
+ *
+ * The printed source pages carried one representative photograph per
+ * category, never one per dish, so there is no approved image that can
+ * honestly be labelled as a specific menu item. The September 2026 venue
+ * shoot (`modules/brand/media-manifest.ts`) does contain real plates, but
+ * nobody has confirmed which menu row any of them depicts, and choosing
+ * one by eye would invent a fact about published food.
+ *
+ * This map is the single seam where approved per-item photography lands.
+ * Until it has entries, `resolveItemThumb` returns `null` and the item rail
+ * shows a lettered medallion instead — which says nothing false — rather
+ * than repeating one category photo behind several different dish names.
+ */
+export const menuItemMedia: Readonly<Record<string, MenuCategoryMedia>> = {};
+
+/**
+ * Square thumbnail for one menu item, or `null` when none is approved.
+ * Callers must render a non-photographic fallback for `null`; they must
+ * never substitute the category photo, which would present one picture as
+ * several different dishes.
+ */
+export function resolveItemThumb(itemId: string): string | null {
+  return menuItemMedia[itemId]?.assetPath ?? null;
 }

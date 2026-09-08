@@ -203,9 +203,11 @@ export function ConciergeChat({ locale, csrfToken: providedCsrfToken }: Concierg
       {/*
        * The welcome stays visible above the transcript rather than being
        * injected as a fake first message from the concierge — it is
-       * interface copy, not something the assistant said.
+       * interface copy, not something the assistant said. It is now the
+       * page's only greeting: the near-identical page lede that used to sit
+       * directly above it has gone.
        */}
-      <p className="u-lede">{chromeText('conciergeIntro', locale)}</p>
+      <p className="chat-welcome u-lede">{chromeText('conciergeIntro', locale)}</p>
 
       {/*
        * Starter questions are real, pre-filled guest messages: choosing one
@@ -230,7 +232,13 @@ export function ConciergeChat({ locale, csrfToken: providedCsrfToken }: Concierg
         </ul>
       ) : null}
 
-      <ul className="chat-log" aria-live="polite">
+      {/*
+       * `data-empty` gives the transcript a deliberate resting shape before
+       * the first message instead of a collapsed strip that jumps open on
+       * send. It reserves roughly the height two exchanges occupy, so the
+       * composer does not move under the guest's hand mid-conversation.
+       */}
+      <ul className="chat-log" data-empty={turns.length === 0 || undefined} aria-live="polite">
         {turns.map((turn, index) => (
           <li key={index} className={turn.role === 'user' ? 'chat-turn-user' : 'chat-turn-agent'}>
             {/* The speaker is named in text, not conveyed by alignment or

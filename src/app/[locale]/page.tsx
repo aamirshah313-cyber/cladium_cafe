@@ -6,12 +6,17 @@
  * celebration experiences, an honest category-led dining teaser, a visit
  * teaser, and a closing request/WhatsApp invitation.
  *
- * **There is deliberately no gallery.** Exactly one real venue photograph
- * exists. Repeating it across six cards to simulate one would be inventing
- * an impression of the place, so the page runs fewer, stronger sections
- * instead — and the small category crops (176–235px wide, mostly) appear at
- * genuinely small sizes with an honest caption saying they show a category
- * rather than a specific dish.
+ * **The gallery is real now.** It could not be built before, when exactly
+ * one venue photograph existed — repeating that one image across six cards
+ * to simulate a gallery would have invented an impression of the place. The
+ * September 2026 shoot supplies genuinely distinct scenes
+ * (`modules/brand/media-manifest.ts`), so six of them are shown, each once.
+ * It is still not padded to a rounder number: a gallery that repeats one
+ * subject is telling the visitor there is more to see than there is.
+ *
+ * Photographs appear at or below their real pixel sizes throughout. The
+ * sources are around 335–415px wide, which is ample for the sizes used here
+ * and nowhere near enough to go full-bleed — so they do not.
  *
  * Copy comes only from approved sources: bilingual chrome (`chromeText`),
  * confirmed operational facts (`modules/business/facts.ts`), and the
@@ -31,6 +36,7 @@ import { BRAND_NAME, TAGLINE, chromeText } from '../../lib/i18n/chrome';
 import { isSupportedLocale } from '../../lib/i18n/locale';
 import { buildWhatsAppUrl } from '../../lib/business/whatsapp-link';
 import { venueHero, venueHeroBlurPath } from '../../modules/brand/asset-manifest';
+import { diningMedia, galleryMedia, venueMedia } from '../../modules/brand/media-manifest';
 import {
   ADDRESS_DISPLAY,
   BUSINESS_HOURS_DISPLAY,
@@ -46,6 +52,7 @@ import {
   HOME_SEATING_TEXT,
 } from '../../modules/business/site-copy';
 import { LocalizedProse } from './localized-prose';
+import { PhotoGrid, SitePhoto } from './site-photo';
 import { TrackedWhatsAppLink } from './tracked-whatsapp-link';
 
 export default async function LocaleHomePage({ params }: { params: Promise<{ locale: string }> }) {
@@ -121,15 +128,39 @@ export default async function LocaleHomePage({ params }: { params: Promise<{ loc
         </div>
       </section>
 
+      {/*
+       * The story section, paired with a portrait of the pavilion seen
+       * through the trees — the same subject the copy describes, so the
+       * picture is evidence for the text rather than decoration beside it.
+       * It is marked decorative for assistive technology because the prose
+       * immediately next to it already says what the photograph shows.
+       */}
       <section className="u-section home-place">
-        <h2>{chromeText('homePlaceHeading', locale)}</h2>
-        <LocalizedProse text={HOME_PLACE_TEXT} locale={locale} className="u-lede" />
+        <div className="home-story">
+          <div className="home-story-copy">
+            <h2>{chromeText('homePlaceHeading', locale)}</h2>
+            <LocalizedProse text={HOME_PLACE_TEXT} locale={locale} className="u-lede" />
+          </div>
+          <SitePhoto
+            asset={venueMedia.pavilionThroughTrees}
+            className="home-story-photo"
+            decorative
+          />
+        </div>
       </section>
 
       <section className="u-section">
         <h2>{chromeText('homeExperiencesHeading', locale)}</h2>
         <div className="home-cards">
           <article className="home-card">
+            {/*
+             * Garden seating, which is what the card is about. There is
+             * deliberately no treehouse photograph here: none of the
+             * supplied frames is confirmed to show it, and captioning a
+             * general garden picture as the treehouse would document a
+             * space nobody has identified.
+             */}
+            <SitePhoto asset={venueMedia.gardenSeatingTrees} className="home-card-photo" />
             <h3>{chromeText('homeSeatingHeading', locale)}</h3>
             <LocalizedProse text={HOME_SEATING_TEXT} locale={locale} />
             {/* The approved operational wording, kept verbatim beside the
@@ -149,6 +180,13 @@ export default async function LocaleHomePage({ params }: { params: Promise<{ loc
           </article>
 
           <article className="home-card">
+            {/*
+             * The terrace under its string lights: a real evening at
+             * Cladium, not a staged birthday setup. Showing décor here
+             * would imply an arrangement is included, which the approved
+             * policy explicitly does not say.
+             */}
+            <SitePhoto asset={venueMedia.terraceStringLightsNight} className="home-card-photo" />
             <h3>{chromeText('homeCelebrationsHeading', locale)}</h3>
             {/* Décor pricing and the staff-confirmation requirement come
                 straight from approved operations knowledge — never
@@ -166,12 +204,41 @@ export default async function LocaleHomePage({ params }: { params: Promise<{ loc
       <section className="u-section">
         <h2>{chromeText('homeDiningHeading', locale)}</h2>
         <LocalizedProse text={HOME_DINING_TEXT} locale={locale} className="u-lede" />
+        {/*
+         * The caption said photographs show a category rather than a
+         * specific dish — while there were no photographs on the section at
+         * all. Either half alone is wrong: a caption describing nothing, or
+         * food pictures with no statement of what they represent. Both are
+         * here now, and the caption sits directly under the images it
+         * describes.
+         *
+         * These are `category` provenance (media-manifest.ts): real plates
+         * photographed at Cladium, with nobody having confirmed which menu
+         * row any of them is. So they are never captioned with a dish name.
+         */}
+        <ul className="home-dining-thumbs" aria-label={chromeText('homeDiningHeading', locale)}>
+          {[
+            diningMedia.platedDishGreens,
+            diningMedia.platterFriesVegetables,
+            diningMedia.boardFriesOutdoor,
+            diningMedia.teaCupGarden,
+          ].map((asset) => (
+            <li key={asset.path}>
+              <SitePhoto asset={asset} className="home-dining-thumb" />
+            </li>
+          ))}
+        </ul>
         <p className="u-muted home-dining-caption">{chromeText('homeDiningCaption', locale)}</p>
         <div className="home-card-actions">
           <Link href={`/${locale}/menu`} className="u-button u-button--primary">
             {chromeText('homeExploreMenuCtaLabel', locale)}
           </Link>
         </div>
+      </section>
+
+      <section className="u-section home-gallery">
+        <h2>{chromeText('homeGalleryHeading', locale)}</h2>
+        <PhotoGrid assets={galleryMedia} label={chromeText('homeGalleryHeading', locale)} />
       </section>
 
       <section className="u-section home-visit">

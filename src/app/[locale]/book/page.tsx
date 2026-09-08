@@ -13,7 +13,9 @@ import { chromeText } from '../../../lib/i18n/chrome';
 import { isSupportedLocale } from '../../../lib/i18n/locale';
 import { localePageMetadata } from '../../../lib/i18n/metadata';
 import { SEATING_POLICY_TEXT } from '../../../modules/business/facts';
+import { venueMedia } from '../../../modules/brand/media-manifest';
 import { LocalizedProse } from '../localized-prose';
+import { SitePhoto } from '../site-photo';
 import { BookingForm } from './booking-form';
 
 export async function generateMetadata({
@@ -59,6 +61,16 @@ export default async function BookPage({
         </div>
 
         <aside className="panel" aria-labelledby="book-next-heading">
+          {/*
+           * Garden seating, captioned as exactly that by its manifest alt
+           * text. There is deliberately no treehouse photograph anywhere on
+           * this page: none of the supplied frames has been confirmed to
+           * show it, and presenting a general garden picture beside a
+           * treehouse option would document a space nobody has identified —
+           * the same class of invention the seating policy exists to
+           * prevent.
+           */}
+          <SitePhoto asset={venueMedia.lawnChairsPavilion} className="panel-photo" />
           <h2 id="book-next-heading" className="u-display" style={{ fontSize: 'var(--step-h3)' }}>
             {chromeText('bookWhatHappensHeading', locale)}
           </h2>
