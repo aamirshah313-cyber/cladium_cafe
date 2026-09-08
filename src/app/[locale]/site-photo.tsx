@@ -11,14 +11,22 @@
  * genuinely large and needs art direction, uses its own `<picture>` in
  * `page.tsx` for the same reason.
  *
- * ## Sizes are capped at the file's real pixels
+ * ## Sizes are capped at the file's real pixels — structurally
  *
- * Every layout below sizes these photographs *at or below* what they
- * actually contain. `width`/`height` carry the true dimensions so the box
- * is reserved before the bytes arrive and nothing shifts, and the CSS never
- * asks for more. Enlargement is the exact defect this photography pass
- * exists to remove from the menu; reintroducing it on the homepage would be
- * the same mistake in a different place.
+ * `width`/`height` carry the true dimensions so the box is reserved before
+ * the bytes arrive and nothing shifts. But a layout can still ask for more
+ * than the file has: `width: 100%` inside a container wider than the source
+ * silently enlarges it, which is exactly what happened to the two homepage
+ * experience cards — 335px photographs rendered at 462px on a 1440px
+ * screen, the same enlargement defect this pass exists to remove from the
+ * menu, reintroduced one section away from it.
+ *
+ * Relying on every future rule to remember the source widths is what let
+ * that through. So the real width is published as `--intrinsic-w` and the
+ * stylesheet caps against it with `max-width: min(100%, var(--intrinsic-w))`.
+ * A layout may now be as wide as it likes; the picture simply stops
+ * growing at 1x and centres, and any new rule that forgets inherits the
+ * cap rather than a bug.
  *
  * ## Alt text
  *
@@ -28,6 +36,7 @@
  * assistive technology instead of read out twice.
  */
 
+import type { CSSProperties } from 'react';
 import type { SiteMediaAsset } from '../../modules/brand/media-manifest';
 
 interface SitePhotoProps {
@@ -53,7 +62,13 @@ export function SitePhoto({
       width={asset.width}
       height={asset.height}
       className={className}
-      style={{ objectPosition: asset.focalPoint }}
+      /*
+       * `--intrinsic-w` is the file's real width, handed to CSS so a layout
+       * cannot enlarge it past 1x. See the module comment.
+       */
+      style={
+        { objectPosition: asset.focalPoint, '--intrinsic-w': `${asset.width}px` } as CSSProperties
+      }
       loading={loading}
       decoding="async"
     />

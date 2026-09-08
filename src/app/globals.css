@@ -1493,6 +1493,30 @@ button[aria-pressed='true'] {
 /* ------------------------------------------------- homepage photography */
 
 /*
+ * The 1x cap, applied to every photograph from the September 2026 shoot.
+ *
+ * `--intrinsic-w` is the file's real width, set by `SitePhoto`. Without
+ * this, any container wider than the source enlarged it: the two experience
+ * cards rendered 335px photographs at 462px on a 1440px screen. Capping
+ * here rather than per-rule means a future layout inherits the limit
+ * instead of having to remember it, and `margin-inline: auto` keeps a
+ * picture that stops short of its container centred rather than jammed to
+ * one edge.
+ *
+ * These sources are 333-415px wide. That is genuinely all there is, so a
+ * full-bleed band of one is not available at any desktop width — the honest
+ * result is a smaller, sharp photograph, not a large soft one.
+ */
+.site-photo-grid-image,
+.home-dining-thumb,
+.home-story-photo,
+.home-card-photo,
+.panel-photo {
+  max-width: min(100%, var(--intrinsic-w, 100%));
+  margin-inline: auto;
+}
+
+/*
  * The editorial story block: copy and one portrait, side by side on wide
  * screens and stacked below 768px. The picture column is capped at the
  * file's real width (415px) because that is genuinely all it has —
