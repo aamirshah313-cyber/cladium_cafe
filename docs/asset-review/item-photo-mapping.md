@@ -1,6 +1,6 @@
 # Item-to-photograph mapping — what still needs your confirmation
 
-`contact-sheet.png` in this folder is the numbered sheet to read alongside
+`contact-sheet.jpg` in this folder is the numbered sheet to read alongside
 this list. Every photograph is shown at its **real pixel size**, which is the
 constraint that shapes the whole menu design.
 
