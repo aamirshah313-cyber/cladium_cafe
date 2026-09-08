@@ -1737,6 +1737,22 @@ button[aria-pressed='true'] {
   font-size: var(--step-small);
 }
 
+/*
+ * The staff entrance. Quieter than the guest links above it and separated
+ * by a rule, because it is not part of anyone's visit - it just has to be
+ * findable by the people who need it.
+ */
+.site-footer-staff {
+  margin: 0;
+  padding-block-start: 1.25rem;
+  border-block-start: 1px solid var(--border-subtle);
+  font-size: var(--step-small);
+}
+
+.site-footer-staff a {
+  color: var(--text-muted);
+}
+
 .site-footer-bottom {
   margin-block-start: 2.5rem;
   padding-block-start: 1.5rem;

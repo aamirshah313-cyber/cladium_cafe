@@ -63,36 +63,52 @@ The English is the source of truth if the two ever disagree.
   deeper than Latin, and the caption was rendering 24px of glyph in a 17px
   line box.
 
-## 2. Business and editorial copy still shown in English on Urdu pages
+## 2. Business and editorial copy — owner-approved Urdu, now published
 
-Each of these renders as approved English inside the Urdu page, correctly
-marked up, until an owner-reviewed Urdu version exists. That is the
-deliberate fallback, not a bug to be closed by translating them here.
+These were English-on-Urdu-pages until the owner reviewed and approved the
+Urdu on 9 September 2026. They are now `ownerApprovedLocalizedText` and
+render in Urdu on `/ur`. The English is unchanged and still renders on `/en`.
 
-| Source                          | Constant               | What it is                                                                 |
-| ------------------------------- | ---------------------- | -------------------------------------------------------------------------- |
-| `modules/business/site-copy.ts` | `HOME_PLACE_TEXT`      | Editorial: the garden setting.                                             |
-| `modules/business/site-copy.ts` | `HOME_SEATING_TEXT`    | Editorial + the treehouse position. **Reworded in this pass** — see below. |
-| `modules/business/site-copy.ts` | `HOME_DINING_TEXT`     | Editorial: the kitchen. **Reworded in this pass** — see below.             |
-| `modules/business/site-copy.ts` | `HOME_CLOSING_TEXT`    | Editorial: what a request is.                                              |
-| `modules/business/facts.ts`     | `SEATING_POLICY_TEXT`  | Approved operational position.                                             |
-| `modules/business/facts.ts`     | `BIRTHDAY_POLICY_TEXT` | Approved décor pricing and confirmation rule.                              |
-| `modules/business/facts.ts`     | `DIRECTIONS_TEXT`      | Approved directions.                                                       |
-| `modules/menu` (published rows) | —                      | All 118 item names and variant labels.                                     |
+| Source                          | Constant                   | What it is                              |
+| ------------------------------- | -------------------------- | --------------------------------------- |
+| `modules/business/site-copy.ts` | `HOME_PLACE_TEXT`          | Editorial: the garden setting.          |
+| `modules/business/site-copy.ts` | `HOME_SEATING_TEXT`        | Editorial + the treehouse position.     |
+| `modules/business/site-copy.ts` | `HOME_DINING_TEXT`         | Editorial: opening hours and the range. |
+| `modules/business/site-copy.ts` | `HOME_CLOSING_TEXT`        | Editorial: what a request is.           |
+| `modules/business/facts.ts`     | `SEATING_POLICY_TEXT`      | Approved operational position.          |
+| `modules/business/facts.ts`     | `BIRTHDAY_POLICY_TEXT`     | Décor pricing and confirmation rule.    |
+| `modules/business/facts.ts`     | `DELIVERY_POLICY_TEXT`     | No home delivery; takeaway only.        |
+| `modules/business/facts.ts`     | `CAKE_POLICY_TEXT`         | No cakes provided.                      |
+| `modules/business/facts.ts`     | `OUTSIDE_FOOD_POLICY_TEXT` | Outside food not allowed.               |
+| `modules/business/facts.ts`     | `DIRECTIONS_TEXT`          | Approved directions.                    |
 
-Two of those were reworded for accuracy in this pass, so if an Urdu
-translation is prepared, translate the **new** English:
+What the Urdu deliberately preserves — and what `business-facts.test.ts` now
+enforces rather than trusting:
 
-- `HOME_SEATING_TEXT` — "with room for most groups without booking ahead"
-  became "and general seating is ample". The old phrasing read as a promise
-  that a guest could simply turn up and be seated; what is actually approved
-  is that general seating is ample, which is a statement about the garden's
-  size and not about availability on any particular evening.
-- `HOME_DINING_TEXT` — "The kitchen runs from midday until midnight" became
-  "Cladium is open from midday until midnight … ask our staff about late
-  orders". Midday–midnight is the venue's opening time; nobody has confirmed
-  when the kitchen stops taking orders, and the old sentence quietly turned
-  one into the other.
+- **`PKR 8,000` and `1.4` appear as digits, untranslated.** Numerals are
+  "preserve original configured values" under `localization-and-rtl.md`, so a
+  test fails if the décor floor price is restated, or if any other PKR figure
+  appears in the Urdu.
+- **The delivery refusal survives translation.** A test asserts the Urdu
+  still carries a negation, because a softened delivery policy is the one
+  mistranslation here that would actually mislead a guest.
+- **Seating is _requested_, not reserved** (درخواست پر, never محفوظ), and the
+  hours are the venue's opening times rather than a claim about when the
+  kitchen stops taking orders.
+
+An approved translation is also checked for being real Urdu rather than the
+English copied across — the shape a careless translation pass leaves behind.
+
+### Still English on Urdu pages
+
+| Source                          | What it is                             |
+| ------------------------------- | -------------------------------------- |
+| `modules/menu` (published rows) | All 118 item names and variant labels. |
+
+Menu item names are canonical English and stay that way for now. They are the
+largest remaining gap and need their own owner-approved translation pass.
+Until then they are marked `lang="en" dir="ltr"` wherever they appear inside
+an Urdu page, so they are pronounced and laid out correctly.
 
 ## 3. Layout checks that need an Urdu reader, not a translator
 

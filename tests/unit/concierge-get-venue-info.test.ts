@@ -100,9 +100,49 @@ describe('getVenueInfo — policy topics', () => {
 });
 
 describe('getVenueInfo — locale resolution', () => {
-  it('never invents Urdu — falls back to the same English text in both locales until an owner approves a translation', () => {
-    const en = getVenueInfo({ topic: 'SEATING' }, 'en');
-    const ur = getVenueInfo({ topic: 'SEATING' }, 'ur');
-    expect(ur).toEqual(en); // no owner-approved Urdu exists yet for this fact
+  /*
+   * The concierge answers an Urdu speaker in Urdu, but only from text an
+   * owner approved.
+   *
+   * This test used to assert that both locales returned the *same* English
+   * string, with a comment explaining that no approved Urdu existed yet. It
+   * was checking a fact about the data, not a rule about the tool, so it
+   * started failing the moment the owner approved the seating policy —
+   * failing on the desired outcome rather than on a defect.
+   *
+   * What the tool must actually guarantee is asserted instead: it returns
+   * exactly what `resolveLocalizedText` resolves for the requested locale,
+   * and never anything of its own. That holds whether or not a translation
+   * exists, so approving the remaining policies cannot break it either.
+   */
+  it('returns the owner-approved Urdu for an Urdu request, verbatim', () => {
+    expect(getVenueInfo({ topic: 'SEATING' }, 'ur')).toEqual({
+      topic: 'SEATING',
+      policy: resolveLocalizedText(SEATING_POLICY_TEXT, 'ur'),
+    });
+  });
+
+  it('leaves the English answer untouched', () => {
+    expect(getVenueInfo({ topic: 'SEATING' }, 'en')).toEqual({
+      topic: 'SEATING',
+      policy: SEATING_POLICY_TEXT.en,
+    });
+  });
+
+  /*
+   * The concierge must never synthesise a translation of its own. Every
+   * locale it can be asked for has to resolve to one of the two strings the
+   * approved record holds — never a third one.
+   */
+  it('answers only from the approved record, in either locale', () => {
+    // Compared as whole results rather than by reaching for .policy, which
+    // does not exist on every variant of the GetVenueInfoResult union.
+    const approved = [SEATING_POLICY_TEXT.en, SEATING_POLICY_TEXT.ur].map((policy) => ({
+      topic: 'SEATING',
+      policy,
+    }));
+    for (const locale of ['en', 'ur'] as const) {
+      expect(approved).toContainEqual(getVenueInfo({ topic: 'SEATING' }, locale));
+    }
   });
 });

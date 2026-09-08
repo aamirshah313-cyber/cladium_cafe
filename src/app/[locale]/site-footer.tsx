@@ -122,6 +122,17 @@ export function SiteFooter({ locale }: SiteFooterProps) {
           </div>
         </div>
 
+        {/*
+         * The staff entrance. Deliberately in the footer rather than the
+         * primary navigation: it is not a guest destination, and a sign-in
+         * link sitting beside "Menu" and "Visit" would read as part of the
+         * customer journey. /staff renders its own sign-in when nobody is
+         * authenticated, so this needs no separate login route.
+         */}
+        <p className="site-footer-staff">
+          <Link href="/staff">{chromeText('footerStaffSignInLabel', locale)}</Link>
+        </p>
+
         <p className="site-footer-bottom">
           © {new Date().getFullYear()} {BRAND_NAME}
         </p>

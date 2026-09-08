@@ -33,6 +33,7 @@ export const chrome = {
   themeSwitcherLabel: { en: 'Themes', ur: 'تھیم' },
   dayThemeName: { en: 'Light', ur: 'روشن' },
   nightThemeName: { en: 'Dark', ur: 'تاریک' },
+  footerStaffSignInLabel: { en: 'Staff sign in', ur: 'عملہ سائن اِن' },
   carouselPreviousLabel: { en: 'Previous choices', ur: 'پچھلے انتخاب' },
   carouselNextLabel: { en: 'More choices', ur: 'مزید انتخاب' },
   homeIntro: {
