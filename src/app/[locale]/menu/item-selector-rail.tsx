@@ -91,8 +91,7 @@ export function ItemSelectorRail({
         <button
           type="button"
           className="menu-carousel-tabs-edge"
-          aria-hidden="true"
-          tabIndex={-1}
+          aria-label={chromeText('carouselPreviousLabel', locale)}
           disabled={!canScrollStart}
           onClick={() => scrollByPage(-1)}
         >
@@ -118,10 +117,13 @@ export function ItemSelectorRail({
                 role="option"
                 aria-selected={selected}
                 tabIndex={tabIndexFor(index)}
-                className="menu-carousel-item-selector"
+                className={`menu-carousel-item-selector ${thumb ? 'has-photo' : 'is-text'}`}
                 onClick={() => onSelect(index)}
               >
-                <span className="menu-carousel-thumb" aria-hidden="true">
+                <span
+                  className={thumb ? 'menu-carousel-thumb' : 'menu-carousel-item-number'}
+                  aria-hidden="true"
+                >
                   {thumb ? (
                     <img
                       src={thumb}
@@ -132,10 +134,12 @@ export function ItemSelectorRail({
                       decoding="async"
                     />
                   ) : (
-                    <span className="menu-carousel-thumb-initial">{item.name.charAt(0)}</span>
+                    <span>{String(index + 1).padStart(2, '0')}</span>
                   )}
                 </span>
-                <span className="menu-carousel-thumb-name">{item.name}</span>
+                <span className="menu-carousel-thumb-name" lang="en" dir="ltr">
+                  {item.name}
+                </span>
               </button>
             </li>
           );
@@ -146,8 +150,7 @@ export function ItemSelectorRail({
         <button
           type="button"
           className="menu-carousel-tabs-edge"
-          aria-hidden="true"
-          tabIndex={-1}
+          aria-label={chromeText('carouselNextLabel', locale)}
           disabled={!canScrollEnd}
           onClick={() => scrollByPage(1)}
         >

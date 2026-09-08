@@ -564,6 +564,444 @@ button[aria-pressed='true'] {
   }
 }
 
+/*
+ * Menu feature carousel — the reference clip's composition, rebuilt with
+ * Cladium's own palette and Cladium's own (rectangular, angled) photographs.
+ *
+ * ## What the clip actually does, frame by frame
+ *
+ * Read off the real video rather than its description: a deep near-black
+ * ground; a large soft ivory shape carrying the text on the left; an
+ * oversized dish on the right bleeding past the edge; a row of round
+ * selectors with the active one enlarged and ringed; and, between dishes,
+ * the outgoing plate flying up-and-left while the incoming one rises from
+ * the lower right, with the title and description crossfading underneath.
+ *
+ * ## What was taken and what was not
+ *
+ * The *grammar* is taken: dark ground, light text field, dominant dish,
+ * round selectors, diagonal hand-off. The clip's brand, typefaces, food
+ * photographs, watermark and copy are not, and its dish cannot be either —
+ * its plate is a disc shot from overhead and cut out, so it can bleed off
+ * the edge as a shape. Cladium's pictures are rectangular scenes at roughly
+ * 176-235px. Blowing one up to bleed off a stage would be the enlargement
+ * defect this whole pass exists to remove.
+ *
+ * So the dominance is manufactured honestly: the picture stays at its true
+ * pixel size and the *stage around it* — arc, plinth, contact shadow, dark
+ * ground — supplies the scale and the depth. That is the same trick the
+ * clip uses, applied to what we actually have.
+ */
+.menu-carousel {
+  --motion-direction: 1;
+  /* The stage carries its own dark ground in both themes rather than
+     inheriting the page surface. The clip's dish reads as premium because
+     of the contrast behind it, and a pale panel in Day mode threw that
+     away — this is the single element on the page that is deliberately
+     dark at all times, the way a hero photograph is. */
+  --stage-ground: #101d18;
+  --stage-ground-far: #060d0b;
+  --stage-ivory: #f6f1e6;
+  --stage-gold: #c9a86a;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  padding: clamp(1.25rem, 3.5vw, 3rem);
+  border-radius: 1.5rem;
+  color: var(--stage-ivory);
+  background:
+    radial-gradient(120% 90% at 78% 30%, #16291f 0%, transparent 60%),
+    linear-gradient(150deg, var(--stage-ground) 0%, var(--stage-ground-far) 100%);
+  box-shadow: 0 30px 70px -50px rgb(0 0 0 / 65%);
+}
+
+/*
+ * The clip's organic ivory shape, behind the text column only. An ellipse
+ * rather than a traced blob: the clip's exact silhouette is its artwork,
+ * and copying the outline would be copying the thing rather than the idea.
+ * Hidden below 768px, where the single column leaves it nothing to sit
+ * behind.
+ */
+.menu-carousel::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset-inline-start: -14%;
+  inset-block-start: -18%;
+  width: 68%;
+  height: 136%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgb(246 241 230 / 7%), transparent 70%);
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .menu-carousel::before {
+    display: block;
+  }
+}
+
+.menu-carousel[data-direction='-1'] {
+  --motion-direction: -1;
+}
+
+/* --- category strip ---------------------------------------------------- */
+
+.menu-carousel-tabs {
+  position: relative;
+  padding-block-end: 1.25rem;
+  border-bottom: 1px solid rgb(246 241 230 / 14%);
+  margin-block-end: clamp(1.25rem, 3vw, 2.25rem);
+}
+
+.menu-carousel .menu-carousel-tab {
+  padding: 0.55rem 0.95rem;
+  border-color: transparent;
+  background: transparent;
+  color: rgb(246 241 230 / 78%);
+  font-size: 0.95rem;
+}
+
+.menu-carousel .menu-carousel-tab:hover {
+  color: var(--stage-ivory);
+}
+
+/*
+ * Selected is an ivory pill with dark text, as in the clip. The unselected
+ * labels sit at 78% opacity on the dark ground, which stays clear of AA, so
+ * the state is never carried by a gold tint alone that a colour-blind
+ * reader would miss.
+ */
+.menu-carousel .menu-carousel-tab[aria-selected='true'] {
+  background: var(--stage-ivory);
+  border-color: var(--stage-ivory);
+  color: #16241d;
+  font-weight: 600;
+}
+
+.menu-carousel .menu-carousel-tabs-edge {
+  border-color: rgb(246 241 230 / 22%);
+  background: transparent;
+  color: var(--stage-ivory);
+}
+
+/* --- the two-column stage ---------------------------------------------- */
+
+.menu-carousel .menu-carousel-stage {
+  gap: clamp(1.5rem, 3vw, 3rem);
+  align-items: center;
+}
+
+/*
+ * 45/55 in the dish's favour, as in the clip. The text column is the
+ * narrower one; the picture side gets the extra room because it also has to
+ * hold the arc and plinth that surround the photograph.
+ */
+@media (min-width: 768px) {
+  .menu-carousel .menu-carousel-stage {
+    grid-template-columns: minmax(0, 45fr) minmax(0, 55fr);
+  }
+}
+
+.menu-carousel .menu-carousel-details {
+  min-height: 15rem;
+  gap: 0.85rem;
+}
+
+.menu-carousel .menu-carousel-category-label {
+  color: var(--stage-gold);
+  letter-spacing: 0.16em;
+  font-size: 0.72rem;
+}
+
+.menu-carousel .menu-carousel-item-name {
+  font-size: clamp(1.8rem, 3.4vw, 2.9rem);
+  line-height: 1.08;
+  max-width: 18ch;
+  text-wrap: balance;
+  color: var(--stage-ivory);
+}
+
+/*
+ * Price at full ivory, not gold. Price is the number a guest acts on and it
+ * should be the brightest thing after the name — gold stays a rule and an
+ * accent, never the carrier of information.
+ */
+.menu-carousel .menu-carousel-price {
+  font-size: 1.35rem;
+  color: var(--stage-ivory);
+}
+
+/*
+ * Nastaliq needs more leading than Latin. Its ascenders and descenders are
+ * far deeper, and at the tight line-heights that suit the serif headings
+ * the Urdu chrome overflowed its own line box - measured at 24px of glyph
+ * in a 17px box on the caption. Overflow is visible so nothing was cut,
+ * but the strokes ran into whatever sat beneath them.
+ */
+[lang='ur'] .menu-carousel-availability,
+[lang='ur'] .menu-media-stage-caption,
+[lang='ur'] .menu-carousel-note,
+[lang='ur'] .menu-carousel-category-label {
+  line-height: 2.1;
+}
+
+.menu-carousel .menu-carousel-availability,
+.menu-carousel .menu-carousel-note {
+  color: rgb(246 241 230 / 72%);
+}
+
+.menu-carousel .menu-carousel-variant-option {
+  border-color: rgb(246 241 230 / 34%);
+  background: transparent;
+  color: var(--stage-ivory);
+}
+
+.menu-carousel .menu-carousel-variant-option[aria-checked='true'] {
+  border-color: var(--stage-gold);
+  outline-color: var(--stage-gold);
+}
+
+.menu-carousel .u-button--secondary,
+.menu-carousel .u-button--primary {
+  border-radius: 999px;
+}
+
+/* The clip's primary action is an ivory pill on the dark ground. */
+.menu-carousel .u-button--primary {
+  background: var(--stage-ivory);
+  border-color: var(--stage-ivory);
+  color: #16241d;
+}
+
+.menu-carousel .u-button--secondary {
+  border-color: rgb(246 241 230 / 38%);
+  color: var(--stage-ivory);
+  background: transparent;
+}
+
+.menu-carousel :focus-visible {
+  outline-color: var(--stage-gold);
+}
+
+/* --- the dish, and the depth around it --------------------------------- */
+
+.menu-carousel-media {
+  position: relative;
+  perspective: 1100px;
+  min-width: 0;
+}
+
+.menu-carousel .menu-media-stage {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  place-items: center;
+  min-height: clamp(15rem, 28vw, 19.5rem);
+  padding: 0.75rem 0.5rem 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  transform-style: preserve-3d;
+}
+
+/*
+ * The gold arc behind the picture. The clip has dashed gold curves sweeping
+ * past its plate; this is the same idea reduced to one ring, so it frames
+ * the dish instead of decorating the corners. The bottom edge is left
+ * undrawn — that is where the plinth and the contact shadow go.
+ */
+.menu-carousel .menu-media-stage-arc {
+  position: absolute;
+  z-index: -2;
+  width: min(96%, 19rem);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 1px dashed rgb(201 168 106 / 45%);
+  border-bottom-color: transparent;
+  transform: translateY(-6%) rotate(-18deg);
+}
+
+/*
+ * The plinth: an ellipse the picture appears to stand on. Lit from the
+ * upper left to agree with the contact shadow's offset, so the two read as
+ * one light source rather than two competing effects.
+ */
+.menu-carousel .menu-media-stage-plinth {
+  position: absolute;
+  z-index: -1;
+  bottom: 8%;
+  width: min(92%, 22rem);
+  height: 34%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at 42% 30%, rgb(246 241 230 / 13%), transparent 68%);
+  filter: blur(2px);
+}
+
+/*
+ * The picture is presented as a mounted print, not a bare rectangle
+ * floating in the dark.
+ *
+ * This is the honest answer to the clip oversized plate. Its dish is a
+ * cut-out disc that can simply be scaled up; ours is a 176-235px scene
+ * that cannot. Framing it gives the composition an object of real
+ * presence while the photograph inside stays at its true pixel size. The
+ * mount is what grew, not the food.
+ *
+ * The frame sizes to its content, so the 882x144 beef crop produces a
+ * wide shallow mount and a portrait crop a tall one, rather than either
+ * being forced into a shape it does not have.
+ */
+.menu-carousel .menu-media-stage-frame {
+  position: relative;
+  display: inline-flex;
+  padding: clamp(0.6rem, 1.4vw, 0.95rem);
+  border-radius: 1rem;
+  background: linear-gradient(150deg, rgb(246 241 230 / 10%), rgb(246 241 230 / 4%));
+  border: 1px solid rgb(246 241 230 / 16%);
+  perspective: 1000px;
+  transform-style: preserve-3d;
+  transform: rotateX(var(--tilt-x, 0deg)) rotateY(calc(-5deg + var(--tilt-y, 0deg))) rotate(-2deg);
+  box-shadow:
+    inset 0 1px 0 rgb(246 241 230 / 14%),
+    18px 30px 44px -26px rgb(0 0 0 / 78%);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .menu-carousel .menu-media-stage-frame {
+    transition: transform 220ms ease-out;
+  }
+}
+
+/*
+ * The picture. The tilt custom properties are written by
+ * use-pointer-tilt.ts and default to zero, so with no pointer, on touch, or
+ * under reduced motion this is simply the resting tilt with no scripted
+ * input at all.
+ *
+ * There is deliberately no width declaration: the intrinsic width/height
+ * attributes size it, max-width/max-height only ever shrink it, and so the
+ * picture cannot be displayed above 1x however large the stage grows.
+ */
+.menu-carousel .menu-media-stage-image {
+  max-width: 100%;
+  max-height: clamp(12rem, 26vw, 19rem);
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 0.75rem;
+  box-shadow: 0 8px 18px -12px rgb(0 0 0 / 70%);
+}
+
+/*
+ * The contact shadow — the single most convincing depth cue here, because
+ * it is the one an eye checks unconsciously to decide whether an object is
+ * resting on a surface or floating above it. Tight, offset to match the
+ * light, and darker at its centre than at its edge.
+ */
+.menu-carousel .menu-media-stage-contact {
+  position: absolute;
+  z-index: -1;
+  left: 50%;
+  bottom: -1.1rem;
+  width: 82%;
+  height: 1.6rem;
+  transform: translateX(-46%);
+  border-radius: 50%;
+  background: radial-gradient(ellipse at 50% 50%, rgb(0 0 0 / 55%), transparent 70%);
+  filter: blur(6px);
+}
+
+/*
+ * Stated in words, under the picture, once. A category photograph beside a
+ * specific dish name would otherwise read as a photograph of that dish, and
+ * alt text does not reach the sighted reader being misled.
+ */
+.menu-carousel .menu-media-stage-caption {
+  position: relative;
+  margin-block-start: 1.15rem;
+  max-width: 30ch;
+  text-align: center;
+  padding: 0;
+  background: none;
+  color: rgb(246 241 230 / 72%);
+  font-size: 0.78rem;
+}
+
+.menu-carousel .menu-media-stage-monogram-ring {
+  stroke: rgb(246 241 230 / 30%);
+}
+
+.menu-carousel-media-exit {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* --- the hand-off ------------------------------------------------------- */
+
+/*
+ * The clip's choreography: the outgoing dish leaves up-and-left while the
+ * incoming one rises from the lower right, both rotating slightly, with the
+ * copy crossfading beneath. The motion-direction property flips the
+ * diagonal when the guest moves backwards through the list, so the movement
+ * always agrees with the direction of travel.
+ *
+ * The copy fades without the two versions ever overlapping — the clip lets
+ * its old and new titles sit on top of each other mid-transition, which is
+ * a legibility bug rather than a thing worth reproducing.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .menu-carousel .menu-carousel-media-enter {
+    animation: dish-arrive 420ms cubic-bezier(0.16, 0.84, 0.28, 1) both;
+  }
+
+  .menu-carousel .menu-carousel-media-exit {
+    animation: dish-leave 260ms cubic-bezier(0.4, 0, 0.9, 0.4) both;
+  }
+
+  .menu-carousel .menu-carousel-details {
+    animation: dish-copy 300ms ease-out both;
+  }
+}
+
+@keyframes dish-arrive {
+  from {
+    opacity: 0;
+    transform: translate3d(calc(38px * var(--motion-direction)), 54px, 0)
+      rotate(calc(7deg * var(--motion-direction))) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes dish-leave {
+  to {
+    opacity: 0;
+    transform: translate3d(calc(-34px * var(--motion-direction)), -48px, 0)
+      rotate(calc(-6deg * var(--motion-direction))) scale(0.94);
+  }
+}
+
+@keyframes dish-copy {
+  from {
+    opacity: 0;
+    transform: translateY(0.7rem);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .menu-carousel-media-exit {
+    display: none;
+  }
+}
+
 .menu-carousel-details {
   display: flex;
   flex-direction: column;
@@ -755,6 +1193,126 @@ button[aria-pressed='true'] {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+/*
+ * State B selectors: no approved per-item photograph exists, so these are
+ * deliberately typographic rather than five copies of one category photo
+ * dressed as five different dishes. The number is an index into the
+ * category, which is a fact; a repeated picture would have been a claim.
+ *
+ * Sized so four sit across the 45% text column at 1280px and up. They were
+ * 11rem, which fitted two and left the third clipped behind a scroll arrow
+ * on the very first category a guest sees.
+ */
+
+/*
+ * The selector name inherits the light-theme colour from the shared rail
+ * rule, which is near-invisible on the dark stage - measured at rgb(85 112
+ * 100) on a near-black ground before this. The colour is taken from the
+ * button so selected and unselected both stay legible, and the selected
+ * state is additionally carried by weight rather than colour alone.
+ */
+.menu-carousel .menu-carousel-thumb-name {
+  color: inherit;
+}
+.menu-carousel .menu-carousel-item-selector.is-text {
+  flex-direction: row;
+  align-items: flex-start;
+  width: 8.5rem;
+  min-height: 4rem;
+  padding: 0.6rem 0.7rem;
+  gap: 0.5rem;
+  border: 1px solid rgb(246 241 230 / 20%);
+  background: rgb(246 241 230 / 6%);
+  color: rgb(246 241 230 / 88%);
+  border-radius: 0.75rem;
+  height: 100%;
+}
+.menu-carousel .menu-carousel-item-selector.is-text:hover {
+  background: rgb(246 241 230 / 11%);
+}
+/* Selection is a gold rule plus a brighter, heavier name - never colour
+   alone, so it survives a colour vision deficiency and a mono print. */
+.menu-carousel .menu-carousel-item-selector.is-text[aria-selected='true'] {
+  border-color: var(--stage-gold);
+  background: rgb(246 241 230 / 14%);
+  color: var(--stage-ivory);
+  box-shadow: inset 0 -2px var(--stage-gold);
+}
+.menu-carousel
+  .menu-carousel-item-selector.is-text[aria-selected='true']
+  .menu-carousel-thumb-name {
+  /* The shared rail sets --text-primary here for the light page; on this
+     dark stage that measured 1.26:1 - effectively invisible. */
+  color: var(--stage-ivory);
+  font-weight: 600;
+}
+.menu-carousel-item-number {
+  font-size: 0.7rem;
+  color: var(--stage-gold);
+  font-variant-numeric: tabular-nums;
+  padding-block-start: 0.1rem;
+}
+.menu-carousel .menu-carousel-thumb-name {
+  display: block;
+  overflow: visible;
+  -webkit-line-clamp: unset;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+.menu-carousel .is-text .menu-carousel-thumb-name {
+  text-align: start;
+}
+.menu-carousel .has-photo {
+  width: 6.5rem;
+}
+.menu-carousel .has-photo .menu-carousel-thumb {
+  width: 4rem;
+  height: 4rem;
+  padding: 0.25rem;
+  box-shadow: 0 5px 10px -5px rgb(0 0 0 / 35%);
+}
+.menu-carousel .has-photo .menu-carousel-thumb img {
+  object-fit: contain;
+  border-radius: 0;
+}
+.menu-availability-notice {
+  color: var(--text-muted);
+  border-inline-start: 2px solid var(--accent-gold);
+  padding: 0.5rem 1rem;
+  margin-block: 2rem;
+}
+
+.site-preference {
+  display: grid;
+  gap: 0.1rem;
+  margin: 0;
+  min-width: 0;
+}
+.site-preference > span {
+  font-size: 0.65rem;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+.site-preference select {
+  width: auto;
+  min-height: 2.4rem;
+  padding: 0.35rem 1.4rem 0.35rem 0.45rem;
+  font-size: 0.8rem;
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.35rem;
+}
+@media (max-width: 420px) {
+  .site-header-utilities {
+    gap: 0.5rem;
+  }
+  .site-preference select {
+    padding-inline-end: 0.4rem;
+    max-width: 6rem;
+  }
 }
 
 /* ================================================== site header (Step B) */
@@ -1643,6 +2201,72 @@ button[aria-pressed='true'] {
 .home-hero {
   background-size: cover;
   background-position: center;
+}
+
+/* Photos and copy share an editorial row rather than a floating thumbnail. */
+.home-cards {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2rem;
+}
+.home-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1rem;
+  border: 0;
+  border-top: 1px solid var(--border-subtle);
+  border-radius: 0;
+  background: transparent;
+  padding: 2rem 0;
+}
+.home-card .home-card-photo {
+  width: 100%;
+  height: auto;
+  max-height: 22rem;
+  object-fit: cover;
+  border-radius: 0.9rem;
+}
+.home-card h3 {
+  font-size: clamp(1.6rem, 3vw, 2rem);
+  margin: 0;
+}
+.home-card > p {
+  margin: 0;
+  max-width: 52ch;
+}
+.home-card .home-card-actions {
+  padding-top: 0.5rem;
+  margin-top: 0;
+}
+@media (min-width: 768px) {
+  .home-card {
+    grid-template-columns: minmax(0, 17rem) minmax(0, 1fr);
+    column-gap: clamp(2rem, 6vw, 5rem);
+    align-content: center;
+  }
+  .home-card .home-card-photo {
+    grid-column: 1;
+    grid-row: 1 / 4;
+    max-height: 20rem;
+    align-self: center;
+  }
+  .home-card > :not(img) {
+    grid-column: 2;
+  }
+  .home-card:nth-child(even) {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 17rem);
+  }
+  .home-card:nth-child(even) .home-card-photo {
+    grid-column: 2;
+  }
+  .home-card:nth-child(even) > :not(img) {
+    grid-column: 1;
+  }
+}
+.home-gallery .site-photo-grid-image {
+  height: 17rem;
+}
+.home-place.u-section {
+  padding-block: clamp(2rem, 5vw, 4rem);
 }
 
 /* ============================================ inner pages (Step D) */

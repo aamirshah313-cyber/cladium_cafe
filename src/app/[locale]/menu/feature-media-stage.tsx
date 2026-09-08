@@ -84,6 +84,26 @@ export function FeatureMediaStage({ media, locale }: FeatureMediaStageProps) {
 
   return (
     <div className="menu-media-stage">
+      {/*
+       * Depth is built from separate, honestly-flat layers rather than by
+       * pretending the photograph has geometry it does not.
+       *
+       * The reference clip gets its presence from a round plate shot from
+       * directly above and cut out against a dark ground — the plate really
+       * is a disc, so it can be lit and shadowed like one. Cladium's
+       * pictures are rectangular scenes photographed from an angle. Masking
+       * one into a circle would slice through the food and claim a shape the
+       * photograph does not have, so nothing here is cut out.
+       *
+       * Instead the *stage* supplies the dimension: a gold arc set behind
+       * the picture, a plinth it appears to rest on, and a soft contact
+       * shadow directly beneath. The picture itself stays a rectangle at its
+       * true pixel size and is only tilted a few degrees — enough for the
+       * eye to read a physical object on a surface, far short of the
+       * distortion that would misrepresent what was photographed.
+       */}
+      <span className="menu-media-stage-arc" aria-hidden="true" />
+      <span className="menu-media-stage-plinth" aria-hidden="true" />
       <div className="menu-media-stage-frame">
         {/*
          * `width`/`height` are the derivative's real pixels, so the browser
@@ -97,6 +117,10 @@ export function FeatureMediaStage({ media, locale }: FeatureMediaStageProps) {
           className="menu-media-stage-image"
           decoding="async"
         />
+        {/* The contact shadow that sells the object as resting on the
+            plinth. Sized from the picture, so it tracks whatever the
+            category's real dimensions happen to be. */}
+        <span className="menu-media-stage-contact" aria-hidden="true" />
       </div>
       {media.provenance !== 'item' ? (
         <p className="menu-media-stage-caption">

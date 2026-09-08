@@ -251,8 +251,8 @@ export const diningMedia = {
  */
 export const galleryMedia: readonly SiteMediaAsset[] = [
   venueMedia.timberFootbridge,
-  venueMedia.gardenSeatingTrees,
-  venueMedia.terraceStringLightsNight,
+  venueMedia.entranceSignDusk,
+  venueMedia.gardenNight,
   venueMedia.lawnPeacockPavilion,
   venueMedia.gardenLitPathDusk,
   venueMedia.pavilionCounterDay,

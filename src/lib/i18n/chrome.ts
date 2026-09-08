@@ -27,12 +27,14 @@ export const TAGLINE = 'Relax • Refresh • Reconnect';
 
 export const chrome = {
   skipToContent: { en: 'Skip to content', ur: 'مرکزی مواد پر جائیں' },
-  languageSwitcherLabel: { en: 'Language', ur: 'زبان' },
+  languageSwitcherLabel: { en: 'Languages', ur: 'زبان' },
   englishLanguageName: { en: 'English', ur: 'انگریزی' },
   urduLanguageName: { en: 'Urdu', ur: 'اردو' },
-  themeSwitcherLabel: { en: 'Theme', ur: 'تھیم' },
-  dayThemeName: { en: 'Day', ur: 'دن' },
-  nightThemeName: { en: 'Night', ur: 'رات' },
+  themeSwitcherLabel: { en: 'Themes', ur: 'تھیم' },
+  dayThemeName: { en: 'Light', ur: 'روشن' },
+  nightThemeName: { en: 'Dark', ur: 'تاریک' },
+  carouselPreviousLabel: { en: 'Previous choices', ur: 'پچھلے انتخاب' },
+  carouselNextLabel: { en: 'More choices', ur: 'مزید انتخاب' },
   homeIntro: {
     en: 'A luxury café and resort experience.',
     ur: 'ایک شاندار کیفے اور ریزورٹ کا تجربہ۔',

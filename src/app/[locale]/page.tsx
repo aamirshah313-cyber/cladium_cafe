@@ -43,7 +43,6 @@ import {
   BIRTHDAY_POLICY_TEXT,
   DIRECTIONS_TEXT,
   GOOGLE_MAPS_URL,
-  SEATING_POLICY_TEXT,
 } from '../../modules/business/facts';
 import {
   HOME_CLOSING_TEXT,
@@ -163,9 +162,6 @@ export default async function LocaleHomePage({ params }: { params: Promise<{ loc
             <SitePhoto asset={venueMedia.gardenSeatingTrees} className="home-card-photo" />
             <h3>{chromeText('homeSeatingHeading', locale)}</h3>
             <LocalizedProse text={HOME_SEATING_TEXT} locale={locale} />
-            {/* The approved operational wording, kept verbatim beside the
-                editorial framing so the limit is never softened. */}
-            <LocalizedProse text={SEATING_POLICY_TEXT} locale={locale} className="u-muted" />
             <div className="home-card-actions">
               <Link href={`/${locale}/book`} className="u-button u-button--primary">
                 {chromeText('navBookLabel', locale)}

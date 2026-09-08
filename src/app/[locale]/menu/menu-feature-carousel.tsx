@@ -64,12 +64,17 @@ import { chromeText } from '../../../lib/i18n/chrome';
 import type { Locale } from '../../../lib/i18n/locale';
 import { formatPkr } from '../../../lib/business/money';
 import type { MenuViewCategory } from '../../../modules/menu/menu-view';
-import { resolveCategoryMedia, resolveItemThumb } from '../../../modules/menu/media-mapping';
-import { FeatureMediaStage, categoryFeatureMedia } from './feature-media-stage';
+import {
+  resolveCategoryMedia,
+  resolveItemThumb,
+  menuItemMedia,
+} from '../../../modules/menu/media-mapping';
+import { FeatureMediaStage, categoryFeatureMedia, type FeatureMedia } from './feature-media-stage';
 import { CategoryTabs } from './category-tabs';
 import { ItemSelectorRail } from './item-selector-rail';
 import { FeaturedItemDetails } from './featured-item-details';
 import { useOverflowControls } from './use-overflow-controls';
+import { usePointerTilt } from './use-pointer-tilt';
 
 export interface MenuFeatureCarouselProps {
   readonly categories: readonly MenuViewCategory[];
@@ -103,6 +108,8 @@ export function MenuFeatureCarousel({
 }: MenuFeatureCarouselProps) {
   const [categoryIndex, setCategoryIndex] = useState(0);
   const [itemIndex, setItemIndex] = useState(0);
+  const [direction, setDirection] = useState(1);
+  const [outgoingMedia, setOutgoingMedia] = useState<FeatureMedia | null>(null);
   const [variantId, setVariantId] = useState<string | null>(null);
   const [csrfToken, setCsrfToken] = useState<string | null>(null);
   // Seeded from the server-resolved gate rather than assumed available and
@@ -126,6 +133,7 @@ export function MenuFeatureCarousel({
     canScrollEnd: tabsCanScrollEnd,
     scrollByPage: scrollTabsByPage,
   } = useOverflowControls();
+  const tiltRef = usePointerTilt<HTMLDivElement>();
 
   useEffect(() => {
     /*
@@ -162,6 +170,27 @@ export function MenuFeatureCarousel({
     };
   }, [takeawayEnabled]);
 
+  /*
+   * Retire the outgoing dish on a timer rather than on animationend alone.
+   *
+   * animationend is not guaranteed to arrive. Under
+   * prefers-reduced-motion the exit layer is display:none, which runs no
+   * animation at all, so the event never fires and the outgoing media
+   * stays in state forever - stale content that the next transition then
+   * compares against. A backgrounded tab throttles animations to the same
+   * effect. Observed directly: the previous category photograph was still
+   * in the DOM more than a second after the change.
+   *
+   * The timeout is the authority and animationend is kept only as the
+   * faster path, so the layer is cleaned up on every route including the
+   * ones where nothing animates.
+   */
+  useEffect(() => {
+    if (outgoingMedia === null) return;
+    const timer = window.setTimeout(() => setOutgoingMedia(null), 400);
+    return () => window.clearTimeout(timer);
+  }, [outgoingMedia]);
+
   if (categories.length === 0) return null;
 
   const category = categories[categoryIndex] ?? categories[0]!;
@@ -169,12 +198,22 @@ export function MenuFeatureCarousel({
   const item = items[itemIndex] ?? items[0];
 
   function selectCategory(index: number) {
+    if (index === categoryIndex) return;
+    setDirection(index > categoryIndex ? 1 : -1);
+    setOutgoingMedia(media);
     setCategoryIndex(index);
     setItemIndex(0);
     setVariantId(null);
   }
 
   function selectItem(index: number) {
+    if (index === itemIndex) return;
+    setDirection(index > itemIndex ? 1 : -1);
+    const next = items[index];
+    const nextSrc = next ? menuItemMedia[next.id]?.assetPath : undefined;
+    setOutgoingMedia(
+      nextSrc !== media?.src && (nextSrc || media?.provenance === 'item') ? media : null,
+    );
     setItemIndex(index);
     setVariantId(null);
   }
@@ -213,10 +252,23 @@ export function MenuFeatureCarousel({
 
   const tabId = `menu-carousel-tab-${category.id}`;
   const panelId = `menu-carousel-panel-${category.id}`;
-  const media = categoryFeatureMedia(resolveCategoryMedia(category.mediaKey));
+  const exact = menuItemMedia[item.id];
+  const media: FeatureMedia | null = exact
+    ? {
+        src: exact.assetPath,
+        alt: exact.alt,
+        width: exact.width,
+        height: exact.height,
+        provenance: 'item',
+      }
+    : categoryFeatureMedia(resolveCategoryMedia(category.mediaKey));
 
   return (
-    <section aria-label={chromeText('navMenuLabel', locale)} className="menu-carousel">
+    <section
+      aria-label={chromeText('navMenuLabel', locale)}
+      className="menu-carousel"
+      data-direction={direction}
+    >
       <div className="menu-carousel-tabs">
         {/*
          * Edge controls render only when the strip genuinely overflows, and
@@ -229,8 +281,7 @@ export function MenuFeatureCarousel({
           <button
             type="button"
             className="menu-carousel-tabs-edge menu-carousel-tabs-edge--start"
-            aria-hidden="true"
-            tabIndex={-1}
+            aria-label={chromeText('carouselPreviousLabel', locale)}
             disabled={!tabsCanScrollStart}
             onClick={() => scrollTabsByPage(-1)}
           >
@@ -252,8 +303,7 @@ export function MenuFeatureCarousel({
           <button
             type="button"
             className="menu-carousel-tabs-edge menu-carousel-tabs-edge--end"
-            aria-hidden="true"
-            tabIndex={-1}
+            aria-label={chromeText('carouselNextLabel', locale)}
             disabled={!tabsCanScrollEnd}
             onClick={() => scrollTabsByPage(1)}
           >
@@ -339,8 +389,20 @@ export function MenuFeatureCarousel({
           ) : null}
         </div>
 
-        <div className="menu-carousel-media">
-          <FeatureMediaStage key={category.id} media={media} locale={locale} />
+        <div className="menu-carousel-media" ref={tiltRef}>
+          {outgoingMedia && outgoingMedia.src !== media?.src ? (
+            <div
+              key={`exit-${outgoingMedia.src}`}
+              className="menu-carousel-media-exit"
+              aria-hidden="true"
+              onAnimationEnd={() => setOutgoingMedia(null)}
+            >
+              <FeatureMediaStage media={outgoingMedia} locale={locale} />
+            </div>
+          ) : null}
+          <div key={media?.src ?? category.id} className="menu-carousel-media-enter">
+            <FeatureMediaStage media={media} locale={locale} />
+          </div>
         </div>
       </div>
     </section>

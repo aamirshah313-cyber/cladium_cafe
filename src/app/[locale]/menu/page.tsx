@@ -163,6 +163,9 @@ export default async function MenuPage({ params, searchParams }: MenuPageProps) 
         </button>
       </form>
 
+      <p className="menu-availability-notice" id="menu-availability-notice">
+        {chromeText('availabilityUnknown', locale)}
+      </p>
       {filtered.length === 0 ? (
         <div className="state-block">
           <p className="u-lede">{chromeText('menuNoResultsText', locale)}</p>
@@ -182,7 +185,7 @@ export default async function MenuPage({ params, searchParams }: MenuPageProps) 
             <h2 id={`menu-category-${category.id}`} className="menu-category-heading">
               {category.name}
             </h2>
-            <ul className="menu-items">
+            <ul className="menu-items" aria-describedby="menu-availability-notice">
               {category.items.map((item) => (
                 /*
                  * The anchor target for the carousel's "View dish details"
@@ -194,7 +197,7 @@ export default async function MenuPage({ params, searchParams }: MenuPageProps) 
                  */
                 <li key={item.id} id={`menu-item-${item.id}`} tabIndex={-1} className="menu-item">
                   <div className="menu-item-head">
-                    <span className="menu-item-name">
+                    <span className="menu-item-name" lang="en" dir="ltr">
                       {item.name}
                       {item.groupLabel ? (
                         <span className="menu-item-group"> ({item.groupLabel})</span>
@@ -207,9 +210,11 @@ export default async function MenuPage({ params, searchParams }: MenuPageProps) 
                       <span className="menu-item-price">{formatPkr(item.basePricePkr)}</span>
                     ) : null}
                   </div>
-                  <p className="menu-item-availability">
-                    {chromeText(availabilityChromeKey(item.availability), locale)}
-                  </p>
+                  {item.availability !== 'UNKNOWN' ? (
+                    <p className="menu-item-availability">
+                      {chromeText(availabilityChromeKey(item.availability), locale)}
+                    </p>
+                  ) : null}
                   {item.variants.length > 0 ? (
                     <ul className="menu-variants">
                       {item.variants.map((variant) => (

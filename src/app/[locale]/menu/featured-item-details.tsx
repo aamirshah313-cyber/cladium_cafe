@@ -77,7 +77,19 @@ export function FeaturedItemDetails({
       className="menu-carousel-details"
     >
       <p className="menu-carousel-category-label">{categoryName}</p>
-      <h3 className="menu-carousel-item-name">{item.name}</h3>
+      {/*
+       * Marked as English explicitly. Menu item names are canonical English
+       * (CLAUDE.md forbids inventing Urdu for them), so on an Urdu page the
+       * inherited Nastaliq stack would be asked to set Latin text - it
+       * falls back, but only after the tight Nastaliq line box has already
+       * been applied, and the two-line name then overflowed its box by 33px
+       * into the price beneath it. Declaring the real language fixes both
+       * the font selection and the metrics, and is what a screen reader
+       * needs in order to pronounce it.
+       */}
+      <h3 className="menu-carousel-item-name" lang="en" dir="ltr">
+        {item.name}
+      </h3>
 
       <p className="menu-carousel-price">
         {item.variants.length === 0

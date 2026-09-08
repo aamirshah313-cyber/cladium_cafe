@@ -85,11 +85,19 @@ export default async function VisitPage({ params }: { params: Promise<{ locale: 
        * this is not the LCP element on this page.
        */}
       <Image
-        src={venueHero.wideSmall.path}
-        alt={venueHero.wideSmall.alt}
-        width={venueHero.wideSmall.width}
-        height={venueHero.wideSmall.height}
-        sizes="(min-width: 1240px) 1240px, 100vw"
+        /*
+         * The full-resolution source, not the 1280px derivative. With the
+         * smaller one the optimizer was resolving this box to an 826px
+         * candidate for a 1096px slot at 1440px wide - a soft image on the
+         * page that is meant to introduce the place. The sizes hint below
+         * is the real measured width rather than the container maximum,
+         * which is what misled the candidate choice.
+         */
+        src={venueHero.wide.path}
+        alt={venueHero.wide.alt}
+        width={venueHero.wide.width}
+        height={venueHero.wide.height}
+        sizes="(min-width: 1280px) 1100px, 100vw"
         className="visit-image"
         loading="lazy"
         style={{ objectPosition: venueHero.wideSmall.focalPoint }}

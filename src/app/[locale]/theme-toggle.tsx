@@ -16,11 +16,27 @@
  * `prefers-color-scheme` is only a first-visit default).
  */
 
-import { useState } from 'react';
+import { useSyncExternalStore } from 'react';
 import { chromeText } from '../../lib/i18n/chrome';
 import type { Locale } from '../../lib/i18n/locale';
 import { serializeThemeCookie } from '../../lib/theme/preference-cookie';
 import { THEMES, type Theme } from '../../lib/theme/theme';
+
+function subscribeTheme(listener: () => void) {
+  const observer = new MutationObserver(listener);
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  const query = window.matchMedia('(prefers-color-scheme: dark)');
+  query.addEventListener('change', listener);
+  return () => {
+    observer.disconnect();
+    query.removeEventListener('change', listener);
+  };
+}
+function currentTheme(): Theme {
+  const explicit = document.documentElement.dataset.theme;
+  if (explicit === 'day' || explicit === 'night') return explicit;
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'night' : 'day';
+}
 
 interface ThemeToggleProps {
   readonly locale: Locale;
@@ -28,33 +44,34 @@ interface ThemeToggleProps {
 }
 
 export function ThemeToggle({ locale, initialTheme }: ThemeToggleProps) {
-  const [activeTheme, setActiveTheme] = useState<Theme | null>(initialTheme);
+  const activeTheme = useSyncExternalStore(
+    subscribeTheme,
+    currentTheme,
+    () => initialTheme ?? 'day',
+  );
 
   return (
-    <div
-      className="site-theme-toggle"
-      role="group"
-      aria-label={chromeText('themeSwitcherLabel', locale)}
-    >
-      {THEMES.map((theme) => {
-        const nameKey = theme === 'day' ? 'dayThemeName' : 'nightThemeName';
-        return (
-          <button
-            key={theme}
-            type="button"
-            aria-pressed={activeTheme === theme}
-            onClick={() => {
-              document.documentElement.dataset.theme = theme;
-              document.cookie = serializeThemeCookie(theme, {
-                secure: window.location.protocol === 'https:',
-              });
-              setActiveTheme(theme);
-            }}
-          >
-            {chromeText(nameKey, locale)}
-          </button>
-        );
-      })}
-    </div>
+    <label className="site-preference">
+      <span>{chromeText('themeSwitcherLabel', locale)}</span>
+      <select
+        value={activeTheme}
+        onChange={(event) => {
+          const theme = event.target.value as Theme;
+          document.documentElement.dataset.theme = theme;
+          document.cookie = serializeThemeCookie(theme, {
+            secure: window.location.protocol === 'https:',
+          });
+        }}
+      >
+        {THEMES.map((theme) => {
+          const nameKey = theme === 'day' ? 'dayThemeName' : 'nightThemeName';
+          return (
+            <option key={theme} value={theme}>
+              {chromeText(nameKey, locale)}
+            </option>
+          );
+        })}
+      </select>
+    </label>
   );
 }

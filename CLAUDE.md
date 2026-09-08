@@ -77,3 +77,13 @@ When older documents conflict with the Version 2 architecture, data model, relea
 - Check context at each phase boundary; first update the compact `.continuum/` handoff, then compact only at a phase boundary while preserving the active architecture/version, verification, changes, blockers, and next step.
 - Treat every item in `operations/release-gates-v2.md` as mandatory evidence or an explicitly disabled/deferred feature before deployment.
 - After any successfully completed runbook step, report step-completion progress: (a) overall = completed steps / 47 total runbook steps, as a percentage; (b) within-phase = completed steps / total steps in the current phase (from that phase's step list in `CLADIUM_CODE_BUILD_RUNBOOK_V2.md`), as a percentage. Label both explicitly as **step-completion metrics, not effort or time estimates** — each step counts equally regardless of size. Keep `.continuum/PROJECT_STATE.md`'s `## Progress` line as the current snapshot.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

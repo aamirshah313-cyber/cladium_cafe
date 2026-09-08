@@ -29,7 +29,7 @@
 import { useState } from 'react';
 import { chromeText } from '../../../lib/i18n/chrome';
 import type { Locale } from '../../../lib/i18n/locale';
-import { ADDRESS_DISPLAY, MAP_LATITUDE, MAP_LONGITUDE } from '../../../modules/business/facts';
+import { MAP_LATITUDE, MAP_LONGITUDE } from '../../../modules/business/facts';
 
 interface MapEmbedProps {
   readonly locale: Locale;
@@ -48,7 +48,6 @@ export function MapEmbed({ locale }: MapEmbedProps) {
   if (!shown) {
     return (
       <div className="map-placeholder">
-        <p className="map-placeholder-address">{ADDRESS_DISPLAY}</p>
         <button
           type="button"
           className="u-button u-button--secondary"

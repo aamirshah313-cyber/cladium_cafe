@@ -53,28 +53,30 @@ export function LanguageSwitcher({ locale }: LanguageSwitcherProps) {
   const currentPath = buildCurrentPath(pathname ?? `/${locale}`, new URLSearchParams(searchParams));
 
   return (
-    <nav
-      className="site-nav site-lang-switcher"
-      aria-label={chromeText('languageSwitcherLabel', locale)}
-    >
-      <ul>
+    <label className="site-preference">
+      <span>{chromeText('languageSwitcherLabel', locale)}</span>
+      <select
+        value={locale}
+        onChange={(event) => {
+          window.location.assign(
+            `/api/locale-preference?to=${event.target.value}&path=${encodeURIComponent(currentPath)}`,
+          );
+        }}
+      >
         {LOCALES.map((targetLocale) => {
           const nameKey = targetLocale === 'en' ? 'englishLanguageName' : 'urduLanguageName';
-          const isCurrent = targetLocale === locale;
           return (
-            <li key={targetLocale}>
-              <a
-                href={`/api/locale-preference?to=${targetLocale}&path=${encodeURIComponent(currentPath)}`}
-                lang={targetLocale}
-                dir={localeDirection(targetLocale)}
-                aria-current={isCurrent ? 'page' : undefined}
-              >
-                {chromeText(nameKey, targetLocale)}
-              </a>
-            </li>
+            <option
+              key={targetLocale}
+              value={targetLocale}
+              lang={targetLocale}
+              dir={localeDirection(targetLocale)}
+            >
+              {chromeText(nameKey, targetLocale)}
+            </option>
           );
         })}
-      </ul>
-    </nav>
+      </select>
+    </label>
   );
 }

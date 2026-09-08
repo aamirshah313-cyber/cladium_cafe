@@ -40,6 +40,29 @@ The English is the source of truth if the two ever disagree.
 | `homeClosingHeading`            | Request your table                                                           | اپنی میز کی درخواست کریں                                                                 | **Changed.** Was "Reserve your table" / "اپنی میز محفوظ کریں", which said the site reserves a table. It does not — a guest sends a request and staff confirm it. Please check the Urdu carries _request_, not _reserve_.                    |
 | `homeDiningCaption`             | Photographs of food served at Cladium. They do not show specific menu items. | کلیڈیم میں پیش کیے جانے والے کھانے کی تصاویر۔ یہ کسی مخصوص مینو آئٹم کو ظاہر نہیں کرتیں۔ | **Changed.** Was "Photographs show each category, not a specific dish" — which described a per-category set the section never had. It now sits above four real Cladium food photographs, none matched to a menu row, and says exactly that. |
 
+## 1b. Added or changed in the carousel/3D pass
+
+| Key                     | English          | Urdu as shipped | Note                                                                                                                                                                                               |
+| ----------------------- | ---------------- | --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `languageSwitcherLabel` | Languages        | زبان            | **Changed** from "Language". Now labels a select, not a pair of links.                                                                                                                             |
+| `themeSwitcherLabel`    | Themes           | تھیم            | **Changed** from "Theme". Now labels a select.                                                                                                                                                     |
+| `dayThemeName`          | Light            | روشن            | **Changed** from "Day" / "دن". Please confirm روشن reads naturally as a UI theme name rather than as "bright".                                                                                     |
+| `nightThemeName`        | Dark             | تاریک           | **Changed** from "Night" / "رات". Same question for تاریک.                                                                                                                                         |
+| `carouselPreviousLabel` | Previous choices | پچھلے انتخاب    | Accessible name for the scroll-back control on both the category strip and the item rail. These controls are now exposed to assistive technology rather than hidden, so this string is read aloud. |
+| `carouselNextLabel`     | More choices     | مزید انتخاب     | As above.                                                                                                                                                                                          |
+
+### Two layout fixes that are not translations
+
+- Menu item names are now explicitly `lang="en" dir="ltr"` in the carousel
+  heading as well as in the selector rail. They are canonical English, and
+  on an Urdu page the inherited Nastaliq stack was being asked to set Latin
+  text — it fell back, but only after applying the tight Nastaliq line box,
+  and a two-line dish name then overflowed into the price beneath it.
+- Urdu chrome inside the carousel (availability, caption, category label)
+  now gets `line-height: 2.1`. Nastaliq ascenders and descenders are far
+  deeper than Latin, and the caption was rendering 24px of glyph in a 17px
+  line box.
+
 ## 2. Business and editorial copy still shown in English on Urdu pages
 
 Each of these renders as approved English inside the Urdu page, correctly
