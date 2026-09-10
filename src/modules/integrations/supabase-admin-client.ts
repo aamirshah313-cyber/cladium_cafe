@@ -9,9 +9,14 @@
  * code must never use this client; RLS is what protects everything else).
  * Used by `modules/staff/supabase-directory.ts` to read `staff_profiles`/
  * `staff_role_memberships`, and by `modules/bookings/deps.ts` to construct
- * the real Postgres-backed booking deps (D-077) when configured — guest-
- * facing domain data for takeaway/events still stays on the in-memory
- * adapters (D-023) until each domain's own cutover is separately decided.
+ * the real Postgres-backed booking deps (D-077) when configured, and by
+ * `modules/takeaway/deps.ts` for the same after that domain's own cutover.
+ * Events are the one guest-facing domain still on the in-memory adapters
+ * (D-023).
+ *
+ * "When configured" no longer means "or else quietly fall back to memory":
+ * `lib/db/durable-storage-policy.ts` fails closed unless the environment
+ * explicitly opts in.
  *
  * Never throws at construction — see `supabase-auth-client.ts`'s doc
  * comment for the same "fail only when actually used" reasoning.

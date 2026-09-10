@@ -2,6 +2,65 @@
 
 Newest decisions go first. Each entry stays short and points to authoritative evidence.
 
+## D-090 — A fixture that shares the code's assumption cannot test it
+
+- Decision: the takeaway cart/submission adapters address menu rows by
+  `menu_items.id`/`menu_variants.id` — the row uuids — because that is what
+  the domain actually carries. `guest-view-repository.ts` builds
+  `MenuViewItem.id` from `menu_items.id`; only `MenuViewCategory.mediaKey`
+  is a stable id, and carts never reference categories.
+- What went wrong: both new adapters translated via `stable_id` instead. The
+  cart store threw on every add (500, empty cart). The atomic submit function
+  was worse — it resolved `menu_item_id`/`menu_variant_id` in *scalar
+  subqueries*, so a miss wrote `NULL` rather than raising, silently losing
+  line traceability inside a transaction that reported success.
+- Why nothing caught it: the cutover suite's fixture menu was built with
+  `id: item.stable_id`. Fixture and adapter encoded the same wrong assumption
+  and agreed with each other, so seven tests passed against a contract that
+  did not exist. A fixture derived from the code's own belief cannot falsify
+  it. The fixture now reads the same column the repository reads, and the
+  suite asserts `takeaway_items.menu_item_id` is actually populated.
+- Also decided: `addItemBodySchema` uses `uuidSchema`, not `stableIdSchema`.
+  The old schema accepted the right values only by accident (a lowercase uuid
+  satisfies `[a-z0-9][a-z0-9._-]*`) while documenting the wrong contract. And
+  `variantId` is `nullish`, not `optional` — the carousel posts an explicit
+  `null` for a variant-less dish, which `optional()` rejects, so every add of
+  a dish without variants was a 400. Only driving the real control found it.
+- Evidence: full journey through the actual "Add to takeaway order" button —
+  add, quantity change, review, submit — against local Postgres, with the
+  request, line snapshot (FK populated), status event, audit event and
+  `staff_notification` outbox row all confirmed written in one commit.
+
+## D-089 — Missing durable storage fails closed
+
+- Decision: `lib/db/durable-storage-policy.ts` throws
+  `DurableStorageUnavailableError` when a durable store cannot be
+  constructed. Falling back to memory requires `ALLOW_IN_MEMORY_STORES=true`,
+  set only by the two vitest configs and `playwright.config.ts`.
+- Why: the previous pattern caught any construction failure and returned an
+  in-memory store with a `warn`. That is invisible from outside and invisible
+  in the worst way — the dispatch endpoint keeps returning a healthy `200`
+  with a plausible summary while claiming batches from a per-instance `Map`,
+  and real `outbox_events` rows pile up undelivered behind a green light.
+  This was one of three causes that fitted the production dispatcher
+  evidence equally well, and the only one that would have looked healthy.
+  Making it loud removes it as a possibility rather than leaving it to be
+  ruled out by inference.
+- The error message names what needs storage and never quotes the underlying
+  cause, which for a Supabase construction failure can contain the rejected
+  key.
+- Corollary: the change proved itself on contact — it broke 7 unit files and
+  5 integration tests immediately, all of which were silently running on
+  `Map`s. It then broke `next build`, which was the more valuable catch:
+  `concierge/deps.ts` read `takeawayDeps.requestStore` at module scope,
+  defeating the lazy `Proxy` and resolving storage during page-data
+  collection, where no credentials exist. Fixed with getters. A build must
+  not require runtime secrets, and the old silent fallback had been hiding
+  that it did.
+- Scope limit, stated because it is easy to overclaim: this changes **local
+  code only**. It has not been deployed, so it has fixed nothing in
+  production and is not evidence about the running dispatcher.
+
 ## D-088 — Image provenance is a contract, not a caption
 
 - Decision: every site photograph carries an explicit `venue | category | item`
@@ -40,7 +99,9 @@ The existing dashboard notification list was wired to the durable store rather t
 
 Proven on real Postgres (12 tests): round-trip, survival across a separately constructed store/client, single row on repeated upsert, read state preserved across redelivery, durable mark-read, newest-first ordering, one notification per dispatch for booking/event/takeaway, no duplicate on repeated dispatch, and zero rows visible to the anon role. Full RLS matrix passes against a clean database.
 
-**Not yet operational end to end:** the external scheduler still is not authenticating (D-085), so nothing drains the outbox. Notifications now accumulate durably and will be delivered once it does.
+**Not yet operational end to end:** nothing drains the outbox. Notifications accumulate durably and will be delivered once something does.
+
+*Corrected 9 Sep 2026.* This previously read "the external scheduler still is not authenticating," which asserted a cause that had never been established — the earlier probe proved only that no write of any kind reached the row, which is equally consistent with the scheduler never firing. Direct inspection of the live project's `edge_logs` now confirms zero `rpc/outbox_claim_batch` calls in 24 hours, and still cannot distinguish "not firing" from "401" from "authenticated but silently running on the in-memory fallback in `resolveOutboxStore`". See the P0 item in `TASKS.md` for the full evidence and the test needed to separate them.
 
 ## D-085 — Durable outbox cutover: staff notifications survive the process
 

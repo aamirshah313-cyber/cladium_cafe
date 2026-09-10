@@ -6,6 +6,14 @@ runs one bounded dispatch cycle — but **nothing invokes it on a schedule
 from inside this repository**. That is deliberate, and this document says
 what has to exist outside it.
 
+> **Status, 11 Sep 2026 — this is not working in production.** The scheduler
+> described below was reported as configured, but no notification has ever
+> been delivered: `staff_notifications` has had zero inserts for the lifetime
+> of the project, and no `rpc/outbox_claim_batch` call reached Postgres in the
+> 24h to 10 Sep 19:46Z. Do not read this document as a description of a
+> working system. `docs/takeaway-release-plan.md` §5 has the diagnostic
+> procedure and the delivery test that must pass.
+
 ## Why not Vercel Cron
 
 This project is on the **Vercel Hobby** plan, which restricts cron jobs to a

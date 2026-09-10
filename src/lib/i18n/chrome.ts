@@ -217,6 +217,76 @@ export const chrome = {
   navBookLabel: { en: 'Request a Table', ur: 'میز کی درخواست' },
   bookPageHeading: { en: 'Request a Table', ur: 'میز کی درخواست' },
   treehouseSeatingCtaLabel: { en: 'Request Treehouse Seating', ur: 'ٹری ہاؤس نشست کی درخواست' },
+  /*
+   * Takeaway cart and review.
+   *
+   * Every string here is request-language, never purchase-language: a guest
+   * *sends a request* and staff confirm it. CLAUDE.md's approved CTA is
+   * "Start Takeaway Request", and nothing below may imply an order is
+   * placed, priced finally, or accepted — because none of that is true
+   * until a person at Cladium says so.
+   */
+  navTakeawayLabel: { en: 'Start Takeaway Request', ur: 'ٹیک وے کی درخواست شروع کریں' },
+  takeawayPageHeading: { en: 'Your takeaway request', ur: 'آپ کی ٹیک وے درخواست' },
+  takeawayPageLede: {
+    en: 'Check your items, then send the request. Our staff confirm every request and the pickup time directly with you.',
+    ur: 'اپنے آئٹمز دیکھیں، پھر درخواست بھیجیں۔ ہمارا عملہ ہر درخواست اور پک اپ کے وقت کی تصدیق آپ سے براہِ راست کرتا ہے۔',
+  },
+  takeawayMetaDescription: {
+    en: 'Review your takeaway items and send a request to Cladium Café & Resort. Staff confirm every request and pickup time.',
+    ur: 'اپنے ٹیک وے آئٹمز کا جائزہ لیں اور کلیڈیم کیفے اینڈ ریزورٹ کو درخواست بھیجیں۔ عملہ ہر درخواست اور پک اپ کے وقت کی تصدیق کرتا ہے۔',
+  },
+  takeawayEmptyHeading: { en: 'Nothing added yet', ur: 'ابھی کچھ شامل نہیں کیا گیا' },
+  takeawayEmptyBody: {
+    en: 'Browse the menu and add what you would like to collect.',
+    ur: 'مینو دیکھیں اور جو کچھ آپ لینا چاہتے ہیں شامل کریں۔',
+  },
+  takeawayItemsHeading: { en: 'Items', ur: 'آئٹمز' },
+  takeawayQuantityLabel: { en: 'Quantity', ur: 'مقدار' },
+  takeawayRemoveLabel: { en: 'Remove', ur: 'ہٹا دیں' },
+  takeawaySubtotalLabel: { en: 'Subtotal', ur: 'ذیلی مجموعہ' },
+  /*
+   * The subtotal is deliberately not called a total. No tax or service
+   * charge is configured (CLAUDE.md forbids inventing either), so the site
+   * must not present a figure that looks like the final amount payable.
+   */
+  takeawaySubtotalNote: {
+    en: 'Subtotal only. Staff confirm the final amount when they confirm your request.',
+    ur: 'صرف ذیلی مجموعہ۔ عملہ آپ کی درخواست کی تصدیق کرتے وقت حتمی رقم کی تصدیق کرے گا۔',
+  },
+  takeawayDetailsHeading: { en: 'Your details', ur: 'آپ کی تفصیلات' },
+  takeawayCollectionNoteLabel: {
+    en: 'Preferred collection time (optional)',
+    ur: 'پک اپ کا ترجیحی وقت (اختیاری)',
+  },
+  takeawayCollectionNoteHint: {
+    en: 'A preference only — staff confirm the actual time with you.',
+    ur: 'صرف ترجیح — اصل وقت کی تصدیق عملہ آپ سے کرے گا۔',
+  },
+  takeawayContinueLabel: { en: 'Continue to review', ur: 'جائزے کی طرف بڑھیں' },
+  takeawayReviewHeading: { en: 'Review your request', ur: 'اپنی درخواست کا جائزہ لیں' },
+  takeawayBackToCartLabel: { en: 'Back to items', ur: 'آئٹمز پر واپس' },
+  takeawaySendRequestLabel: { en: 'Send request', ur: 'درخواست بھیجیں' },
+  takeawayConfirmedHeading: { en: 'Request received', ur: 'درخواست موصول ہو گئی' },
+  takeawayConfirmedBody: {
+    en: 'Our staff will review it and contact you on the number you gave us to confirm the items and a pickup time. It is not confirmed until they do.',
+    ur: 'ہمارا عملہ اس کا جائزہ لے کر آپ کے دیے گئے نمبر پر رابطہ کرے گا تاکہ آئٹمز اور پک اپ کے وقت کی تصدیق ہو سکے۔ جب تک وہ ایسا نہ کریں، یہ تصدیق شدہ نہیں ہے۔',
+  },
+  /*
+   * STALE_REVIEW. The published menu changed between review and confirm, so
+   * the reviewed prices are no longer the real ones. The guest is sent back
+   * to look again rather than shown a stale figure or silently charged a
+   * different one.
+   */
+  takeawayStalePricesError: {
+    en: 'The menu changed while you were reviewing, so those prices are out of date. Please check your items again.',
+    ur: 'جائزہ لیتے وقت مینو تبدیل ہو گیا، اس لیے وہ قیمتیں پرانی ہو چکی ہیں۔ براہِ کرم اپنے آئٹمز دوبارہ دیکھیں۔',
+  },
+  takeawayCartGoneError: {
+    en: 'Your request is no longer available — it may have been sent already, or your session may have expired. Please start again from the menu.',
+    ur: 'آپ کی درخواست اب دستیاب نہیں — ممکن ہے یہ بھیجی جا چکی ہو، یا آپ کا سیشن ختم ہو گیا ہو۔ براہِ کرم مینو سے دوبارہ شروع کریں۔',
+  },
+  takeawayBrowseMenuLabel: { en: 'Browse the menu', ur: 'مینو دیکھیں' },
   bookFormNameLabel: { en: 'Your name', ur: 'آپ کا نام' },
   bookFormPhoneLabel: { en: 'Phone number', ur: 'فون نمبر' },
   bookFormDateLabel: { en: 'Date', ur: 'تاریخ' },
