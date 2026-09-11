@@ -66,10 +66,16 @@ import { formatPkr } from '../../../lib/business/money';
 import type { MenuViewCategory } from '../../../modules/menu/menu-view';
 import {
   resolveCategoryMedia,
+  resolveGroupMedia,
   resolveItemThumb,
   menuItemMedia,
 } from '../../../modules/menu/media-mapping';
-import { FeatureMediaStage, categoryFeatureMedia, type FeatureMedia } from './feature-media-stage';
+import {
+  FeatureMediaStage,
+  categoryFeatureMedia,
+  groupFeatureMedia,
+  type FeatureMedia,
+} from './feature-media-stage';
 import { CategoryTabs } from './category-tabs';
 import { ItemSelectorRail } from './item-selector-rail';
 import { FeaturedItemDetails } from './featured-item-details';
@@ -210,10 +216,19 @@ export function MenuFeatureCarousel({
     if (index === itemIndex) return;
     setDirection(index > itemIndex ? 1 : -1);
     const next = items[index];
-    const nextSrc = next ? menuItemMedia[next.id]?.assetPath : undefined;
-    setOutgoingMedia(
-      nextSrc !== media?.src && (nextSrc || media?.provenance === 'item') ? media : null,
-    );
+    /*
+     * Resolved through the same chain the render uses, not just the item
+     * map. Once sub-group photography exists, moving between two items in
+     * one category can genuinely change the picture — BBQ's Beef group to
+     * its Chicken group does exactly that — and the exit layer has to know,
+     * or the outgoing photo is dropped without its transition.
+     */
+    const nextSrc = next
+      ? (menuItemMedia[next.id]?.assetPath ??
+        resolveGroupMedia(category.mediaKey, next.groupLabel)?.assetPath ??
+        resolveCategoryMedia(category.mediaKey)?.assetPath)
+      : undefined;
+    setOutgoingMedia(nextSrc !== media?.src ? media : null);
     setItemIndex(index);
     setVariantId(null);
   }
@@ -252,6 +267,12 @@ export function MenuFeatureCarousel({
 
   const tabId = `menu-carousel-tab-${category.id}`;
   const panelId = `menu-carousel-panel-${category.id}`;
+  /*
+   * Most specific true statement wins: a photo of this dish, else a photo
+   * of its sub-group, else a photo of the category. Each step down is a
+   * weaker claim, never a false one, and `FeatureMediaStage` captions the
+   * two weaker ones so a guest is told what they are looking at.
+   */
   const exact = menuItemMedia[item.id];
   const media: FeatureMedia | null = exact
     ? {
@@ -261,7 +282,8 @@ export function MenuFeatureCarousel({
         height: exact.height,
         provenance: 'item',
       }
-    : categoryFeatureMedia(resolveCategoryMedia(category.mediaKey));
+    : (groupFeatureMedia(resolveGroupMedia(category.mediaKey, item.groupLabel)) ??
+      categoryFeatureMedia(resolveCategoryMedia(category.mediaKey)));
 
   return (
     <section
