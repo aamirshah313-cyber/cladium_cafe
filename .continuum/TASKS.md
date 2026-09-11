@@ -29,12 +29,26 @@
 
 - [ ] **P0 — One blocker left before `TAKEAWAY_GUEST_JOURNEY_COMPLETE` may be flipped to `true`.** It was two.
 
-  1. **Staff notification has never been delivered in production — not once, all-time.** Verified 11 Sep 2026 from `pg_stat_user_tables`: `staff_notifications` has **`n_tup_ins = 0`**. That counter survives deletion, so this is not "the rows were cleaned up" — no row has ever existed. Six real production submissions (3 bookings, 3 events, 5–6 Sep) produced 3 `outbox_events` rows, none of which was ever delivered. Separately, zero `rpc/outbox_claim_batch` calls reached Postgres in the 24h to 10 Sep 19:46Z, where a 5-minute schedule implies ~288. **Still open, and now the only reason the journey is switched off.** See `docs/takeaway-release-plan.md` §5 for the controlled test that closes it.
+  1. **Production notification delivery remains unproven.** No evidence exists that any staff notification has ever been delivered, and there is positive evidence against it over a bounded window — but "never, all-time" overstates what the data supports, and an earlier version of this entry made that claim. Corrected 11 Sep 2026.
+
+     What is actually established:
+
+     - `staff_notifications` has `n_tup_ins = 0` and zero rows. The insert counter survives `delete`, so this is not "the rows were cleaned up".
+     - **The window is bounded.** `pg_stat_database.stats_reset` for this database is **2026-08-25 20:41:21Z**, so those counters describe activity since that timestamp only — statistics can be reset, and a claim about the project's lifetime cannot rest on them. The window does still contain all six known production submissions (3 bookings, 3 events, 5–6 Sep), which produced 3 `outbox_events` rows, none delivered.
+     - Zero `rpc/outbox_claim_batch` calls reached Postgres in the 24h to 10 Sep 19:46Z, and none since, where a 5-minute schedule implies ~288/day. `runDispatchCycle` calls `claimBatch()` unconditionally, so an empty outbox is not an explanation.
+
+     The defensible statement is therefore: **no notification delivery has been observed since 25 Aug 2026, and none has ever been demonstrated.** That is enough to keep the journey switched off; it is not the same as proving it never happened.
+
+     **Closing this requires a controlled test of the whole chain, not one link:** scheduler invocation → authenticated dispatcher → Postgres claim (`rpc/outbox_claim_batch` visible in `edge_logs`) → notification row created → visible to staff in the UI. **An HTTP `200` from the dispatch route proves a cycle ran, not that anything was delivered.** See `docs/takeaway-release-plan.md` §5.
+
+     On a `401`: do **not** rotate `CRON_SECRET` as a first move. Establish first whether the scheduler is sending an `Authorization: Bearer …` header at all, and which side holds the wrong value — rotating blind destroys the evidence that would identify the misconfiguration, and re-breaks the pipeline if the scheduler is the side that is wrong.
   2. ~~`modules/takeaway/deps.ts` is entirely in-memory.~~ **Resolved 10 Sep 2026 (D-090).** `createPostgresTakeawayDeps` now wires `requestStore`, `confirmationTokens`, `idempotency`, `cartStore`, the item-snapshot sink and the status/audit sinks to Postgres, plus a `persistSubmission` that writes the request, its line snapshots, the status event, the audit event and the outbox row in **one transaction** (`takeaway_submit_request`, a plpgsql function — PostgREST cannot span five calls transactionally). Two new adapters written: `postgres-cart-store.ts` and `postgres-takeaway-submission.ts`.
 
      Verified against real local Postgres, each through separately constructed application instances: a cart written by one instance readable by another; review on one instance and submit on another; all five tables committed together; a failure inside the transaction leaving no request and no notification; two concurrent duplicate submissions creating exactly one request; a retry after a lost response returning the original id; and empty carts, stale reviews and foreign tokens all rejected. State survives an application restart (proved across two OS processes). 124 integration tests pass from a bare `supabase db reset`.
 
   Turning the journey on before (1) is fixed would let guests submit orders that staff are never notified of.
+
+- [x] **Merged and deployed 11 Sep 2026 (D-090/D-091).** PR #1 (`9558e36`, merge `3d9d983`) and PR #2 (`b4b1552`, merge `13cb83e`) are on `master` and live. Both production migrations were applied **before** the code that calls them, and each was verified after applying — see `PROJECT_STATE.md` for the evidence, including the `edge_logs` correlation (`GET /rest/v1/carts → 200`) that establishes the takeaway path really runs on Postgres rather than inferring it from a healthy response. `TAKEAWAY_GUEST_JOURNEY_COMPLETE` stays `false`.
 
 - [ ] **P0 — VERIFIED BROKEN 9 Sep 2026: nothing is draining the production outbox.** Supersedes the Step-25-era note that "nothing invokes it outside tests yet" (true then, stale since the owner reported configuring an external scheduler) and corrects D-087's assertion that the cause is specifically authentication — that was never established.
 

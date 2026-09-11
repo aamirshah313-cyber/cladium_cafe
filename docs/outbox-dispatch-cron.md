@@ -6,13 +6,22 @@ runs one bounded dispatch cycle — but **nothing invokes it on a schedule
 from inside this repository**. That is deliberate, and this document says
 what has to exist outside it.
 
-> **Status, 11 Sep 2026 — this is not working in production.** The scheduler
-> described below was reported as configured, but no notification has ever
-> been delivered: `staff_notifications` has had zero inserts for the lifetime
-> of the project, and no `rpc/outbox_claim_batch` call reached Postgres in the
-> 24h to 10 Sep 19:46Z. Do not read this document as a description of a
-> working system. `docs/takeaway-release-plan.md` §5 has the diagnostic
-> procedure and the delivery test that must pass.
+> **Status, 11 Sep 2026 — production notification delivery remains unproven.**
+> The scheduler described below was reported as configured, but nothing
+> observable supports it working: `staff_notifications` has `n_tup_ins = 0`
+> and no `rpc/outbox_claim_batch` call has reached Postgres across the
+> retained log window.
+>
+> Scope that carefully — `pg_stat_database.stats_reset` for this database is
+> **2026-08-25 20:41:21Z**, so the insert counter describes activity since
+> then rather than for all time, and statistics can be reset. The window does
+> contain all six known production submissions (5–6 Sep), so the absence is
+> meaningful; it is not a lifetime claim.
+>
+> Do not read this document as a description of a working system.
+> `docs/takeaway-release-plan.md` §5 has the diagnostic procedure and the
+> delivery test that must pass — and note that an HTTP `200` from the dispatch
+> route proves a cycle ran, not that any notification was delivered.
 
 ## Why not Vercel Cron
 
