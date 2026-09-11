@@ -33,6 +33,10 @@ export const chrome = {
   themeSwitcherLabel: { en: 'Themes', ur: 'تھیم' },
   dayThemeName: { en: 'Light', ur: 'روشن' },
   nightThemeName: { en: 'Dark', ur: 'تاریک' },
+  peachThemeName: { en: 'Peach', ur: 'آڑو' },
+  goldenThemeName: { en: 'Golden', ur: 'سنہری' },
+  terracottaThemeName: { en: 'Terracotta', ur: 'مٹیالا' },
+  emberThemeName: { en: 'Ember', ur: 'انگارہ' },
   footerStaffSignInLabel: { en: 'Staff sign in', ur: 'عملہ سائن اِن' },
   carouselPreviousLabel: { en: 'Previous choices', ur: 'پچھلے انتخاب' },
   carouselNextLabel: { en: 'More choices', ur: 'مزید انتخاب' },
@@ -210,6 +214,15 @@ export const chrome = {
   carouselCategoryPhotoCaption: {
     en: 'Photograph of this category, not of the selected dish',
     ur: 'اس زمرے کی تصویر، منتخب کردہ ڈش کی نہیں',
+  },
+  /**
+   * The same disclaimer one level finer. A BBQ group photo really is beef
+   * (or really is chicken), so saying "this category" would understate it —
+   * but it is still not the selected dish, which is the part that matters.
+   */
+  carouselGroupPhotoCaption: {
+    en: 'Photograph of this section, not of the selected dish',
+    ur: 'اس حصے کی تصویر، منتخب کردہ ڈش کی نہیں',
   },
   carouselViewDishDetailsLabel: { en: 'View dish details', ur: 'ڈش کی تفصیلات دیکھیں' },
   carouselPreviousCategoryLabel: { en: 'Previous categories', ur: 'پچھلے زمرے' },

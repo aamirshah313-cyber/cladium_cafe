@@ -2,8 +2,15 @@ import { describe, expect, it } from 'vitest';
 import { isSupportedTheme, THEMES } from '../../src/lib/theme/theme';
 
 describe('THEMES', () => {
-  it('is exactly day and night', () => {
-    expect(THEMES).toEqual(['day', 'night']);
+  /**
+   * Pinned deliberately. `THEMES` drives the switcher, the cookie and the
+   * `customer_sessions.theme` check constraint, and only the first of those
+   * follows automatically — so adding a theme should force a visit here,
+   * and from here to `globals.css` and the migration that widens the
+   * constraint.
+   */
+  it('is exactly the six supported themes', () => {
+    expect(THEMES).toEqual(['day', 'night', 'peach', 'golden', 'terracotta', 'ember']);
   });
 });
 

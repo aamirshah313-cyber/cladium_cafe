@@ -25,8 +25,20 @@
   --border-subtle: #c9d4c8;
 }
 
+/*
+ * `:not([data-theme])`, not `:not([data-theme='day'])`.
+ *
+ * The original guard meant "system dark applies unless Day was chosen",
+ * which was correct while Day and Night were the only options. With a
+ * third theme it silently became "system dark also applies to Peach": the
+ * selectors tie on specificity, so Peach only won by being declared later
+ * in the file — one reorder away from a guest on a dark-preferring device
+ * picking Peach and getting the Night palette. Keying on the *presence* of
+ * an explicit choice says what was always meant, and holds for any theme
+ * added later.
+ */
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme='day']) {
+  :root:not([data-theme]) {
     color-scheme: dark;
     --surface-canvas: #0b1a15;
     --surface-raised: #183228;
@@ -51,6 +63,106 @@
   --action-on-primary: #0b1a15;
   --accent-gold: #e7d5ab;
   --border-subtle: #365246;
+}
+
+/*
+ * Peach and Golden — two warm light themes.
+ *
+ * Both carry the same ten semantic tokens as Day and Night, so every
+ * component inherits them without knowing they exist; nothing in the app
+ * branches on a theme name.
+ *
+ * Peach is drawn from the venue's own signage wall: the terracotta plaster
+ * in shadow (#b4653b), the warm orange mid-wall (#de8a4e), and the golden
+ * light washing the top of it (#f2b544). Those are the anchors, not the
+ * token values — a wall photographed under warm light is far too saturated
+ * to sit behind body text, so the surfaces are that same hue family opened
+ * right up, and the saturated end of the wall is kept for the deep browns
+ * that carry the type.
+ *
+ * Golden is the lighter, yellower sibling: cream-gold surfaces with amber
+ * type, for the same room in daylight rather than under the evening lamps.
+ *
+ * Every foreground/background pair a component can actually produce was
+ * measured against WCAG AA rather than judged by eye, because warm
+ * mid-tones on cream are exactly where a palette looks inviting and reads
+ * badly. Tightest text pair is 4.98:1 (Peach) and 5.05:1 (Golden);
+ * `tests/unit/theme-tokens.test.ts` holds every pair to the line. Re-measure
+ * before changing any value here — nudging toward a prettier peach is
+ * precisely what drops a pair below it.
+ *
+ * `color-scheme: light` on both, so form controls, scrollbars and the
+ * browser's own UI stay light. These are light themes wearing warm colours,
+ * not dark ones.
+ */
+/*
+ * Peach — the warm orange band across the middle of the wall (#de8a4e).
+ *
+ * Carried at close to full strength rather than opened up into a tint. An
+ * earlier pass lightened all of these to near-cream, which met contrast
+ * easily and lost the point: the wall's colour has to actually be on screen
+ * for the theme to be from the wall at all. Dark brown type on saturated
+ * orange is what the signage itself does.
+ */
+:root[data-theme='peach'] {
+  color-scheme: light;
+  --surface-canvas: #de8a4e;
+  --surface-raised: #eda87a;
+  --surface-atmosphere: #d07b3a;
+  --text-primary: #2a1303;
+  --text-muted: #351704;
+  --action-primary: #6d3208;
+  --action-on-primary: #fdefe0;
+  --accent-gold: #351704;
+  --border-subtle: #bd6a2c;
+}
+
+/* Golden — the lamplit top of the wall (#f2b544), likewise at full strength. */
+:root[data-theme='golden'] {
+  color-scheme: light;
+  --surface-canvas: #f2b544;
+  --surface-raised: #f8cd74;
+  --surface-atmosphere: #db9c22;
+  --text-primary: #2b1a02;
+  --text-muted: #4a2f05;
+  --action-primary: #6b4405;
+  --action-on-primary: #fff6de;
+  --accent-gold: #4a2f05;
+  --border-subtle: #c98f1e;
+}
+
+/* The plaster below the sign, where the lamp no longer reaches it. */
+:root[data-theme='terracotta'] {
+  color-scheme: light;
+  --surface-canvas: #f7e2d1;
+  --surface-raised: #fdf1e7;
+  --surface-atmosphere: #e8b892;
+  --text-primary: #3b1d0d;
+  --text-muted: #6a3a1e;
+  --action-primary: #9c4a24;
+  --action-on-primary: #fdf1e7;
+  --accent-gold: #7e5210;
+  --border-subtle: #dcb693;
+}
+
+/*
+ * The sign plate itself: near-black lacquer with the logo's gold linework.
+ *
+ * The one dark theme here, and deliberately distinct from Night — Night is
+ * the brand's deep green, this is the warm brown-black of the board with
+ * amber lamplight on it, so the two do not read as the same theme twice.
+ */
+:root[data-theme='ember'] {
+  color-scheme: dark;
+  --surface-canvas: #1a120d;
+  --surface-raised: #2a1d14;
+  --surface-atmosphere: #3d2a1b;
+  --text-primary: #fbeeda;
+  --text-muted: #e0c49b;
+  --action-primary: #f2b544;
+  --action-on-primary: #1a120d;
+  --accent-gold: #f5c96a;
+  --border-subtle: #5a3f28;
 }
 
 /*

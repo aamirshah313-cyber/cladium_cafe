@@ -47,7 +47,7 @@
  * surface displaying one beside a dish name must say so visibly.
  */
 
-export type MediaProvenance = 'venue' | 'category' | 'item';
+export type MediaProvenance = 'venue' | 'category' | 'group' | 'item';
 
 export interface SiteMediaAsset {
   /** The preserved original this was generated from. */

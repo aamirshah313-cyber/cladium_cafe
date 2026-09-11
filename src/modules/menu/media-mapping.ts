@@ -131,6 +131,65 @@ export function resolveCategoryMedia(categoryId: string): MenuCategoryMedia | nu
 }
 
 /**
+ * Group-level photography — one step finer than a category, one step
+ * coarser than a dish.
+ *
+ * BBQ is the case that forced this. Its 12 items split into real
+ * sub-groups in `menu.json` — Beef, Chicken, Turkish — and a single
+ * category photo cannot represent all three honestly: a plate of beef
+ * skewers shown against "Chicken Malai Boti" is a false statement about
+ * the food, which is exactly what the per-item map below refuses to make.
+ *
+ * A group photo can be honest without identifying a dish. "Beef skewers
+ * grilling over charcoal" is true of every item in the Beef group, and
+ * claims nothing about which one is pictured. That is the whole reason
+ * this layer exists rather than keying per item.
+ *
+ * Keyed by `<category stable id>.<group slug>`, using the same `slugify`
+ * the adapter applies when it builds item stable ids
+ * (`adapter.ts` — `bbq.beef.beef-seekh-kabab`), so the key here is the
+ * prefix of the ids of exactly the items it describes.
+ *
+ * Provenance: supplied by the owner in September 2026 as frames from
+ * grill footage. Each was cropped to remove the source app's interface —
+ * like/comment/share counts and a creator handle were burned into the
+ * originals — and then re-checked visually, not assumed clean. Alt text
+ * describes the group, never a named dish.
+ */
+export const menuGroupMedia: Readonly<Record<string, MenuCategoryMedia>> = {
+  'bbq.beef': {
+    assetPath: '/menu/bbq.beef.jpg',
+    alt: 'Skewers of marinated beef grilling over glowing charcoal',
+    width: 940,
+    height: 820,
+  },
+  'bbq.chicken': {
+    assetPath: '/menu/bbq.chicken.jpg',
+    alt: 'Grilled chicken pieces served on a wooden platter with onion and carrot',
+    width: 940,
+    height: 490,
+  },
+};
+
+/**
+ * The group photo covering one item, or `null` when the item's group has
+ * none — in which case the caller falls back to the category photo, which
+ * is still a true statement about the category.
+ */
+export function resolveGroupMedia(
+  categoryStableId: string,
+  groupLabel: string | null,
+): MenuCategoryMedia | null {
+  if (!groupLabel) return null;
+  const slug = groupLabel
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return menuGroupMedia[`${categoryStableId}.${slug}`] ?? null;
+}
+
+/**
  * Per-item photography — deliberately empty.
  *
  * The printed source pages carried one representative photograph per

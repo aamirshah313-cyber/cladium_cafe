@@ -66,6 +66,25 @@ export function categoryFeatureMedia(media: MenuCategoryMedia | null): FeatureMe
   };
 }
 
+/**
+ * The same adaptation for a sub-group photo (`menuGroupMedia`).
+ *
+ * Separate from `categoryFeatureMedia` for the same reason that one
+ * hard-codes its provenance: the claim travels with the mapping the
+ * picture came out of, so a caller cannot relabel a category photo as a
+ * group one by passing a different argument.
+ */
+export function groupFeatureMedia(media: MenuCategoryMedia | null): FeatureMedia | null {
+  if (!media) return null;
+  return {
+    src: media.assetPath,
+    alt: media.alt,
+    width: media.width,
+    height: media.height,
+    provenance: 'group',
+  };
+}
+
 export function FeatureMediaStage({ media, locale }: FeatureMediaStageProps) {
   if (!media) {
     // No approved photograph for this category: a calm Cladium mark rather
@@ -124,7 +143,12 @@ export function FeatureMediaStage({ media, locale }: FeatureMediaStageProps) {
       </div>
       {media.provenance !== 'item' ? (
         <p className="menu-media-stage-caption">
-          {chromeText('carouselCategoryPhotoCaption', locale)}
+          {chromeText(
+            media.provenance === 'group'
+              ? 'carouselGroupPhotoCaption'
+              : 'carouselCategoryPhotoCaption',
+            locale,
+          )}
         </p>
       ) : null}
     </div>
