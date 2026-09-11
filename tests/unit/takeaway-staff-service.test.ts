@@ -94,6 +94,7 @@ describe('getTakeawayRequestDetail', () => {
       id: 'snap-1',
       takeawayRequestId: 'order-1',
       menuItemId: 'steaks.ribeye',
+      variantId: null,
       name: 'Ribeye Steak',
       variantLabel: null,
       unitPricePkr: 3500,
@@ -104,6 +105,7 @@ describe('getTakeawayRequestDetail', () => {
       id: 'snap-2',
       takeawayRequestId: 'order-2', // a different request — must not leak in
       menuItemId: 'x',
+      variantId: null,
       name: 'x',
       variantLabel: null,
       unitPricePkr: 1,

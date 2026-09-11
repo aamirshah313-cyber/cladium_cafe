@@ -34,6 +34,12 @@ const TEST_ENV: Record<string, string> = {
   // 32+ chars, arbitrary — not a real secret, never used outside this run.
   SESSION_SECRET: 'playwright-e2e-local-only-session-secret-not-real',
   CRON_SECRET: 'playwright-e2e-local-only-cron-secret-not-real',
+  // This suite deliberately runs with no Supabase credentials, so the
+  // durable stores cannot be constructed. Saying so explicitly is now
+  // required: `lib/db/durable-storage-policy.ts` fails closed rather than
+  // silently degrading to memory, so an unset variable means "stop", and
+  // only a test or a local dev environment may opt back in.
+  ALLOW_IN_MEMORY_STORES: 'true',
   FEATURE_PUBLIC_SITE: 'true',
   FEATURE_TAKEAWAY_REQUESTS: 'true',
   FEATURE_BOOKING_REQUESTS: 'true',

@@ -136,6 +136,14 @@ export function removeCartItem(cart: Cart, cartLineId: string): Result<Cart, App
 export interface CartLineTotal {
   readonly cartLineId: string;
   readonly menuItemId: string;
+  /**
+   * Carried alongside the label so the snapshot can record which variant row
+   * a line came from. The label alone is what a guest reads and what stays
+   * authoritative once the menu moves on, but it is not an identifier — two
+   * versions can both call a variant "Half", and `takeaway_items` has a real
+   * `menu_variant_id` column that was being written as null for want of this.
+   */
+  readonly variantId: string | null;
   readonly name: string;
   readonly variantLabel: string | null;
   readonly unitPricePkr: number;
@@ -184,6 +192,7 @@ export function recomputeCartTotals(
     lines.push({
       cartLineId: cartLine.id,
       menuItemId: item.id,
+      variantId: cartLine.variantId,
       name: item.name,
       variantLabel,
       unitPricePkr: priceResult.value,

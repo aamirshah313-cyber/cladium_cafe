@@ -32,6 +32,8 @@ export interface TakeawayItemSnapshot {
   readonly id: string;
   readonly takeawayRequestId: string;
   readonly menuItemId: string;
+  /** The variant row this line came from, or null when the item has none. */
+  readonly variantId: string | null;
   readonly name: string;
   readonly variantLabel: string | null;
   readonly unitPricePkr: number;

@@ -254,7 +254,18 @@ describe('submitTakeaway', () => {
     expect(cartAfter?.lines).toHaveLength(1);
   });
 
-  it('fails NOT_FOUND submitting for a session with no cart', async () => {
+  /*
+   * Was `NOT_FOUND`, from an early return in `submitTakeaway` when no cart
+   * was stored. That early return also broke retries, because a successful
+   * submit *clears the cart*: a guest whose response was lost, retrying with
+   * the same idempotency key, was told `NOT_FOUND` — that their request had
+   * failed — when it had actually been created. See the retry test below.
+   *
+   * The cart check now happens inside the idempotent function, so a replay
+   * resolves from the stored result and a genuinely empty submit is refused
+   * as `empty_cart`. Still refused; more accurately named.
+   */
+  it('refuses to submit a session with no cart, as an empty cart', async () => {
     const deps = harness();
     const prepared = await prepareTakeawayRequest(deps, {
       sessionId: 'never-added-anything',
@@ -271,6 +282,45 @@ describe('submitTakeaway', () => {
       correlationId: 'corr-1',
     });
     expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.error.code).toBe('NOT_FOUND');
+    if (!result.ok) {
+      expect(result.error.code).toBe('VALIDATION_FAILED');
+      expect(result.error.issues?.[0]?.code).toBe('empty_cart');
+    }
+  });
+
+  /*
+   * The regression this whole change exists for, at the layer where it broke.
+   *
+   * Found by driving the real HTTP routes rather than the service: the
+   * service's own idempotent-replay test passed the entire time, because the
+   * early cart check sat *above* it and the service was never reached.
+   */
+  it('returns the original request on a retry after the cart was cleared', async () => {
+    const deps = harness();
+    const sessionId = 'retry-after-success';
+    await addItem(deps, sessionId, { menuItemId: 'steaks.ribeye', quantity: 1 });
+
+    const prepared = await reviewTakeaway(deps, sessionId, GUEST_DETAILS);
+    if (!prepared.ok) throw new Error('unexpected review failure');
+
+    const submitInput = {
+      ...GUEST_DETAILS,
+      sourceChannel: 'WEB' as const,
+      confirmationToken: prepared.value.confirmationToken,
+      idempotencyKey: 'idem-key-retry0000000',
+      correlationId: 'corr-retry',
+    };
+
+    const first = await submitTakeaway(deps, sessionId, submitInput);
+    expect(first.ok).toBe(true);
+
+    // The cart is gone now. A guest whose response never arrived retries.
+    expect(await deps.cartStore.get(sessionId)).toBeNull();
+    const retry = await submitTakeaway(deps, sessionId, submitInput);
+
+    expect(retry.ok).toBe(true);
+    if (first.ok && retry.ok) {
+      expect(retry.value.requestId).toBe(first.value.requestId);
+    }
   });
 });

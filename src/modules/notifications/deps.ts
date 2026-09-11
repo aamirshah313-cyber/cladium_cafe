@@ -31,6 +31,7 @@
 import { createInMemoryOutboxStore, type OutboxStore } from '../../lib/domain/outbox-store';
 import { createPostgresOutboxStore } from '../../lib/db/postgres-outbox-store';
 import { createSupabaseAdminClient } from '../integrations/supabase-admin-client';
+import { resolveDurableDeps } from '../../lib/db/durable-storage-policy';
 import { createLogger } from '../../lib/logging';
 import type { OutboxHandler } from '../../lib/domain/outbox-dispatcher';
 import { createStaffNotificationHandler } from '../staff/notification-handlers';
@@ -55,16 +56,38 @@ let cachedOutboxStore: OutboxStore | null = null;
  * meant-to-be-configured environment quietly lost durability; real
  * alerting on it is the separate, still-open monitoring task.
  */
+/**
+ * Durable, or it fails — it no longer degrades quietly.
+ *
+ * This used to catch any construction failure and fall back to an in-memory
+ * outbox with a `warn` log. That fallback is invisible from outside, and it
+ * is invisible in the worst possible way: the dispatch endpoint keeps
+ * returning a healthy `200` with a plausible summary while claiming batches
+ * from a per-instance `Map` and never touching Postgres. Real
+ * `outbox_events` rows accumulate undelivered behind a green light.
+ *
+ * That is not hypothetical. When the production dispatcher was found not to
+ * be draining anything, this fallback was one of three causes that fitted
+ * the evidence equally well, and the only one that would have looked
+ * healthy while failing. Making it loud removes it as a possibility rather
+ * than leaving it to be ruled out by inference.
+ *
+ * The in-memory store is still available for tests and for local development
+ * without a database, but only when the environment says so explicitly. See
+ * `lib/db/durable-storage-policy.ts`.
+ */
 function resolveOutboxStore(): OutboxStore {
   if (cachedOutboxStore) return cachedOutboxStore;
-  try {
-    cachedOutboxStore = createPostgresOutboxStore(createSupabaseAdminClient());
-  } catch (error) {
-    createLogger().warn('notifications.outbox.postgres_unavailable_using_in_memory', {
-      errorType: error instanceof Error ? error.constructor.name : typeof error,
-    });
-    cachedOutboxStore = createInMemoryOutboxStore();
-  }
+  cachedOutboxStore = resolveDurableDeps(
+    'The notification outbox',
+    () => createPostgresOutboxStore(createSupabaseAdminClient()),
+    createInMemoryOutboxStore,
+    (error) => {
+      createLogger().warn('notifications.outbox.in_memory_opt_in', {
+        errorType: error instanceof Error ? error.constructor.name : typeof error,
+      });
+    },
+  );
   return cachedOutboxStore;
 }
 
