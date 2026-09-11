@@ -108,12 +108,19 @@ needs **no secret to be shared or displayed**.
 
 ### 5a. Establish whether the scheduler runs at all
 
-Evidence today (see `.continuum/TASKS.md`): zero `rpc/outbox_claim_batch`
-calls reached Postgres in the last 24 hours, and `staff_notifications` has
-had **zero inserts for the lifetime of the project**. Delivery has never
-worked in production. Three causes were previously open; production data now
-narrows them, but the deciding evidence is on Vercel's side and is not
-readable from here.
+Evidence (see `.continuum/TASKS.md`): zero `rpc/outbox_claim_batch` calls have
+reached Postgres, and `staff_notifications` has `n_tup_ins = 0`.
+
+**Stated precisely: production notification delivery remains _unproven_.** An
+earlier version of this section claimed "zero inserts for the lifetime of the
+project", which the data does not support — `pg_stat_database.stats_reset` for
+this database is **2026-08-25 20:41:21Z**, so those counters describe activity
+since that timestamp only, and statistics can be reset. The window does still
+contain all six known production submissions (5–6 Sep), so the absence is
+meaningful; it is simply not a lifetime claim.
+
+The deciding evidence is on Vercel's side and is not readable from this
+workspace.
 
 Ask the owner to trigger the scheduler **once, on demand**, and note the
 minute. Then correlate three sources over that minute:
@@ -127,8 +134,22 @@ minute. Then correlate three sources over that minute:
 Readings:
 
 - **Absent from Vercel** → the scheduler is not firing. Fix the schedule.
-- **Present, `401`** → `CRON_SECRET` mismatch between scheduler and Vercel.
-  Rotate and set both sides; never paste the value into a chat or a file.
+- **Present, `401`** → the request arrived but did not authenticate. **Do not
+  rotate `CRON_SECRET` as a first move.** Rotating destroys the evidence that
+  would identify which side is misconfigured, and if the scheduler is the wrong
+  side it re-breaks the pipeline while looking like a fix. Diagnose in order:
+  1. Is the scheduler sending an `Authorization` header at all? Some schedulers
+     silently drop headers on redirect, or need them configured per-request
+     rather than per-job.
+  2. Is it exactly `Authorization: Bearer <secret>`? `verifyCronAuthHeader`
+     expects that prefix; a bare secret, `Basic`, or a custom header name all
+     produce an identical `401`.
+  3. Do the two values match? Compare lengths and a short prefix/suffix on each
+     side rather than pasting either value anywhere — a trailing newline or a
+     quoted value in the scheduler's config is a common cause.
+     Rotate only once you have established that the secret itself is the problem,
+     and then set both sides in the same change. Never paste the value into a chat
+     or a file.
 - **Present, `200`, and a matching `outbox_claim_batch` line** → the pipeline
   is reaching Postgres. The earlier 24-hour gap was a scheduling lapse.
 - **Present, `200`, but no `outbox_claim_batch` line** → the dispatcher ran
@@ -145,7 +166,7 @@ The two are distinguishable by one query, and this is the check that matters:
 select count(*) as delivered_ever from public.staff_notifications;
 ```
 
-It has never been anything but `0`. A successful delivery test must move it.
+It has never been observed as anything but `0`. A successful delivery test must move it.
 
 Procedure, once 5a shows the scheduler reaching Postgres:
 
