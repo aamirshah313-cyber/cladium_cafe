@@ -109,8 +109,15 @@ export function ItemSelectorRail({
         {items.map((item, index) => {
           const thumb = thumbFor(item, index);
           const selected = index === selectedIndex;
+          /*
+           * `role="none"` on the `<li>`: the `<ul>` is a `listbox`, whose
+           * required children are `option`s. An implicit `listitem` between
+           * them breaks `aria-required-children` and `aria-required-parent`.
+           * Hiding it makes the button's `option` a direct child, which is
+           * what the markup means; the `<li>` remains for styling.
+           */
           return (
-            <li key={item.id} className="menu-carousel-item-slot">
+            <li key={item.id} role="none" className="menu-carousel-item-slot">
               <button
                 ref={registerRef(index)}
                 type="button"
