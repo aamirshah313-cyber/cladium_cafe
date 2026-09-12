@@ -1244,10 +1244,14 @@ button[aria-pressed='true'] {
   object-fit: cover;
 }
 
+/* The second place `--text-muted` met `--surface-atmosphere` (the medallion's
+ * own background) — 4.37:1 under Day. Same reasoning as `.map-placeholder
+ * .field-hint` above: change the pairing, not the palette. At 20px this is
+ * not WCAG "large text", so the 4.5:1 threshold applies in full. */
 .menu-carousel-thumb-initial {
   font-family: var(--font-serif), Georgia, 'Times New Roman', serif;
   font-size: 1.25rem;
-  color: var(--text-muted);
+  color: var(--text-primary);
 }
 
 .menu-carousel-thumb-name {
@@ -1861,8 +1865,11 @@ button[aria-pressed='true'] {
   font-size: var(--step-small);
 }
 
+/* The footer paints its own dark ground and has its own ink tokens, which the
+ * other de-emphasised rules here already use. `--text-muted` follows the page
+ * theme instead: under Day that is 3.31:1 against the footer's near-black. */
 .site-footer-staff a {
-  color: var(--text-muted);
+  color: var(--footer-ink-muted);
 }
 
 .site-footer-bottom {
@@ -3191,8 +3198,16 @@ button[aria-pressed='true'] {
   font-size: var(--step-small);
 }
 
+/*
+ * `--text-muted` on `--surface-atmosphere` is 4.37:1 under Day — just under
+ * AA, and axe flags it as serious. The pairing is the problem, not either
+ * token alone (muted is 7.74:1 on canvas). The two places that render that
+ * pair use the primary ink instead; `tests/unit/theme-tokens.test.ts` still
+ * records the pair as a known shortfall.
+ */
 .map-placeholder .field-hint {
   margin: 0;
+  color: var(--text-primary);
 }
 
 .map-frame {

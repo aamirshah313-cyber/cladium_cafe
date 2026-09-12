@@ -4,7 +4,6 @@
 
 import { expect, type Locator, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { chromeText } from '../../src/lib/i18n/chrome';
 
 export const LOCALES = ['en', 'ur'] as const;
 export type E2ELocale = (typeof LOCALES)[number];
@@ -49,15 +48,13 @@ export async function expectNoHorizontalOverflow(page: Page): Promise<void> {
   expect(overflow, 'page scrolls horizontally').toBeLessThanOrEqual(1); // 1px tolerance for subpixel rounding
 }
 
-/** Clicks the Day/Night toggle button for the requested theme (`theme-toggle.tsx`, Step 14) — real UI interaction, not a cookie shortcut. Locale-aware: the button's accessible name is translated. */
-export async function setThemeViaToggle(
-  page: Page,
-  theme: E2ETheme,
-  locale: E2ELocale,
-): Promise<void> {
-  const nameKey = theme === 'day' ? 'dayThemeName' : 'nightThemeName';
-  const label = chromeText(nameKey, locale);
-  await page.getByRole('button', { name: label, exact: true }).click();
+/**
+ * Sets the theme through the real switcher (`theme-toggle.tsx`), not a cookie
+ * shortcut. Selects by option value, which is locale-independent; the theme is
+ * confirmed from `<html data-theme>` rather than from the control.
+ */
+export async function setThemeViaToggle(page: Page, theme: E2ETheme): Promise<void> {
+  await page.locator('.site-preference select').last().selectOption(theme);
   await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
 }
 
