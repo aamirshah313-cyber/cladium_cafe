@@ -133,7 +133,14 @@ minute. Then correlate three sources over that minute:
 
 Readings:
 
-- **Absent from Vercel** → the scheduler is not firing. Fix the schedule.
+- **Absent from Vercel** → **no matching request was observed in the window you
+  searched.** That is not the same as "the scheduler is not firing", and the
+  difference matters: log retention, an over-narrow time range, a filter that
+  does not match the path, and log sampling all produce an identical empty
+  result. Before concluding anything, widen the window, drop the path filter,
+  and confirm the retention period covers the minute you are looking at. Only
+  once a request genuinely should be there and is not does this point at the
+  schedule.
 - **Present, `401`** → the request arrived but did not authenticate. **Do not
   rotate `CRON_SECRET` as a first move.** Rotating destroys the evidence that
   would identify which side is misconfigured, and if the scheduler is the wrong
