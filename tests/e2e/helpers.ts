@@ -58,6 +58,43 @@ export async function setThemeViaToggle(page: Page, theme: E2ETheme): Promise<vo
   await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
 }
 
+/** The primary navigation landmark. Rendered twice: once in
+ * `.site-header-desktop` (hidden below the desktop breakpoint) and once inside
+ * the drawer, which only mounts while open. */
+export function primaryNav(page: Page): Locator {
+  return page
+    .locator('nav[aria-label]')
+    .filter({ has: page.locator('a') })
+    .last();
+}
+
+/**
+ * Makes the primary navigation reachable at whatever viewport is in play.
+ *
+ * Wide viewports show it inline and this is a no-op. Narrow ones collapse it
+ * behind the drawer trigger, which is correct responsive behaviour, not a
+ * defect — so the navigation is opened the way a guest would rather than the
+ * test asserting that a deliberately hidden element is visible.
+ *
+ * Returns the trigger so a caller can assert its expanded state.
+ */
+export async function revealPrimaryNav(page: Page): Promise<Locator | null> {
+  const trigger = page.locator('.site-header-drawer-trigger');
+  if (await primaryNav(page).isVisible()) return null;
+
+  await expect(trigger).toBeVisible();
+  await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+  await trigger.click();
+  await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.getByRole('dialog')).toBeVisible();
+  return trigger;
+}
+
+/** The theme `<select>` in the header utilities. */
+export function themeSelect(page: Page): Locator {
+  return page.locator('.site-preference select').last();
+}
+
 /** Locates the primary `<main>` landmark, matching every page's shared shell. */
 export function mainLandmark(page: Page): Locator {
   return page.locator('main, [role="main"]').first();

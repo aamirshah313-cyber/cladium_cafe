@@ -1422,12 +1422,66 @@ button[aria-pressed='true'] {
   border-radius: 0.35rem;
 }
 @media (max-width: 420px) {
+  /*
+   * At 320px the header row could not fit its own contents. Measured: a
+   * 272px content box against 298.2px of children, pushing
+   * `.site-header-drawer-trigger` to 322.2px — 2.2px past the viewport — and
+   * scrolling the page horizontally (WCAG 1.4.10 Reflow, and the zoom spec's
+   * 200% case, where the 375px project halves to 320px).
+   *
+   * Deliberately not `overflow-x: hidden`: that hides the symptom, leaves the
+   * trigger partly off-screen, and silences the assertion that found it.
+   *
+   * The room comes from the two preference labels. `.site-header-utilities`
+   * measured 178.2px of the 272px available, most of it the words
+   * "Languages" and "Themes" sitting beside controls that already say what
+   * they are. They are hidden visually only — the text stays in the
+   * accessibility tree, so each select keeps its accessible name, and the
+   * control still shows words rather than an icon, which
+   * `design/theme-mode.md` requires.
+   */
   .site-header-utilities {
     gap: 0.5rem;
   }
+
+  .site-preference > span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
   .site-preference select {
     padding-inline-end: 0.4rem;
     max-width: 6rem;
+  }
+}
+
+/*
+ * A `<select>` is sized by its widest option, so the theme control grew when
+ * the four venue themes were added — "Terracotta" alone took it to 92.6px.
+ * Below 360px that is the last thing pushing the drawer trigger off-screen.
+ *
+ * Capping the select's width was tried first and rejected: a native select
+ * clips its closed value without reporting any overflow, so the box measured
+ * as fitting (`clientWidth === scrollWidth`) while actually rendering
+ * "Terrac" and "Englis". Only a screenshot showed it. The space is therefore
+ * taken from the header's own padding and the control's type size, both of
+ * which shrink honestly, rather than from the label the guest has to read.
+ *
+ * Not from the 48px drawer trigger either — WCAG 2.5.5 target size.
+ */
+@media (max-width: 360px) {
+  .site-header-inner {
+    padding-inline: 0.75rem;
+  }
+
+  .site-preference select {
+    font-size: 0.72rem;
   }
 }
 
