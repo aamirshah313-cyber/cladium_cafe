@@ -6,6 +6,7 @@
  */
 
 import { test, expect } from '@playwright/test';
+import { themeSelect } from './helpers';
 
 test.describe('reduced motion', () => {
   test('no color/background transition is applied to <body> when reduced motion is requested', async ({
@@ -23,7 +24,7 @@ test.describe('reduced motion', () => {
   }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto('/en');
-    await page.getByRole('button', { name: 'Night', exact: true }).click();
+    await themeSelect(page).selectOption('night');
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'night');
   });
 });

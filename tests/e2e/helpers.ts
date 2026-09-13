@@ -4,7 +4,6 @@
 
 import { expect, type Locator, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { chromeText } from '../../src/lib/i18n/chrome';
 
 export const LOCALES = ['en', 'ur'] as const;
 export type E2ELocale = (typeof LOCALES)[number];
@@ -49,16 +48,51 @@ export async function expectNoHorizontalOverflow(page: Page): Promise<void> {
   expect(overflow, 'page scrolls horizontally').toBeLessThanOrEqual(1); // 1px tolerance for subpixel rounding
 }
 
-/** Clicks the Day/Night toggle button for the requested theme (`theme-toggle.tsx`, Step 14) — real UI interaction, not a cookie shortcut. Locale-aware: the button's accessible name is translated. */
-export async function setThemeViaToggle(
-  page: Page,
-  theme: E2ETheme,
-  locale: E2ELocale,
-): Promise<void> {
-  const nameKey = theme === 'day' ? 'dayThemeName' : 'nightThemeName';
-  const label = chromeText(nameKey, locale);
-  await page.getByRole('button', { name: label, exact: true }).click();
+/**
+ * Sets the theme through the real switcher (`theme-toggle.tsx`), not a cookie
+ * shortcut. Selects by option value, which is locale-independent; the theme is
+ * confirmed from `<html data-theme>` rather than from the control.
+ */
+export async function setThemeViaToggle(page: Page, theme: E2ETheme): Promise<void> {
+  await page.locator('.site-preference select').last().selectOption(theme);
   await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
+}
+
+/** The primary navigation landmark. Rendered twice: once in
+ * `.site-header-desktop` (hidden below the desktop breakpoint) and once inside
+ * the drawer, which only mounts while open. */
+export function primaryNav(page: Page): Locator {
+  return page
+    .locator('nav[aria-label]')
+    .filter({ has: page.locator('a') })
+    .last();
+}
+
+/**
+ * Makes the primary navigation reachable at whatever viewport is in play.
+ *
+ * Wide viewports show it inline and this is a no-op. Narrow ones collapse it
+ * behind the drawer trigger, which is correct responsive behaviour, not a
+ * defect — so the navigation is opened the way a guest would rather than the
+ * test asserting that a deliberately hidden element is visible.
+ *
+ * Returns the trigger so a caller can assert its expanded state.
+ */
+export async function revealPrimaryNav(page: Page): Promise<Locator | null> {
+  const trigger = page.locator('.site-header-drawer-trigger');
+  if (await primaryNav(page).isVisible()) return null;
+
+  await expect(trigger).toBeVisible();
+  await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+  await trigger.click();
+  await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.getByRole('dialog')).toBeVisible();
+  return trigger;
+}
+
+/** The theme `<select>` in the header utilities. */
+export function themeSelect(page: Page): Locator {
+  return page.locator('.site-preference select').last();
 }
 
 /** Locates the primary `<main>` landmark, matching every page's shared shell. */
