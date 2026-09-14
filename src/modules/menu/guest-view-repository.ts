@@ -50,6 +50,7 @@ interface CategoryRow {
 
 interface ItemRow {
   readonly id: string;
+  readonly stable_id: string;
   readonly category_id: string;
   readonly name: string;
   readonly group_label: string | null;
@@ -96,7 +97,7 @@ export async function fetchPublishedMenuView(deps: GuestMenuViewDeps): Promise<P
   const { data: itemRows, error: itemError } = await client
     .from('menu_items')
     .select(
-      'id, category_id, name, group_label, base_price_pkr, availability, is_signature, serves, served_with, sort_order',
+      'id, stable_id, category_id, name, group_label, base_price_pkr, availability, is_signature, serves, served_with, sort_order',
     )
     .eq('menu_version_id', versionRow.id)
     .eq('publish_state', 'PUBLISHED')
@@ -129,6 +130,7 @@ export async function fetchPublishedMenuView(deps: GuestMenuViewDeps): Promise<P
     const list = itemsByCategoryId.get(i.category_id) ?? [];
     list.push({
       id: i.id,
+      mediaKey: i.stable_id,
       name: i.name,
       groupLabel: i.group_label,
       availability: i.availability,

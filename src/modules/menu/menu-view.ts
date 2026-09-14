@@ -40,6 +40,16 @@ export interface MenuViewVariant {
 
 export interface MenuViewItem {
   readonly id: string;
+  /**
+   * The stable slug (`menu_items.stable_id`, e.g.
+   * `desi-cuisine.chicken-handi`) per-item media mapping keys off, for
+   * exactly the reason `MenuViewCategory.mediaKey` exists: `id` is the
+   * database UUID, regenerated on every menu import, so a media map keyed
+   * by it silently stops matching the moment the menu is re-imported.
+   * `stable_id` is derived from the category/group/item names and survives
+   * one. See `modules/menu/media-mapping.ts`.
+   */
+  readonly mediaKey: string;
   readonly name: string;
   readonly groupLabel: string | null;
   readonly availability: AvailabilityStatus;

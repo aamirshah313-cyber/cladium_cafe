@@ -13,6 +13,7 @@ const FIXTURE: PublishedMenuView = {
       items: [
         {
           id: 'steaks.ribeye',
+          mediaKey: 'steaks.ribeye',
           name: 'Ribeye Steak',
           groupLabel: null,
           availability: 'AVAILABLE',
@@ -31,6 +32,7 @@ const FIXTURE: PublishedMenuView = {
       items: [
         {
           id: 'beverages.iced-tea',
+          mediaKey: 'beverages.iced-tea',
           name: 'Iced Tea',
           groupLabel: null,
           availability: 'UNAVAILABLE',

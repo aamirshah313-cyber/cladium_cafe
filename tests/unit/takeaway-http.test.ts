@@ -33,6 +33,7 @@ const MENU: PublishedMenuView = {
       items: [
         {
           id: 'steaks.ribeye',
+          mediaKey: 'steaks.ribeye',
           name: 'Ribeye Steak',
           groupLabel: null,
           availability: 'AVAILABLE',

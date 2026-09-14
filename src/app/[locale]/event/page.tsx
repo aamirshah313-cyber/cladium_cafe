@@ -85,6 +85,37 @@ export default async function EventPage({ params }: { params: Promise<{ locale: 
               </li>
             ))}
           </ul>
+
+          {/*
+           * Two setups that were actually built at Cladium — the only
+           * décor photographs anywhere on this site.
+           *
+           * The photograph above this aside is deliberately *not* décor,
+           * for the reason stated there: a decorated party shown next to
+           * the form would read as an arrangement that comes with the
+           * booking. That reasoning is about **order**, not about hiding
+           * the work, and it is satisfied here rather than overridden.
+           * These sit after the policy list, so the approved wording —
+           * décor *from* PKR 8,000, final quote and availability
+           * staff-confirmed — has already been read by the time they are
+           * seen. A guest planning a birthday is better served by seeing
+           * what has been done than by being told about it alone.
+           *
+           * They carry their real alt text rather than being decorative:
+           * unlike the terrace photo, no adjacent sentence describes them,
+           * so hiding them would remove the only account of what is in the
+           * frame. Neither is captioned as a package, a price or an offer,
+           * and neither appears in the general gallery — a unit test in
+           * `tests/unit/media-manifest.test.ts` keeps them out of it.
+           */}
+          <ul className="event-decor-gallery">
+            <li>
+              <SitePhoto asset={venueMedia.birthdaySetupFairy} className="event-decor-photo" />
+            </li>
+            <li>
+              <SitePhoto asset={venueMedia.birthdaySetupDinosaur} className="event-decor-photo" />
+            </li>
+          </ul>
         </aside>
       </div>
     </div>

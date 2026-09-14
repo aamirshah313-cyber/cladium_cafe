@@ -67,6 +67,31 @@ export interface SiteMediaAsset {
 
 const SRC = 'cladium-research/assets/provided/newpics';
 
+/**
+ * The owner's second delivery (September 2026), supplied as social frames
+ * rather than a shoot. Kept as its own directory — and its own constant —
+ * because the two batches differ in the two ways that matter downstream:
+ * these are roughly 900-1080px rather than 335-415px, and they needed the
+ * source app's interface cropped away before anything could use them.
+ */
+const MAPPINGS_SRC = 'cladium-research/assets/provided/mappings';
+
+/**
+ * Resolves which preserved original a file name belongs to, so `sourcePath`
+ * stays a real path rather than a decorative string.
+ *
+ * The two batches happen to be spelled apart — `newpics` is uniformly
+ * `.jpg`, `mappings` uniformly `.jpeg` — which is convenient but is a
+ * coincidence, not a guarantee, so it is not left to trust:
+ * `tests/unit/media-manifest.test.ts` asserts every `sourcePath` in this
+ * file resolves to a file that actually exists. A third batch, or one
+ * `.jpg` landing in `mappings`, fails the suite here rather than shipping a
+ * manifest that points at nothing.
+ */
+function sourceDirFor(file: string): string {
+  return file.endsWith('.jpeg') ? MAPPINGS_SRC : SRC;
+}
+
 function venue(
   file: string,
   slug: string,
@@ -76,7 +101,7 @@ function venue(
   focalPoint = 'center',
 ): SiteMediaAsset {
   return {
-    sourcePath: `${SRC}/${file}`,
+    sourcePath: `${sourceDirFor(file)}/${file}`,
     path: `/venue/${slug}.webp`,
     thumbPath: `/venue/${slug}-thumb.webp`,
     width,
@@ -95,7 +120,7 @@ function dining(
   alt: string,
 ): SiteMediaAsset {
   return {
-    sourcePath: `${SRC}/${file}`,
+    sourcePath: `${sourceDirFor(file)}/${file}`,
     path: `/dining/${slug}.webp`,
     thumbPath: `/dining/${slug}-thumb.webp`,
     width,
@@ -188,6 +213,87 @@ export const venueMedia = {
     'A peacock crossing the lawn in front of the pavilion',
   ),
   gardenNight: venue('images (41).jpg', 'garden-night', 387, 516, 'The garden after dark'),
+
+  /*
+   * September 2026, second batch (`assets/provided/mappings`). These are
+   * the owner's own social frames rather than the `newpics` shoot, so they
+   * arrive at roughly 900-1080px — about three times the width of
+   * everything above, which is why they are the ones used as section
+   * backgrounds where a small image would have had to be enlarged.
+   *
+   * Each was cropped to remove the source app's interface (like/comment/
+   * share counts down the right edge, a creator handle along the bottom).
+   * Originals are preserved untouched.
+   *
+   * Two scenes here overlap subjects already in the list — the pavilion bar
+   * and the garden seating — but they are genuinely different photographs,
+   * taken at a different time of day, not second copies. `garden-night` and
+   * `pavilion-counter-day` show the same places in daylight and full dark.
+   *
+   * One supplied frame was **rejected**: the "Peace lives here!" poster
+   * (`10.40.24 PM (3)`). It shows the same scene as `garden-lit-path-dusk`
+   * but heavily retouched — the path relit, the sky recoloured — with the
+   * brand title set over it. `venue` provenance means "a real photograph of
+   * the place", the unretouched original of that exact scene is already
+   * published, and a marketing render is not a substitute for it. Excluded
+   * for the same reason the `newpics` posters were.
+   */
+  pavilionBarEvening: venue(
+    'WhatsApp Image 2026-09-09 at 10.40.33 PM.jpeg',
+    'pavilion-bar-evening',
+    900,
+    1413,
+    'The timber pavilion bar lit up in the evening, with guests seated at tables on the lawn',
+  ),
+  pavilionBarPeacockEvening: venue(
+    'WhatsApp Image 2026-09-09 at 10.40.33 PM (1).jpeg',
+    'pavilion-bar-peacock-evening',
+    884,
+    1488,
+    // As with `lawnPeacockPavilion`: one photographed moment, never a
+    // promise that wildlife is present on any given visit.
+    'A peacock walking past the lit pavilion bar and its wooden stools in the evening',
+    'center 40%',
+  ),
+  gardenSeatingCranes: venue(
+    'WhatsApp Image 2026-09-09 at 10.40.22 PM (2).jpeg',
+    'garden-seating-cranes',
+    900,
+    1350,
+    'Garden tables and a folded parasol beneath willow trees, with two cranes on the grass',
+    'center 35%',
+  ),
+
+  /*
+   * Birthday décor, and the only two images in this manifest that show it.
+   *
+   * They are deliberately **not** added to `galleryMedia` or used anywhere
+   * on the home page. Approved policy is that décor starts from PKR 8,000
+   * and that every arrangement is quoted and confirmed by staff; a décor
+   * photograph sitting in a general gallery reads as something included
+   * with a visit, which is exactly the implication the home page already
+   * avoids on purpose (see its celebrations card). On `/event` — a page
+   * whose entire subject is planning and quoting a celebration — the same
+   * photograph is evidence for the copy beside it.
+   *
+   * Each shows one past setup that was actually built at Cladium. Neither
+   * is a package, a price, or an offer, and the alt text says only what is
+   * in the frame.
+   */
+  birthdaySetupFairy: venue(
+    'WhatsApp Image 2026-09-09 at 10.40.18 PM.jpeg',
+    'birthday-setup-fairy',
+    859,
+    1418,
+    'A birthday setup on the lawn at night: a balloon arch in pink, green and peach around a painted backdrop, under strings of lights',
+  ),
+  birthdaySetupDinosaur: venue(
+    'birthday event.jpeg',
+    'birthday-setup-dinosaur',
+    900,
+    1270,
+    'A dinosaur-themed birthday setup with a green and orange balloon arch and a decorated table',
+  ),
 } as const satisfies Record<string, SiteMediaAsset>;
 
 /**
@@ -238,6 +344,43 @@ export const diningMedia = {
     387,
     516,
     'A cup of tea held in the garden, with seating behind',
+  ),
+
+  /*
+   * September 2026, second batch. These four arrived unnamed, so unlike the
+   * dishes in `menuItemMedia` there is no owner identification of what they
+   * are — which is precisely why they stay `category` and are never
+   * captioned with a menu item's name. Three are clearly chicken over
+   * charcoal and one is beef on a sizzler; the alt text says that and
+   * stops there.
+   */
+  charcoalGrillSkewers: dining(
+    'WhatsApp Image 2026-09-09 at 10.40.26 PM.jpeg',
+    'charcoal-grill-skewers',
+    900,
+    954,
+    'Chicken pieces and seekh kababs grilling over glowing charcoal',
+  ),
+  grilledChickenPlatter: dining(
+    'WhatsApp Image 2026-09-09 at 10.40.30 PM.jpeg',
+    'grilled-chicken-platter',
+    900,
+    1113,
+    'Grilled chicken finished with a cream drizzle, served on a dark platter with cucumber and carrot',
+  ),
+  grilledChickenSizzlers: dining(
+    'WhatsApp Image 2026-09-09 at 10.40.30 PM (1).jpeg',
+    'grilled-chicken-sizzlers',
+    900,
+    1327,
+    'Two sizzling platters of grilled chicken with tomato and onion',
+  ),
+  sizzlingBeefPlatter: dining(
+    'WhatsApp Image 2026-09-09 at 10.40.29 PM.jpeg',
+    'sizzling-beef-platter',
+    900,
+    1184,
+    'Sesame-scattered beef strips with green chilli on a cast-iron platter, with a dip alongside',
   ),
 } as const satisfies Record<string, SiteMediaAsset>;
 

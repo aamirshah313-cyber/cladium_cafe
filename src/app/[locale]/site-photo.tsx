@@ -75,6 +75,62 @@ export function SitePhoto({
   );
 }
 
+interface SceneBackdropProps {
+  readonly asset: SiteMediaAsset;
+}
+
+/**
+ * A photograph used as atmosphere *behind* a section that keeps its own
+ * theme colours — not as a hero the copy sits on top of.
+ *
+ * ## Why it is `aria-hidden` and has no alt text
+ *
+ * It carries no information. Every section using one already states its
+ * content in text, and a screen reader announcing "a peacock walking past
+ * the lit pavilion bar" in the middle of the opening hours would be noise,
+ * not access. The same photographs appear with their real alt text in the
+ * gallery, where they are the content.
+ *
+ * ## Why the image is blurred, and why that is not hiding anything
+ *
+ * Two independent reasons, and both would apply alone:
+ *
+ * 1. **Contrast has to stay predictable.** Body copy here uses
+ *    `--text-primary` on `--surface-canvas`, a pairing already checked for
+ *    AA in all six themes. A sharp photograph behind it introduces local
+ *    variance — one word over a bright lamp, the next over dark foliage —
+ *    that no single measurement covers. Blurring flattens that variance, and
+ *    the veil above it is the current theme's *own* canvas colour at high
+ *    opacity, so the effective text background stays within a hair of the
+ *    value that was checked. The section needs no on-image palette, and
+ *    changing theme changes the wash automatically.
+ * 2. **These are 884-900px sources spanning the full viewport.** Displayed
+ *    sharp across a 1440px screen that is a 1.6x enlargement, the exact
+ *    defect the rest of this module exists to prevent. A deliberately
+ *    defocused wash makes no sharpness claim, so the enlargement is not one
+ *    either — but the cap is still published in `--intrinsic-w` for any
+ *    rule that wants it.
+ *
+ * `background-attachment` is deliberately *not* `fixed`: it forces a repaint
+ * on every scroll frame and is ignored on most mobile browsers anyway, so it
+ * would cost jank on the devices this site is built for and buy nothing.
+ */
+export function SceneBackdrop({ asset }: SceneBackdropProps) {
+  return (
+    <div
+      className="home-scene-backdrop"
+      aria-hidden="true"
+      style={
+        {
+          '--scene-image': `url(${asset.path})`,
+          '--scene-position': asset.focalPoint,
+          '--intrinsic-w': `${asset.width}px`,
+        } as CSSProperties
+      }
+    />
+  );
+}
+
 interface PhotoGridProps {
   readonly assets: readonly SiteMediaAsset[];
   readonly label: string;
