@@ -128,6 +128,22 @@
 
 ## Completed
 
+- [x] **The `e2e` CI gate was inert for about a week, and is repaired (13 Sep 2026, PR #5, merged `f4b844c`).** Recorded because nothing here said so: Step 39's entry below still reads "240/240 E2E tests passing" and "New `e2e` CI job", which was true when written and had stopped being true.
+
+  Every run from at least 8 Sep was **killed at its 20-minute limit** — byte-identical 20m16–19s across four runs, including a documentation-only PR. A killed job prints no summary, so there was never a pass/fail count to notice; `verify` carried CI alone and stayed green throughout. The gate that produces Phase 8's hardening evidence was not producing any.
+
+  Four causes, none of them the timeout:
+  1. `clientEnvSchema` requires `NEXT_PUBLIC_SUPABASE_URL`/`_ANON_KEY`; nothing supplied them, so `parseSupabasePublicCredentials()` threw a `ZodError` **in the browser** — `NEXT_PUBLIC_*` values are inlined into the client bundle.
+  2. `setThemeViaToggle` clicked a button; the theme control is a `<select>`, and has been since before the helper was last touched. Every call waited the full 30s action timeout — that is what consumed the budget.
+  3. `keyboard-and-landmarks` and `reduced-motion` encoded the same stale button group (one also asserted exactly 2 themes, where there are now 6).
+  4. `keyboard-and-landmarks` asserted the inline nav is visible on mobile, where it is correctly collapsed into the drawer.
+
+  Three real accessibility defects were hidden behind the outage, two of them introduced by this project's own recent work: the staff sign-in link at **3.31:1** on the footer's dark ground (on every page), an `<li>` between `role="listbox"` and `role="option"` breaking `aria-required-children`/`aria-required-parent`, and a **2px horizontal overflow at 320px** (WCAG 1.4.10 Reflow) caused partly by the theme `<select>` growing to fit "Terracotta".
+
+  **Method note worth keeping.** The overflow was first "fixed" by capping the select's width. The element then measured as fitting — `clientWidth === scrollWidth` — while actually rendering "Terrac" and "Englis": a native select clips its closed value inside its own chrome without producing scroll overflow. Only a screenshot showed it. Measurement alone is not evidence for anything a control paints itself.
+
+  Result at `65240ff`: **258/258 passed in 10m41s**, zero failed, flaky, skipped or retried, inside the **unchanged** 20-minute limit. No assertion was weakened; the theme test now covers six themes, keyboard operability and actual application where it previously counted two buttons.
+
 - [x] Research assets and verified operating knowledge collected.
 - [x] Menu transcribed and structurally validated.
 - [x] Architecture/data model/release gates Version 2 created.

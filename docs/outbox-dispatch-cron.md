@@ -36,6 +36,39 @@ is driven by an **external scheduler** calling the endpoint over HTTPS. If
 the project later moves to Vercel Pro, the same endpoint and the same secret
 work unchanged — the scheduler simply becomes a `crons` entry instead.
 
+### Which scheduler — unrecorded, and that is now a problem
+
+**No scheduler service is named anywhere in this repository.** This document
+specifies the _contract_ a scheduler must satisfy; it never records which
+product was chosen, under which account, or with what job id. Searched
+11 Sep 2026 across `docs/`, `.continuum/` and `cladium-research/`: no
+reference to any scheduling service exists, and `.github/workflows/` contains
+no `schedule:` trigger, so nothing inside the repository is calling it
+either.
+
+The only evidence a scheduler was ever created is a **verbal report from the
+owner** (`TASKS.md`: "stale since the owner reported configuring an external
+scheduler"). D-088 is explicit that the commit which added this endpoint did
+not activate anything: _"Not activated by this commit alone. Delivery starts
+only once an external scheduler is calling the endpoint."_
+
+That absence changes the diagnosis. The three candidate causes on record —
+not firing, `401`, in-memory fallback — all presuppose a configured job that
+is misbehaving. Two more fit the evidence equally well and were never listed:
+
+- **No job was ever created**, the intent having been recorded here but not
+  carried out.
+- **A job was created and has since stopped.** Free scheduling tiers commonly
+  auto-disable a job after a run of consecutive failures. If the secret was
+  wrong from the start, every call would have returned `401`, and the service
+  would have switched the job off by itself — which looks identical, from
+  Supabase, to a job that never existed.
+
+**Whoever configured it needs to name the service.** Until the job can be
+found and its execution history read, the pipeline cannot be diagnosed from
+this side at all, and any record of it should be written down here so the
+next person does not have to ask.
+
 ## The exact request the scheduler must make
 
 | Field             | Value                                                      |
