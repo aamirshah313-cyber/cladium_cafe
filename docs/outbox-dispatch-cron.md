@@ -8,9 +8,10 @@ what has to exist outside it.
 
 > **Status, 11 Sep 2026 — production notification delivery remains unproven.**
 > The scheduler described below was reported as configured, but nothing
-> observable supports it working: `staff_notifications` has `n_tup_ins = 0`
-> and no `rpc/outbox_claim_batch` call has reached Postgres across the
-> retained log window.
+> observable supports it working: no `rpc/outbox_claim_batch` call has been
+> observed in the retained edge logs, and `staff_notifications` has `n_tup_ins = 0`
+> and no delivery has been demonstrated. Retention is finite and the counter
+> resets, so both are bounded observations, not statements about all time.
 >
 > Scope that carefully — `pg_stat_database.stats_reset` for this database is
 > **2026-08-25 20:41:21Z**, so the insert counter describes activity since
@@ -18,7 +19,8 @@ what has to exist outside it.
 > contain all six known production submissions (5–6 Sep), so the absence is
 > meaningful; it is not a lifetime claim.
 >
-> Do not read this document as a description of a working system.
+> This document describes a contract, not a running system. `docs/outbox-scheduler-setup.md`
+> plans a reviewable job; this file records what the caller must satisfy.
 > `docs/takeaway-release-plan.md` §5 has the diagnostic procedure and the
 > delivery test that must pass — and note that an HTTP `200` from the dispatch
 > route proves a cycle ran, not that any notification was delivered.
