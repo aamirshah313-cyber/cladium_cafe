@@ -18,6 +18,40 @@ paused, disabled after repeated failures, pointed at the wrong URL, or firing
 into a `401`. Step 0 below looks for one first; if it finds nothing that is
 still not proof, but it is enough to justify creating one.
 
+> ## Status: deferred, deliberately
+>
+> **Nothing in this document has been executed.** Scheduler setup is parked so
+> that product work can continue; it is not blocked on a difficulty, and
+> nothing decays while it waits. Specifically:
+>
+> - `TAKEAWAY_GUEST_JOURNEY_COMPLETE` stays `false`, so no guest can reach the
+>   takeaway journey.
+> - No Cloud Scheduler job exists. The registry at the end of this file is
+>   empty, and an empty registry is the authority on that.
+> - The synthetic outbox row in the appendix has **not** been run.
+> - Production configuration is unchanged.
+>
+> Two things remain unverified and should not be treated as settled when this
+> is picked up: Cloud Scheduler's certificate validation is **inferred from
+> the absence of any opt-out**, not confirmed; and the deployed function's
+> duration limit has **never been measured**.
+>
+> ### The sequence when resuming
+>
+> 1. Confirm the deployed Vercel function's timeout, and that `CRON_SECRET` is
+>    present in Production.
+> 2. Create the Cloud Scheduler job **paused** — `GET`, `Authorization: Bearer …`
+>    entered in the console, 5-minute cadence, 60s attempt deadline, retries
+>    disabled.
+> 3. Run it **once, manually**, and correlate the Vercel request with an
+>    `outbox_claim_batch` line in Supabase.
+> 4. Approve one synthetic outbox row and verify a staff notification is
+>    visible in the UI.
+> 5. Re-run Step 45's go/no-go. **Only then** consider enabling the journey.
+>
+> Each step gates the next. Skipping to 4 proves nothing about the schedule;
+> skipping to 5 proves nothing about delivery.
+
 ---
 
 ## 0. Look for an existing job first — **[OWNER]**
@@ -260,30 +294,48 @@ Notes that come from the route, and are easy to get wrong:
 
 ### Cloud Scheduler, concretely — **[OWNER, account access required]**
 
-Console path: **Cloud Scheduler → Create job**. The equivalent `gcloud` form
-is given so the configuration is reviewable as text rather than screenshots.
+**Create the job in the Cloud Console, not on a command line.** The header
+value is a production secret, and a `gcloud` invocation carrying it would put
+it in shell history and in the process table, where any other process on the
+machine can read it with `ps`. The console's header field, or a protected
+secret input, keeps it out of both.
 
-```
-gcloud scheduler jobs create http cladium-outbox-dispatch \
-  --location=<region> \
-  --schedule="*/5 * * * *" \
-  --time-zone="UTC" \
-  --uri="https://cladium-cafe.vercel.app/api/cron/outbox-dispatch" \
-  --http-method=GET \
-  --update-headers="Authorization=Bearer <CRON_SECRET>" \
-  --attempt-deadline=60s \
-  --max-retry-attempts=0 \
-  --description="Drains outbox_events into staff notifications. See docs/outbox-scheduler-setup.md" \
-  --pause
-```
+Console path: **Cloud Scheduler → Create job**, with these values:
+
+| Field              | Value                                                                               |
+| ------------------ | ----------------------------------------------------------------------------------- |
+| Name               | `cladium-outbox-dispatch`                                                           |
+| Region             | owner's choice; nearer `hnd1` reduces latency, nothing here is latency-sensitive    |
+| Frequency          | `*/5 * * * *`                                                                       |
+| Timezone           | UTC                                                                                 |
+| Target type        | HTTP                                                                                |
+| URL                | `https://cladium-cafe.vercel.app/api/cron/outbox-dispatch`                          |
+| HTTP method        | `GET`                                                                               |
+| Auth header        | **None** — see the warning below                                                    |
+| Header name        | `Authorization`                                                                     |
+| Header value       | `Bearer ` + the secret, typed into the console field                                |
+| Attempt deadline   | `60s`                                                                               |
+| Max retry attempts | `0`                                                                                 |
+| Description        | `Drains outbox_events into staff notifications. See docs/outbox-scheduler-setup.md` |
+
+Then **pause the job immediately** after creating it, before §4's checks.
 
 Point by point:
 
-- **`--pause`** creates the job paused. Nothing fires until §4's checks pass.
-- **`--update-headers`** carries the secret. Do **not** also pass
-  `--oidc-service-account-email` or `--oauth-service-account-email`: either
-  makes Cloud Scheduler set `Authorization` itself and overwrite the bearer
-  token.
+- **Paused first.** Nothing fires until §4 passes. If the console offers no
+  create-paused option, create it and pause it as the next action.
+- **Set "Auth header" to None.** Choosing OIDC or OAuth makes Cloud Scheduler
+  generate its own `Authorization` header, which overwrites the bearer token
+  and guarantees a `401`. The custom header is the authentication here.
+- **`Max retry attempts: 0`** — the dispatcher has its own backoff; a
+  scheduler-side retry adds nothing and muddies the run history.
+- **`Attempt deadline: 60s`** is above any plausible cycle while staying below
+  a runaway. Revisit once the cycle has actually been timed.
+
+If the job must be created programmatically, pass the header from a file or
+environment reference that the provider's tooling reads directly — never as a
+literal argument, and never committed.
+
 - **`--max-retry-attempts=0`** — the dispatcher has its own backoff; a
   scheduler-side retry adds nothing and muddies the run history.
 - **`--attempt-deadline=60s`** is deliberately above any plausible cycle while
