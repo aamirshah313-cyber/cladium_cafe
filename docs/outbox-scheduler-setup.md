@@ -142,20 +142,60 @@ a statement is not confirmation. Upstash QStash was checked as an alternative
 and its public security page does not state a destination-certificate policy
 either way, so it is unconfirmed rather than cleared.
 
-### The 30-second timeout, against this dispatcher
+### Timeouts — one estimate, one inference, both unverified
 
-A cycle claims at most 20 rows and each delivery is a single upsert, so a
-normal cycle should finish well inside 30 seconds. Two caveats worth holding:
+Cloud Scheduler's HTTP target attempt deadline is configurable (default 3
+minutes for HTTP targets), which removes the 30-second ceiling cron-job.org
+would have imposed. Three things remain open and are recorded as open:
 
-- If a cycle ever did exceed the provider's timeout, the provider records a
-  failure while the function very likely **continues and completes**
-  server-side. Repeated, that drives the job toward auto-disable while it is
-  actually working — a silent stop with a misleading cause.
-- **The server's own budget is unconfirmed.** Vercel Hobby functions run up to
-  300s with Fluid Compute, but legacy projects predating it default to 10s
-  with a 60s maximum. This project sets no `maxDuration` and no
-  `vercel.json` override, so it inherits whichever applies. Worth confirming
-  in project settings before assuming headroom.
+- **Cycle duration is an estimate, not a measurement.** A cycle claims at most
+  20 rows and each delivery is one upsert, which _should_ finish in a few
+  seconds. That has never been timed. Measuring it needs a local Postgres and
+  a seeded batch of 20; an attempt on 14 Sep was blocked by Docker failing to
+  start. Until measured, treat "well inside the deadline" as unproven.
+- **The deployed function's budget is unconfirmed.** Vercel Hobby functions
+  run to 300s under Fluid compute, but projects predating it default to 10s
+  with a 60s maximum. This project sets no `maxDuration` and no `vercel.json`
+  override, so it inherits whichever applies. Checkable in project settings.
+- **Behaviour on caller disconnect is inferred, not documented.** Vercel's
+  request cancellation is **opt-in** via `"supportsCancellation": true`, which
+  this project does not set — so a disconnecting caller probably does _not_
+  abort the function. That is inference from the feature being opt-in, not a
+  documented guarantee for the non-enabled case. Do not rely on a cycle
+  completing after its caller has given up.
+
+### Selected: Google Cloud Scheduler
+
+**Chosen on the certificate question**, which is the one that disqualified the
+obvious candidate.
+
+| Requirement                | Finding                                                                                                                                                                                                                                                                                                                                             | Basis             |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- |
+| Custom headers             | **Pass.** Arbitrary request headers are supported on an HTTP target. A short list is ignored or replaced — `Host`, `X-CloudScheduler`, `X-CloudScheduler-JobName` — and `Authorization` is not among them, provided the job does **not** also configure OIDC/OAuth auth, which would set that header itself. Total header size must be under 80 KB. | Google Cloud docs |
+| Granularity                | **Pass.** Standard cron expressions, per-minute.                                                                                                                                                                                                                                                                                                    | Google Cloud docs |
+| Execution history          | **Pass.** Per-execution records with status in Cloud Logging.                                                                                                                                                                                                                                                                                       | Google Cloud docs |
+| Failure alerting           | **Pass.** Via Cloud Monitoring alerting policies on job failures.                                                                                                                                                                                                                                                                                   | Google Cloud docs |
+| **Certificate validation** | **Not positively documented — see below.**                                                                                                                                                                                                                                                                                                          | —                 |
+
+**The remaining uncertainty, stated plainly.** No provider checked publishes a
+sentence saying "we verify the target's TLS certificate". Certificate
+validation is the default behaviour of every standard HTTP client, so
+providers tend to mention it only when they _deviate_ — which is exactly what
+cron-job.org does. For Cloud Scheduler the argument is the absence of any
+documented way to disable verification: there is no `--skip-tls-verify`
+equivalent in the job configuration, and no "allow self-signed certificates"
+option of the kind cron-job.org advertises.
+
+That is **inference from absence, not a positive statement**, and it should be
+read as such. It is a materially stronger position than cron-job.org's
+documented opt-out, but it is not the same as confirmation. If certainty is
+required before trusting the secret to it, the check is: create the job
+against a host presenting an invalid certificate and confirm the run fails.
+
+**Cost and access.** Cloud Scheduler's free tier covers a small number of jobs
+per month; one job at 5-minute cadence is well inside typical free-tier job
+counts, but the account requires billing details on file. That is a real
+commitment and the reason this is a decision rather than a default.
 
 ### Why not the alternatives
 
@@ -217,6 +257,46 @@ Notes that come from the route, and are easy to get wrong:
 - **Do not enable a scheduler-side retry.** A failed delivery already returns
   to `PENDING` with backoff inside the dispatcher and is retried by the next
   cycle.
+
+### Cloud Scheduler, concretely — **[OWNER, account access required]**
+
+Console path: **Cloud Scheduler → Create job**. The equivalent `gcloud` form
+is given so the configuration is reviewable as text rather than screenshots.
+
+```
+gcloud scheduler jobs create http cladium-outbox-dispatch \
+  --location=<region> \
+  --schedule="*/5 * * * *" \
+  --time-zone="UTC" \
+  --uri="https://cladium-cafe.vercel.app/api/cron/outbox-dispatch" \
+  --http-method=GET \
+  --update-headers="Authorization=Bearer <CRON_SECRET>" \
+  --attempt-deadline=60s \
+  --max-retry-attempts=0 \
+  --description="Drains outbox_events into staff notifications. See docs/outbox-scheduler-setup.md" \
+  --pause
+```
+
+Point by point:
+
+- **`--pause`** creates the job paused. Nothing fires until §4's checks pass.
+- **`--update-headers`** carries the secret. Do **not** also pass
+  `--oidc-service-account-email` or `--oauth-service-account-email`: either
+  makes Cloud Scheduler set `Authorization` itself and overwrite the bearer
+  token.
+- **`--max-retry-attempts=0`** — the dispatcher has its own backoff; a
+  scheduler-side retry adds nothing and muddies the run history.
+- **`--attempt-deadline=60s`** is deliberately above any plausible cycle while
+  staying below a runaway. Revisit once the cycle has actually been timed.
+- **Region** is the owner's choice; nearer to `hnd1` reduces latency but
+  nothing here is latency-sensitive.
+
+Then, for the properties this provider was chosen for:
+
+- **History:** Cloud Logging, filtered to the job's resource — this is the
+  per-execution status record that was missing before.
+- **Alerting:** a Cloud Monitoring alerting policy on job failures, routed to
+  an address that is actually read.
 
 ### The secret — **[OWNER, production]**
 
@@ -351,3 +431,60 @@ described one.
 | Delivery test passed (§5)        | _(no)_       |
 
 Never record the secret here.
+
+---
+
+## Appendix — the synthetic delivery row, for review
+
+The exact statement proposed for §5, written out so it can be reviewed before
+being approved rather than described in the abstract. **Not yet run.**
+
+```sql
+-- One synthetic outbox event. entity_id is a fabricated uuid belonging to no
+-- real request; payload carries identifiers only, no guest data.
+insert into public.outbox_events (
+  id, event_type, entity_type, entity_id, destination, payload, status
+) values (
+  gen_random_uuid(),
+  'delivery_probe.synthetic',
+  'TAKEAWAY_REQUEST',
+  '00000000-0000-4000-8000-00000000dead',
+  'staff_notification',
+  '{"probe": true, "note": "synthetic delivery test, safe to delete"}'::jsonb,
+  'PENDING'
+);
+```
+
+Why each field is shaped this way:
+
+- **`entity_type`** must be a real enum value; `TAKEAWAY_REQUEST` is used
+  because the notification handler reads it, and no takeaway request carries
+  the id below.
+- **`entity_id`** is a fixed, obviously-synthetic uuid (`…dead`) that no real
+  row uses, so the probe is identifiable and removable without ambiguity.
+- **`destination`** must be exactly `staff_notification` — the only registered
+  handler. Anything else is marked terminal with "no handler registered",
+  which would test the wrong thing.
+- **`status`/`next_attempt_at`** default to `PENDING`/`now()`, so the next
+  cycle claims it.
+
+### What counts as a pass
+
+Within one scheduler interval, all four:
+
+1. `outbox_events` row moves `PENDING → DELIVERED`, `delivered_at` set.
+2. `staff_notifications` gains exactly one row **whose id equals the outbox
+   event id** — the handler upserts on that key, which is what makes a
+   retried dispatch idempotent rather than duplicating.
+3. A matching `rpc/outbox_claim_batch` line appears in Supabase `edge_logs`.
+4. **The notification is visible to staff in the UI** — not merely present in
+   the table. This is the criterion; the first three are how it is traced.
+
+### Cleanup
+
+```sql
+delete from public.staff_notifications where entity_id = '00000000-0000-4000-8000-00000000dead';
+delete from public.outbox_events      where entity_id = '00000000-0000-4000-8000-00000000dead';
+```
+
+Run after the result is recorded, not before.
