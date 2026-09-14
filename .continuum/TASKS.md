@@ -33,11 +33,11 @@
 
      What is actually established:
 
-     - `staff_notifications` has `n_tup_ins = 0` and zero rows. The insert counter survives `delete`, so this is not "the rows were cleaned up".
+     - `staff_notifications` has `n_tup_ins = 0` and zero rows. The insert counter survives `delete`, so this is not "the rows were cleaned up" — but it does **not** survive a statistics reset, which is why the bounded window below matters.
      - **The window is bounded.** `pg_stat_database.stats_reset` for this database is **2026-08-25 20:41:21Z**, so those counters describe activity since that timestamp only — statistics can be reset, and a claim about the project's lifetime cannot rest on them. The window does still contain all six known production submissions (3 bookings, 3 events, 5–6 Sep), which produced 3 `outbox_events` rows, none delivered.
-     - Zero `rpc/outbox_claim_batch` calls reached Postgres in the 24h to 10 Sep 19:46Z, and none since, where a 5-minute schedule implies ~288/day. `runDispatchCycle` calls `claimBatch()` unconditionally, so an empty outbox is not an explanation.
+     - **No `rpc/outbox_claim_batch` call has been observed in the retained edge logs** — none in the 24h to 10 Sep 19:46Z, and none in any window checked since, where a 5-minute schedule implies ~288/day. `runDispatchCycle` calls `claimBatch()` unconditionally, so an empty outbox is not an explanation. Retention is finite, so this is an absence of observation over the retained window, not a statement about all time.
 
-     The defensible statement is therefore: **no notification delivery has been observed since 25 Aug 2026, and none has ever been demonstrated.** That is enough to keep the journey switched off; it is not the same as proving it never happened.
+     The two defensible statements are: **no claim calls have been observed in the retained logs**, and **no notification delivery has been demonstrated.** Both are enough to keep the journey switched off. Neither establishes that nothing ever ran, and neither disproves that a scheduler exists — an existing job could be paused, disabled after repeated failures, pointed at the wrong URL, or firing into a `401`. See `docs/outbox-scheduler-setup.md`, which stops trying to settle that from here and plans a reviewable job instead.
 
      **Closing this requires a controlled test of the whole chain, not one link:** scheduler invocation → authenticated dispatcher → Postgres claim (`rpc/outbox_claim_batch` visible in `edge_logs`) → notification row created → visible to staff in the UI. **An HTTP `200` from the dispatch route proves a cycle ran, not that anything was delivered.** See `docs/takeaway-release-plan.md` §5.
 
