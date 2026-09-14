@@ -108,6 +108,55 @@ price. The rest are judgement calls.
 reads `Authorization` only, and a secret in a URL lands in request logs on
 every hop.
 
+### Verified against cron-job.org's own documentation, 14 Sep 2026
+
+Checked because it is the usual first choice for this shape of job. It passes
+four requirements and **fails one that matters here**.
+
+| Requirement                    | Finding                                                                                                                                           |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Custom headers                 | **Pass.** The API exposes a `headers` key-value dictionary per job.                                                                               |
+| Granularity                    | **Pass.** "Every cronjob can be executed up to 60 times an hour, i.e. every minute."                                                              |
+| Run history                    | **Pass.** Per-execution history with timestamps, duration, status and HTTP response.                                                              |
+| Failure alerting               | **Pass.** `onFailure` with a configurable `onFailureCount` threshold.                                                                             |
+| Auto-disable                   | Disables a job after **25 consecutive failures**, with optional email notification. Acceptable — it is not silent if the notification is enabled. |
+| **TLS certificate validation** | **Fail.** Stated plainly: _"We do not check certificates and thus you can also use self-signed certificates."_                                    |
+| Request timeout                | 30 seconds maximum, then the connection is terminated. Also reads at most 64 KB of response body.                                                 |
+
+**The certificate finding is the blocker.** This request carries
+`CRON_SECRET` as a bearer token. HTTPS is what protects that token in transit,
+and a client that does not validate the server certificate cannot detect an
+interposed one — an active network attacker between the provider and Vercel
+could present their own certificate and capture the secret. For a request
+whose entire security rests on a shared secret in a header, "we do not check
+certificates" removes the protection that made putting it in a header
+acceptable.
+
+That is a judgement, not a rule: the attack needs network position between two
+specific hosts. But it is a real weakening of the only control this endpoint
+has, and it should be a deliberate decision rather than a default.
+
+**Before choosing any provider, confirm certificate validation explicitly.**
+It is rarely mentioned in marketing pages and often only in an FAQ; absence of
+a statement is not confirmation. Upstash QStash was checked as an alternative
+and its public security page does not state a destination-certificate policy
+either way, so it is unconfirmed rather than cleared.
+
+### The 30-second timeout, against this dispatcher
+
+A cycle claims at most 20 rows and each delivery is a single upsert, so a
+normal cycle should finish well inside 30 seconds. Two caveats worth holding:
+
+- If a cycle ever did exceed the provider's timeout, the provider records a
+  failure while the function very likely **continues and completes**
+  server-side. Repeated, that drives the job toward auto-disable while it is
+  actually working — a silent stop with a misleading cause.
+- **The server's own budget is unconfirmed.** Vercel Hobby functions run up to
+  300s with Fluid Compute, but legacy projects predating it default to 10s
+  with a 60s maximum. This project sets no `maxDuration` and no
+  `vercel.json` override, so it inherits whichever applies. Worth confirming
+  in project settings before assuming headroom.
+
 ### Why not the alternatives
 
 **Vercel Cron** is blocked on the Hobby plan: once-daily only, and a sub-daily
@@ -124,12 +173,22 @@ up the property this approach was chosen for.
 
 ---
 
-## 3. The job configuration — **create it disabled**
+## 3. The job configuration — **specification only, no job exists**
 
-Every value below comes from the code, not from prior documentation. Create
-the job **disabled** (or paused) so nothing fires until §4's checks pass — a
-job that starts running before the secret is confirmed produces a run of
-`401`s, which is exactly what gets a free-tier job auto-disabled.
+> **Nothing here is configured anywhere.** This is a specification to be
+> entered into a provider by someone with an account. There is no job, enabled
+> or disabled, until a provider issues a **job ID** — and until that ID is
+> recorded here, "the job is set up but disabled" would be false. The gap this
+> whole document exists to close was caused by exactly that: a scheduler
+> reported as configured, with nothing written down to check.
+>
+> When a job is created, record its **provider, account, and job ID** below.
+> Not the secret.
+
+Every value comes from the code, not from prior documentation. Create the job
+**disabled** (or paused) so nothing fires until §4's checks pass — a job that
+starts running before the secret is confirmed produces a run of `401`s, which
+is exactly what drives a free-tier job toward auto-disable.
 
 | Setting          | Value                                                                                                |
 | ---------------- | ---------------------------------------------------------------------------------------------------- |
@@ -272,3 +331,23 @@ here once a job is firing.
 That no scheduler exists. That the previous configuration attempt failed. That
 setup is quick — §2 is a real decision with an account, a secret and a
 recurring dependency attached, and §5 needs a production write and a wait.
+
+---
+
+## Job registry — fill in when a job exists
+
+Empty by design. An entry here is what distinguishes a configured job from a
+described one.
+
+| Field                            | Value        |
+| -------------------------------- | ------------ |
+| Provider                         | _(none yet)_ |
+| Account                          | _(none yet)_ |
+| Job ID                           | _(none yet)_ |
+| Created                          | _(none yet)_ |
+| Certificate validation confirmed | _(no)_       |
+| Enabled                          | _(no)_       |
+| First correlated `200`           | _(none yet)_ |
+| Delivery test passed (§5)        | _(no)_       |
+
+Never record the secret here.
