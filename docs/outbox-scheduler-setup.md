@@ -79,41 +79,97 @@ data — so it is safe to log in a scheduler's run history.
 
 ---
 
-## 2. Choosing a service — **[OWNER decision]**
+## 2. Choosing a dedicated cron service — **[OWNER decision]**
 
-Any service that can issue an authenticated `GET` on a schedule works. The
-differences that matter here are whether custom headers are supported at all,
-and whether the job is disabled after repeated failures.
+A dedicated cron service is the chosen approach. Its run history is the
+diagnostic that was missing this time: the reason the current state cannot be
+explained is that no caller's execution log was ever available.
 
-| Option                                                                      | Notes                                                                                                                                                                                                                                                                                                   |
-| --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Vercel Cron**                                                             | Simplest — no third party, same platform, `crons` entry in `vercel.json`. **Blocked on Hobby:** limited to once daily, and a sub-daily expression is rejected at deploy time. Viable only if the project moves to Pro, which is the stated production target (`deployment-target.md`).                  |
-| **GitHub Actions** `schedule`                                               | No new account; the repository already runs Actions. Secret lives in repository secrets. Caveat: scheduled workflows are best-effort and can be delayed under load, and are disabled automatically after 60 days without repository activity.                                                           |
-| **A dedicated cron service** (cron-job.org, EasyCron, Cronitor and similar) | Purpose-built, with run history and alerting — the run history is the diagnostic that was missing this time. Free tiers commonly **auto-disable a job after consecutive failures**, which is one of the two untested explanations for the current state. Confirm custom-header support before choosing. |
-| **Upstash QStash**                                                          | Designed for exactly this; supports headers and retries natively. New account and a credential to manage.                                                                                                                                                                                               |
-| **A machine crontab**                                                       | Full control, no third party. Requires a host that is always on, and has no run history unless one is arranged.                                                                                                                                                                                         |
+### Verify these against the provider's current documentation
 
-**Recommendation:** a dedicated cron service with visible run history and
-failure alerting, _or_ GitHub Actions if avoiding another account matters
-more. Both keep the endpoint unchanged, and both become a `crons` entry with
-no code change if the project later moves to Vercel Pro.
+**These are requirements, not a recommendation of any particular product.**
+Free-tier limits, header support and retention change without notice, and this
+document is not a reliable source for any provider's present terms — check
+them at signup rather than trusting a list.
+
+| Requirement                                         | Why it matters here                                                                              | Fails if                                                    |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ----------------------------------------------------------- |
+| **Custom request headers**                          | The endpoint authenticates by `Authorization: Bearer …` and nothing else                         | No header support at all, or headers limited to a fixed set |
+| **1-minute or 5-minute granularity**                | 5 minutes matches `staleClaimMs`; anything coarser delays notifications                          | Minimum interval is 15 min or hourly on the free tier       |
+| **Run history with status codes**                   | `401` vs `200` vs no-request is the whole diagnosis                                              | History is absent, or retained for less than a few days     |
+| **Failure alerting**                                | A silently disabled job is the failure mode that produced this situation                         | No notification on consecutive failures                     |
+| **Auto-disable behaviour, and whether it notifies** | Free tiers commonly disable a job after repeated failures — acceptable, but only if it tells you | Disables silently                                           |
+| **Secret storage in the header field**              | The value must not sit in a URL or a shared screenshot                                           | Only query-string parameters supported                      |
+
+A provider that fails the first or third row is unusable here regardless of
+price. The rest are judgement calls.
+
+**A URL query token is not an acceptable substitute** for the header. The route
+reads `Authorization` only, and a secret in a URL lands in request logs on
+every hop.
+
+### Why not the alternatives
+
+**Vercel Cron** is blocked on the Hobby plan: once-daily only, and a sub-daily
+expression is rejected at deploy time. It becomes the simplest option if the
+project moves to Pro — the endpoint and secret are unchanged, so that is a
+`vercel.json` `crons` entry and no code change.
+
+**GitHub Actions `schedule`** avoids a new account but is best-effort on
+timing and disables itself after 60 days of repository inactivity — a silent
+stop, which is the failure mode being designed against.
+
+**A machine crontab** has no run history unless one is arranged, which gives
+up the property this approach was chosen for.
 
 ---
 
-## 3. Configuration — **[OWNER, requires production secret handling]**
+## 3. The job configuration — **create it disabled**
 
-1. **Confirm `CRON_SECRET` is set** on the Vercel project (Production
-   environment). Its presence is enough; the value need not be revealed.
-   `verifyCronAuthHeader` fails closed, so an unset secret rejects every
-   invocation with `401`.
-2. **Put the same value in the scheduler's own secret/header field.** It must
-   never appear in this repository, in a commit, in a screenshot, in a chat,
-   or in a `NEXT_PUBLIC_*` variable.
+Every value below comes from the code, not from prior documentation. Create
+the job **disabled** (or paused) so nothing fires until §4's checks pass — a
+job that starts running before the secret is confirmed produces a run of
+`401`s, which is exactly what gets a free-tier job auto-disabled.
+
+| Setting          | Value                                                                                                |
+| ---------------- | ---------------------------------------------------------------------------------------------------- |
+| Method           | `GET`                                                                                                |
+| URL              | `https://cladium-cafe.vercel.app/api/cron/outbox-dispatch`                                           |
+| Header name      | `Authorization`                                                                                      |
+| Header value     | `Bearer ` + the `CRON_SECRET` value (one space after `Bearer`)                                       |
+| Schedule         | every 5 minutes — `*/5 * * * *`                                                                      |
+| Timezone         | irrelevant to a fixed interval; UTC if one must be chosen                                            |
+| Request timeout  | 30s or more                                                                                          |
+| Expected status  | `200`                                                                                                |
+| Treat as failure | any non-`200`, especially `401`                                                                      |
+| Retry on failure | off — the dispatcher has its own backoff; a scheduler retry adds nothing and muddies the run history |
+| Follow redirects | not required, and off is safer                                                                       |
+
+Notes that come from the route, and are easy to get wrong:
+
+- **Only `GET` is exported.** `POST`/`HEAD` return `405`, which a scheduler
+  will report as a failure that looks like an outage.
+- **Nothing intercepts `/api/cron/*`.** `proxy.ts`'s matcher is
+  `['/', '/(en|ur)/:path*']`, so there is no locale redirect on this path —
+  worth knowing because some schedulers drop `Authorization` across a
+  redirect.
+- **The response body is safe to retain** in run history: redacted counts
+  only, never event payloads or guest data.
+- **Do not enable a scheduler-side retry.** A failed delivery already returns
+  to `PENDING` with backoff inside the dispatcher and is retried by the next
+  cycle.
+
+### The secret — **[OWNER, production]**
+
+1. **Confirm `CRON_SECRET` is set** on the Vercel project, Production
+   environment. Its presence is what matters; the value need not be revealed
+   to anyone, including me. `verifyCronAuthHeader` fails closed, so an unset
+   secret rejects every invocation with `401`.
+2. **Put the same value in the scheduler's header field.** It must never
+   appear in this repository, in a commit, in a screenshot, in a chat, or in
+   a `NEXT_PUBLIC_*` variable.
 3. If the value is unknown on either side, generate a new one and set it in
-   **both** places in the same change — see the note on rotation below.
-4. Configure: `GET`, the URL above, header `Authorization: Bearer <secret>`,
-   every 5 minutes.
-5. Enable failure alerting if the service offers it.
+   **both** places in the same change.
 
 **On rotation.** Do not rotate as a first response to a `401`. Rotating
 destroys the evidence identifying which side is misconfigured, and re-breaks
@@ -124,7 +180,25 @@ short prefix, never by pasting either value anywhere.
 
 ---
 
-## 4. First invocation — **[OWNER triggers, agent correlates]**
+## 4. Activation — **[OWNER, production actions]**
+
+The job stays disabled until these pass, in this order. Each production
+action is listed explicitly because none can be done from this workspace.
+
+| #   | Action                                                                                               | Who                                               |
+| --- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| 1   | Confirm `CRON_SECRET` is present in Vercel → Production                                              | **owner** — production environment variables      |
+| 2   | Run the job **once, manually**, while still disabled — most services offer "run now" on a paused job | **owner** — scheduler account                     |
+| 3   | Correlate the three sources below over that minute                                                   | owner supplies Vercel logs; I read Supabase       |
+| 4   | Only once a `200` with a matching `outbox_claim_batch` line is seen, **enable the schedule**         | **owner**                                         |
+| 5   | Run the controlled delivery test (§5)                                                                | **owner** approves the write; I verify the result |
+| 6   | Only after §5 passes once, `TAKEAWAY_GUEST_JOURNEY_COMPLETE` may be reconsidered                     | separate decision                                 |
+
+Enabling before step 3 risks a run of `401`s against a free tier that
+auto-disables on consecutive failures — reproducing the exact ambiguity this
+whole exercise exists to remove.
+
+### The correlation
 
 Trigger the job once on demand and note the minute. Then three sources are
 read together:
