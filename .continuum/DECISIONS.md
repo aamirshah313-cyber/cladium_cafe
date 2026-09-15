@@ -21,6 +21,18 @@ Newest decisions go first. Each entry stays short and points to authoritative ev
   against content, and two failed: `Mint Sauce.jpeg` (shows a sesame sauce)
   and `Cladium Special Sandwich.jpeg` (a multi-dish promo frame). Neither is
   mapped.
+- Extended 15 Sep 2026: an owner **caption** counts as the same
+  identification a filename does. `Tawa Beef` was burned into its frame over
+  the `cladium.cafe` handle, so it is the owner naming their own food and
+  meets the same bar; the band was cropped away like the smoothie's title,
+  and the original keeps it. What is still refused is the tempting next step:
+  two nearby uncaptioned frames plainly show the same dish, and neither is
+  mapped, because "it looks like the same food" is exactly the inference this
+  map exists to reject. One ships as `diningMedia.sizzlingBeefPlatter`, where
+  it claims nothing beyond what is visible. Note also that no
+  `Club Sandwich` item exists, so the "Club Sandwiches" caption on another
+  frame maps to nothing — a caption naming a dish the menu does not have is
+  marketing, not identification.
 - Guard: `tests/unit/menu-item-media.test.ts` runs the real adapter over the
   real `menu.json` and fails if any key stops resolving, so an editorial
   rename breaks the suite instead of silently dropping a dish's photograph.

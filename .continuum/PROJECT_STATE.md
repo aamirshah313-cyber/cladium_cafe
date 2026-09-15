@@ -18,7 +18,11 @@ keyed by `MenuViewItem.id` — a row UUID regenerated on every menu import —
 so it could never have matched even once populated. `MenuViewItem` now
 carries `mediaKey` (`menu_items.stable_id`), mirroring
 `MenuViewCategory.mediaKey`, and the carousel resolves item → group →
-category through it. Eight dishes have their own photograph.
+category through it. Nine dishes have their own photograph — eight named by
+filename, plus Tawa Beef, identified by a caption the owner burned into the
+frame over their own handle (same kind of statement, written on the image
+rather than beside it; the caption band was cropped away and the original
+kept intact).
 
 Verified end-to-end against real data, not only unit tests: local Supabase,
 the real published 118-item menu, all eight `stable_id`s present as rows,
