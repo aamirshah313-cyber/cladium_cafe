@@ -224,7 +224,7 @@ export function MenuFeatureCarousel({
      * or the outgoing photo is dropped without its transition.
      */
     const nextSrc = next
-      ? (menuItemMedia[next.id]?.assetPath ??
+      ? (menuItemMedia[next.mediaKey]?.assetPath ??
         resolveGroupMedia(category.mediaKey, next.groupLabel)?.assetPath ??
         resolveCategoryMedia(category.mediaKey)?.assetPath)
       : undefined;
@@ -273,7 +273,7 @@ export function MenuFeatureCarousel({
    * weaker claim, never a false one, and `FeatureMediaStage` captions the
    * two weaker ones so a guest is told what they are looking at.
    */
-  const exact = menuItemMedia[item.id];
+  const exact = menuItemMedia[item.mediaKey];
   const media: FeatureMedia | null = exact
     ? {
         src: exact.assetPath,
@@ -378,7 +378,7 @@ export function MenuFeatureCarousel({
             items={items}
             selectedIndex={itemIndex}
             onSelect={selectItem}
-            thumbFor={(railItem) => resolveItemThumb(railItem.id)}
+            thumbFor={(railItem) => resolveItemThumb(railItem.mediaKey)}
             locale={locale}
           />
 

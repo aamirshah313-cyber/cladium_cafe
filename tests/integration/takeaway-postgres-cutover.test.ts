@@ -125,11 +125,11 @@ describe.skipIf(!configured)('takeaway Postgres cutover (real Postgres)', () => 
      */
     const { data: item } = await client
       .from('menu_items')
-      .select('id, name, base_price_pkr')
+      .select('id, stable_id, name, base_price_pkr')
       .eq('menu_version_id', versionRow.id)
       .not('base_price_pkr', 'is', null)
       .limit(1)
-      .single<{ id: string; name: string; base_price_pkr: number }>();
+      .single<{ id: string; stable_id: string; name: string; base_price_pkr: number }>();
     if (!item) throw new Error('the freshly published menu contains no priced item');
 
     /*
@@ -151,9 +151,9 @@ describe.skipIf(!configured)('takeaway Postgres cutover (real Postgres)', () => 
 
     const { data: variantParent } = await client
       .from('menu_items')
-      .select('id, name, base_price_pkr')
+      .select('id, stable_id, name, base_price_pkr')
       .eq('id', variantRow.item_id)
-      .single<{ id: string; name: string; base_price_pkr: number | null }>();
+      .single<{ id: string; stable_id: string; name: string; base_price_pkr: number | null }>();
     if (!variantParent) throw new Error('the variant has no parent item');
 
     variantItemId = variantParent.id;
@@ -172,6 +172,7 @@ describe.skipIf(!configured)('takeaway Postgres cutover (real Postgres)', () => 
           items: [
             {
               id: item.id,
+              mediaKey: item.stable_id,
               name: item.name,
               groupLabel: null,
               availability: 'AVAILABLE',
@@ -183,6 +184,7 @@ describe.skipIf(!configured)('takeaway Postgres cutover (real Postgres)', () => 
             },
             {
               id: variantParent.id,
+              mediaKey: variantParent.stable_id,
               name: variantParent.name,
               groupLabel: null,
               availability: 'AVAILABLE',

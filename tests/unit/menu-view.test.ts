@@ -15,6 +15,7 @@ const FIXTURE_CATEGORIES: readonly MenuViewCategory[] = [
     items: [
       {
         id: 'steaks.ribeye',
+        mediaKey: 'steaks.ribeye',
         name: 'Ribeye Steak',
         groupLabel: null,
         availability: 'AVAILABLE',
@@ -26,6 +27,7 @@ const FIXTURE_CATEGORIES: readonly MenuViewCategory[] = [
       },
       {
         id: 'steaks.sirloin',
+        mediaKey: 'steaks.sirloin',
         name: 'Sirloin Steak',
         groupLabel: 'Beef',
         availability: 'UNKNOWN',
@@ -47,6 +49,7 @@ const FIXTURE_CATEGORIES: readonly MenuViewCategory[] = [
     items: [
       {
         id: 'beverages.iced-tea',
+        mediaKey: 'beverages.iced-tea',
         name: 'Iced Tea',
         groupLabel: null,
         availability: 'UNAVAILABLE',

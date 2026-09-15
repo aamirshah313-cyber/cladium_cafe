@@ -51,7 +51,7 @@ import {
   HOME_SEATING_TEXT,
 } from '../../modules/business/site-copy';
 import { LocalizedProse } from './localized-prose';
-import { PhotoGrid, SitePhoto } from './site-photo';
+import { PhotoGrid, SceneBackdrop, SitePhoto } from './site-photo';
 import { TrackedWhatsAppLink } from './tracked-whatsapp-link';
 
 export default async function LocaleHomePage({ params }: { params: Promise<{ locale: string }> }) {
@@ -148,52 +148,66 @@ export default async function LocaleHomePage({ params }: { params: Promise<{ loc
         </div>
       </section>
 
-      <section className="u-section">
-        <h2>{chromeText('homeExperiencesHeading', locale)}</h2>
-        <div className="home-cards">
-          <article className="home-card">
-            {/*
-             * Garden seating, which is what the card is about. There is
-             * deliberately no treehouse photograph here: none of the
-             * supplied frames is confirmed to show it, and captioning a
-             * general garden picture as the treehouse would document a
-             * space nobody has identified.
-             */}
-            <SitePhoto asset={venueMedia.gardenSeatingTrees} className="home-card-photo" />
-            <h3>{chromeText('homeSeatingHeading', locale)}</h3>
-            <LocalizedProse text={HOME_SEATING_TEXT} locale={locale} />
-            <div className="home-card-actions">
-              <Link href={`/${locale}/book`} className="u-button u-button--primary">
-                {chromeText('navBookLabel', locale)}
-              </Link>
-              <Link
-                href={`/${locale}/book?seating=treehouse`}
-                className="u-button u-button--secondary"
-              >
-                {chromeText('treehouseSeatingCtaLabel', locale)}
-              </Link>
-            </div>
-          </article>
+      {/*
+       * The first of three photographic bands below the hero.
+       *
+       * Unlike the hero — where the photograph *is* the content and the
+       * copy sits on top of it in fixed ivory — these are atmosphere behind
+       * a section that keeps its ordinary theme colours. `SceneBackdrop`
+       * blurs the image and lays the current theme's own canvas over it at
+       * high opacity, so `--text-primary` on `--surface-canvas` stays the
+       * pairing it was contrast-checked as, in all six themes, rather than
+       * every section needing its own on-image palette.
+       */}
+      <section className="u-bleed u-section home-scene">
+        <SceneBackdrop asset={venueMedia.pavilionBarPeacockEvening} />
+        <div className="u-container">
+          <h2>{chromeText('homeExperiencesHeading', locale)}</h2>
+          <div className="home-cards">
+            <article className="home-card">
+              {/*
+               * Garden seating, which is what the card is about. There is
+               * deliberately no treehouse photograph here: none of the
+               * supplied frames is confirmed to show it, and captioning a
+               * general garden picture as the treehouse would document a
+               * space nobody has identified.
+               */}
+              <SitePhoto asset={venueMedia.gardenSeatingTrees} className="home-card-photo" />
+              <h3>{chromeText('homeSeatingHeading', locale)}</h3>
+              <LocalizedProse text={HOME_SEATING_TEXT} locale={locale} />
+              <div className="home-card-actions">
+                <Link href={`/${locale}/book`} className="u-button u-button--primary">
+                  {chromeText('navBookLabel', locale)}
+                </Link>
+                <Link
+                  href={`/${locale}/book?seating=treehouse`}
+                  className="u-button u-button--secondary"
+                >
+                  {chromeText('treehouseSeatingCtaLabel', locale)}
+                </Link>
+              </div>
+            </article>
 
-          <article className="home-card">
-            {/*
-             * The terrace under its string lights: a real evening at
-             * Cladium, not a staged birthday setup. Showing décor here
-             * would imply an arrangement is included, which the approved
-             * policy explicitly does not say.
-             */}
-            <SitePhoto asset={venueMedia.terraceStringLightsNight} className="home-card-photo" />
-            <h3>{chromeText('homeCelebrationsHeading', locale)}</h3>
-            {/* Décor pricing and the staff-confirmation requirement come
+            <article className="home-card">
+              {/*
+               * The terrace under its string lights: a real evening at
+               * Cladium, not a staged birthday setup. Showing décor here
+               * would imply an arrangement is included, which the approved
+               * policy explicitly does not say.
+               */}
+              <SitePhoto asset={venueMedia.terraceStringLightsNight} className="home-card-photo" />
+              <h3>{chromeText('homeCelebrationsHeading', locale)}</h3>
+              {/* Décor pricing and the staff-confirmation requirement come
                 straight from approved operations knowledge — never
                 restated as a package, an inclusion, or a final quote. */}
-            <LocalizedProse text={BIRTHDAY_POLICY_TEXT} locale={locale} />
-            <div className="home-card-actions">
-              <Link href={`/${locale}/event`} className="u-button u-button--primary">
-                {chromeText('navPlanBirthdayLabel', locale)}
-              </Link>
-            </div>
-          </article>
+              <LocalizedProse text={BIRTHDAY_POLICY_TEXT} locale={locale} />
+              <div className="home-card-actions">
+                <Link href={`/${locale}/event`} className="u-button u-button--primary">
+                  {chromeText('navPlanBirthdayLabel', locale)}
+                </Link>
+              </div>
+            </article>
+          </div>
         </div>
       </section>
 
@@ -215,8 +229,12 @@ export default async function LocaleHomePage({ params }: { params: Promise<{ loc
         <ul className="home-dining-thumbs" aria-label={chromeText('homeDiningHeading', locale)}>
           {[
             diningMedia.platedDishGreens,
+            diningMedia.charcoalGrillSkewers,
+            diningMedia.sizzlingBeefPlatter,
             diningMedia.platterFriesVegetables,
+            diningMedia.grilledChickenPlatter,
             diningMedia.boardFriesOutdoor,
+            diningMedia.grilledChickenSizzlers,
             diningMedia.teaCupGarden,
           ].map((asset) => (
             <li key={asset.path}>
@@ -237,52 +255,58 @@ export default async function LocaleHomePage({ params }: { params: Promise<{ loc
         <PhotoGrid assets={galleryMedia} label={chromeText('homeGalleryHeading', locale)} />
       </section>
 
-      <section className="u-section home-visit">
-        <h2>{chromeText('homeVisitHeading', locale)}</h2>
-        <LocalizedProse text={DIRECTIONS_TEXT} locale={locale} />
-        <dl className="home-facts">
-          <div>
-            <dt>{chromeText('addressHeading', locale)}</dt>
-            <dd>{ADDRESS_DISPLAY}</dd>
+      <section className="u-bleed u-section home-scene home-visit">
+        <SceneBackdrop asset={venueMedia.gardenSeatingCranes} />
+        <div className="u-container">
+          <h2>{chromeText('homeVisitHeading', locale)}</h2>
+          <LocalizedProse text={DIRECTIONS_TEXT} locale={locale} />
+          <dl className="home-facts">
+            <div>
+              <dt>{chromeText('addressHeading', locale)}</dt>
+              <dd>{ADDRESS_DISPLAY}</dd>
+            </div>
+            <div>
+              <dt>{chromeText('hoursLabel', locale)}</dt>
+              <dd>{BUSINESS_HOURS_DISPLAY}</dd>
+            </div>
+          </dl>
+          <div className="home-card-actions">
+            <a
+              href={GOOGLE_MAPS_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="u-button u-button--secondary"
+            >
+              {chromeText('mapCtaLabel', locale)}
+            </a>
+            <Link href={`/${locale}/visit`} className="u-button u-button--secondary">
+              {chromeText('homeVisitCtaLabel', locale)}
+            </Link>
           </div>
-          <div>
-            <dt>{chromeText('hoursLabel', locale)}</dt>
-            <dd>{BUSINESS_HOURS_DISPLAY}</dd>
-          </div>
-        </dl>
-        <div className="home-card-actions">
-          <a
-            href={GOOGLE_MAPS_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="u-button u-button--secondary"
-          >
-            {chromeText('mapCtaLabel', locale)}
-          </a>
-          <Link href={`/${locale}/visit`} className="u-button u-button--secondary">
-            {chromeText('homeVisitCtaLabel', locale)}
-          </Link>
         </div>
       </section>
 
-      <section className="u-section home-closing">
-        <h2>{chromeText('homeClosingHeading', locale)}</h2>
-        <LocalizedProse text={HOME_CLOSING_TEXT} locale={locale} className="u-lede" />
-        <div className="home-card-actions">
-          <Link href={`/${locale}/book`} className="u-button u-button--primary">
-            {chromeText('navBookLabel', locale)}
-          </Link>
-          <Link href={`/${locale}/concierge`} className="u-button u-button--secondary">
-            {chromeText('navConciergeLabel', locale)}
-          </Link>
+      <section className="u-bleed u-section home-scene home-closing">
+        <SceneBackdrop asset={venueMedia.pavilionBarEvening} />
+        <div className="u-container">
+          <h2>{chromeText('homeClosingHeading', locale)}</h2>
+          <LocalizedProse text={HOME_CLOSING_TEXT} locale={locale} className="u-lede" />
+          <div className="home-card-actions">
+            <Link href={`/${locale}/book`} className="u-button u-button--primary">
+              {chromeText('navBookLabel', locale)}
+            </Link>
+            <Link href={`/${locale}/concierge`} className="u-button u-button--secondary">
+              {chromeText('navConciergeLabel', locale)}
+            </Link>
+          </div>
+          <p className="home-whatsapp">
+            <TrackedWhatsAppLink href={buildWhatsAppUrl(locale)} eventSourceUrl={`/${locale}`}>
+              {chromeText('whatsappCtaLabel', locale)}
+            </TrackedWhatsAppLink>
+            <br />
+            <small className="u-muted">{chromeText('whatsappExternalNoticeText', locale)}</small>
+          </p>
         </div>
-        <p className="home-whatsapp">
-          <TrackedWhatsAppLink href={buildWhatsAppUrl(locale)} eventSourceUrl={`/${locale}`}>
-            {chromeText('whatsappCtaLabel', locale)}
-          </TrackedWhatsAppLink>
-          <br />
-          <small className="u-muted">{chromeText('whatsappExternalNoticeText', locale)}</small>
-        </p>
       </section>
     </>
   );
