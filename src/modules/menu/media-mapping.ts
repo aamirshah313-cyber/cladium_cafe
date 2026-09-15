@@ -293,6 +293,29 @@ export const menuItemMedia: Readonly<Record<string, MenuItemMedia>> = {
     width: 900,
     height: 965,
   },
+  /*
+   * The one entry identified by a caption rather than a filename — the
+   * owner burned "Tawa Beef" into the frame itself, over their own
+   * `cladium.cafe` handle. That is the same kind of statement a filename
+   * is (the owner naming their own food), from the same batch, so it meets
+   * the same bar; it simply arrived written on the image instead of beside
+   * it. The caption band was then cropped away like the smoothie's title:
+   * a crop, never an erasure, and the original is preserved with the
+   * caption intact.
+   *
+   * Two nearby frames show what is plainly the same dish, uncaptioned. They
+   * are deliberately *not* used here — "it looks like the same food" is the
+   * inference this map exists to refuse. One of them ships as
+   * `diningMedia.sizzlingBeefPlatter`, where it claims nothing beyond what
+   * is visible.
+   */
+  'exclusive-beef-entree.tawa-beef': {
+    assetPath: '/menu/items/exclusive-beef-entree.tawa-beef.webp',
+    thumbPath: '/menu/items/exclusive-beef-entree.tawa-beef-thumb.webp',
+    alt: 'Tawa beef strips scattered with sesame and green chilli on a cast-iron platter',
+    width: 961,
+    height: 811,
+  },
   'sandwiches.cladium-special-sandwich': {
     assetPath: '/menu/items/sandwiches.cladium-special-sandwich.webp',
     thumbPath: '/menu/items/sandwiches.cladium-special-sandwich-thumb.webp',
