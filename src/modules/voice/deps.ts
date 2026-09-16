@@ -2,14 +2,15 @@
  * Process-lifetime deps binding for voice — Runbook Steps 31–33. Mirrors
  * `modules/concierge/deps.ts#orchestratorDeps` exactly: real, typechecked
  * provider adapters (never live-called in this sandbox — no
- * `VAPI_PRIVATE_KEY`/`VAPI_WEBHOOK_HMAC_SECRET`), in-memory rate-limit/
- * idempotency/replay/pending-confirmation stores (dev-only, same D-023
- * caveat as every other in-memory adapter here), and the redacted
+ * `VAPI_PRIVATE_KEY`/`VAPI_WEBHOOK_HMAC_SECRET`), a durable, shared rate
+ * limiter for token issuance (`lib/security/durable-rate-limiter.ts`),
+ * in-memory idempotency/replay/pending-confirmation stores (dev-only, same
+ * D-023 caveat as every other in-memory adapter here), and the redacted
  * `consoleLogger`.
  */
 
 import { createVapiTokenIssuer } from '../integrations/vapi-client';
-import { createInMemoryRateLimiter } from '../../lib/security/rate-limit';
+import { createDurableRateLimiter } from '../../lib/security/durable-rate-limiter';
 import { createInMemoryReplayStore } from '../../lib/security/webhook';
 import { createInMemoryIdempotencyStore } from '../../lib/domain/idempotency';
 import { createLogger } from '../../lib/logging';
@@ -21,7 +22,7 @@ import type { ExecuteVapiToolCallsDeps } from './tools/execute-vapi-tool-calls';
 
 export const voiceTokenDeps: IssueVapiTokenDeps = {
   issuer: createVapiTokenIssuer(),
-  rateLimiter: createInMemoryRateLimiter(),
+  rateLimiter: createDurableRateLimiter('vapi-token'),
   logger: createLogger(),
   hasMicrophoneConsent: (sessionId) => hasConsent(consentDeps, sessionId, 'MICROPHONE'),
 };
