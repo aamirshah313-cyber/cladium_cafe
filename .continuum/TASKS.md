@@ -126,6 +126,46 @@
 - [ ] Privacy, retention/deletion, consent, and legal wording.
 - [ ] English/Urdu Vapi real-speaker bake-off (Step 34, D-038) — test plan/protocol fully prepared and ready (`cladium-research/operations/voice-bake-off-plan.md`), execution blocked on a live Vapi credential/deployed assistants plus recruited, consented real Pakistani English/Urdu speakers.
 
+## Completed — menu and venue photography (15 Sep 2026)
+
+- [x] **Per-item menu photography works, and nine dishes have one (D-091).**
+  `menuItemMedia` was empty *and* keyed by `MenuViewItem.id` — a row uuid
+  regenerated on every menu import — so populating it would have changed
+  nothing. `MenuViewItem` now carries `mediaKey` (`menu_items.stable_id`) and
+  the carousel resolves item → group → category through it. Verified against
+  local Supabase and the real published 118-item menu, then live on
+  production. PR #9 (`c46efb4`) and PR #10 (`ffe3bd0`), CI green on both
+  merge commits (verify 1240/1240, e2e 258/258).
+
+- [x] **Three photographic bands on the home page (D-092).** Contrast was
+  measured, not assumed, and the first attempt failed AA: an 88% veil put
+  Day's `--text-muted` at 3.70:1. A 92% veil plus `--text-muted-scene` brings
+  the measured worst case to 5.35:1 across three photographs and six themes.
+  The photographs are subtle as a direct consequence — **re-measure before
+  making them more present.**
+
+- [ ] **P3 — Photograph coverage, not capability: 109 of 118 items still have
+  none** and fall back to group/category imagery, which is honest but
+  generic. This needs the owner, not engineering: supply a file named after
+  the dish, or a frame with the dish name captioned into it. Two things to
+  reuse rather than rediscover — a filename is a claim and must be checked
+  against the image (two of the first batch failed: `Mint Sauce.jpeg` shows a
+  sesame sauce, `Cladium Special Sandwich.jpeg` is a multi-dish promo), and
+  a caption naming a dish the menu does not have is marketing, not
+  identification (one frame says "Club Sandwiches"; no such item exists).
+
+- [ ] **P3 — Alt text is English-only site-wide, and is not locale-aware at
+  all.** `SiteMediaAsset.alt` / `MenuCategoryMedia.alt` are plain strings and
+  `SitePhoto` renders `asset.alt` directly, so an Urdu visitor gets English
+  descriptions for every photograph. This predates the September photography
+  — the 12 category images already had it — but that work widened the
+  surface from 12 strings to roughly 40. Fixing it needs both a type change
+  (alt becomes a `ChromeCopy`-shaped pair, or goes through
+  `resolveLocalizedText`) **and** owner-reviewed Urdu; per CLAUDE.md the
+  strings must not be machine-translated, the same constraint as the menu
+  content itself (D-075). Scope it as one pass rather than translating the
+  new entries alone, which would leave the set half-done.
+
 ## Completed
 
 - [x] **The `e2e` CI gate was inert for about a week, and is repaired (13 Sep 2026, PR #5, merged `f4b844c`).** Recorded because nothing here said so: Step 39's entry below still reads "240/240 E2E tests passing" and "New `e2e` CI job", which was true when written and had stopped being true.
