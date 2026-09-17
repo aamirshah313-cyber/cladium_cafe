@@ -49,9 +49,13 @@ see or reach.
 function. It is additive (D-046): no table, column, type, policy or grant is
 altered or dropped.
 
-```
-supabase db push        # applies pending migrations to the linked project
-```
+**Done — applied 11 Sep 2026, recorded in production as `20260911182227`.**
+It was applied through the Supabase connector, not `supabase db push`. Do
+not follow the command this section originally named: the hosted project's
+migration history no longer matches the repo's file names, so `db push`
+would try to re-run every migration since 4 Sep. See
+`docs/database-environments.md` → "Applying migrations to hosted
+environments" for the current procedure.
 
 **Order matters: apply the migration before deploying the application.** The
 new code calls `takeaway_submit_request`; the old code does not. Migration
