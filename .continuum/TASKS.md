@@ -83,7 +83,7 @@
 - [x] P3 — **Resolved during the redesign (Checkpoint D)**: every public page now supplies its own `generateMetadata` via `lib/i18n/metadata.ts#localePageMetadata`, so canonical/hreflang are per-page accurate (`/en/visit` canonicalises to `/en/visit`, and its `ur` alternate points at `/ur/visit`). Each page also carries its own truthful title and description, replacing the shared "pre-launch scaffold" placeholder. `tests/e2e/locale-metadata.spec.ts` now asserts the per-page behaviour (it previously pinned the locale-root limitation) and additionally guards against the placeholder returning.
 - [ ] P2 — Step 41's `performance-resilience-report.md` proposes concrete alert thresholds (outbox terminal-failure rate, guest-route 429 rate, provider-timeout rate, concierge turn-deadline-hit rate) as engineering-judgment starting points — no live monitoring/alerting stack exists to actually wire them into yet. Configure real alerts against these thresholds once a staging/production observability stack exists (Step 43/46).
 - [ ] P2 — Step 41 found Core Web Vitals cannot be meaningfully measured in this sandbox (Gate 7 itself scopes the real P75 measurement to staging/production telemetry) — only a local `localhost` proxy measurement exists (FCP/LCP ~164ms, CLS 0, all four pages tested). Re-measure for real once Step 43's staging environment exists, and again once real hero photography ships (today's identical FCP/LCP across pages reflects the current text-only content, not a representative future measurement).
-- [ ] P2 — Step 41 found and fixed a real concurrency bug in `lib/security/rate-limit.ts`'s in-memory adapter (returned a live mutable object instead of a value snapshot, silently breaking under a genuine `Promise.all` burst — see D-045). The fix is verified at volume in `tests/unit/performance-load.test.ts`, but this remains the *in-memory, dev-only* adapter (D-023) — whoever builds the real production `RateLimitStoreAdapter` (Redis/Supabase-backed) should re-read D-045's reasoning before implementing, since the same "return a live reference instead of a snapshot" mistake could reappear in a different shape there.
+- [x] **Resolved (D-093, 16 Sep 2026)** — the production Postgres `RateLimitStoreAdapter` now exists and is live; each call returns values copied from its own database row, so D-045's shared-reference bug cannot recur in this shape. Original note: Step 41 found and fixed a real concurrency bug in `lib/security/rate-limit.ts`'s in-memory adapter (returned a live mutable object instead of a value snapshot, silently breaking under a genuine `Promise.all` burst — see D-045). The fix is verified at volume in `tests/unit/performance-load.test.ts`, but this remains the *in-memory, dev-only* adapter (D-023) — whoever builds the real production `RateLimitStoreAdapter` (Redis/Supabase-backed) should re-read D-045's reasoning before implementing, since the same "return a live reference instead of a snapshot" mistake could reappear in a different shape there.
 - [ ] P2 — Step 41's load tests only exercise the in-memory reference stores (D-023) — real Postgres/Supabase contention (connection-pool exhaustion, real lock wait times, real query planning under load) remains unmeasured pending a live database adapter and a live Supabase project (D-017), same standing gap as every prior step.
 - [x] P1 — **Capability update (Step 42)**: local Docker + the Supabase CLI's reduced stack (`docs/database-environments.md`'s documented low-memory profile) IS reachable in this sandbox — confirmed live, not assumed. This does **not** resolve D-017 (no *hosted* Supabase project, no staging/production Supabase Pro, no real PITR/backup system) but it does mean `npm run db:test:schema`/`db:test:rls`/a real `db reset` can be run live in this sandbox going forward, if Docker Desktop is started first (`Start-Process 'C:\Program Files\Docker\Docker\Docker Desktop.exe'`, then poll `docker ps` — took under 30s this step). Re-check this capability before assuming any DB-related task is blocked purely on "no live Postgres."
 - [ ] P2 — Step 42 found and fixed a real, previously-undiscovered gap: every table (`confirmation_tokens`/`idempotency_keys` included) carried full `anon`/`authenticated` CRUD grants via a Supabase platform default `20260824140003_grants.sql` never revoked — undetected through 31 runbook steps because `db:test:rls` had no live database to run against. Fixed in `20260830044140_fix_default_table_privileges.sql` (D-046). The next migration author should re-read that migration's own doc comment before adding any new table — Supabase's default-grant behavior applies to *every new table* unless the `ALTER DEFAULT PRIVILEGES` this migration set up continues to hold (verify it survives any future `db reset`, not just this step's).
@@ -125,6 +125,23 @@
 - [ ] Booking/treehouse/event operational details.
 - [ ] Privacy, retention/deletion, consent, and legal wording.
 - [ ] English/Urdu Vapi real-speaker bake-off (Step 34, D-038) — test plan/protocol fully prepared and ready (`cladium-research/operations/voice-bake-off-plan.md`), execution blocked on a live Vapi credential/deployed assistants plus recruited, consented real Pakistani English/Urdu speakers.
+
+## Completed — durable rate limiting and test reliability (16–17 Sep 2026)
+
+- [x] **Durable, shared rate limiting (D-093).** All three limiters on Postgres;
+  migration applied to the hosted project before the code merged, verified
+  there, then confirmed live (one row, count 2, for two requests on one
+  session). PR #12 → `ead9d74`.
+- [x] **Hosted migration procedure documented.** `db push` must not be used
+  against the hosted project until its history is reconciled — see
+  `docs/database-environments.md`.
+- [x] **Night-theme accessibility flake fixed (D-094).** PR #13 → `e29b007`.
+- [ ] **P3 — Reconcile the hosted project's migration history** so `supabase
+  db push` works again. `supabase migration repair` can mark repo versions
+  applied and retire the connector-assigned ones, but it changes production
+  metadata: needs explicit approval, a read of the current history first, and
+  should be done once rather than piecemeal. Until then, keep using the
+  connector procedure.
 
 ## Completed — menu and venue photography (15 Sep 2026)
 

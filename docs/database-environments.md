@@ -82,7 +82,42 @@ npm run db:types      # writes src/lib/db/database.types.ts from the LOCAL datab
 
 ## Applying migrations to hosted environments
 
-Human-run, and deliberately not automated in this step:
+> **Do not use `supabase db push` against the hosted project
+> (`vxvpxywszskxcugwpsch`) as things stand.** Its migration history no longer
+> matches this repository's file names. Checked 16 Sep 2026:
+>
+> - The first 13 migrations (through `20260830044140`) were applied with
+>   `db push` and are recorded under their repo versions.
+> - Every migration since 4 Sep was applied through the Supabase connector's
+>   `apply_migration`, which records the **time it was applied** as the
+>   version. `20260909180000_takeaway_submit_atomic` is `20260911182227` in
+>   production; `20260917120000_rate_limit_windows` is `20260916211003`.
+>
+> All 24 are present in production by name. But `db push` compares versions,
+> so it would treat those 11 as unapplied and try to run them again. The first
+> is `create function idempotency_find_or_begin`, so it would most likely stop
+> there with "already exists" — a loud failure, not silent damage — but later
+> ones in that list (`create or replace`, `revoke`) would succeed a second time
+> if reached. Reconciling the history (`supabase migration repair`) is possible
+> but changes production metadata and needs its own approval.
+
+**How a new migration is applied to the hosted project today:**
+
+1. Apply it locally and verify it there first (`npx supabase migration up
+--local`, then the relevant integration tests).
+2. Read the target's current history (`list_migrations`) and confirm only the
+   new migration is pending and none of its objects already exist.
+3. Apply the **exact committed file** with the connector's `apply_migration`.
+4. Verify on the hosted project: RLS, `prosecdef`, `proconfig` (`search_path`),
+   and role privileges for `public`/`anon`/`authenticated`/`service_role`
+   (D-065/D-073). Grants on paper are not proof a function runs — call it as
+   `service_role` inside a transaction that is rolled back.
+5. **Only then** merge the code that depends on it. Merging deploys, and code
+   that calls a missing function fails every request that reaches it.
+
+`20260917120000_rate_limit_windows` followed exactly this sequence (D-093).
+
+The original, still-valid rule for any environment with a clean history:
 
 ```sh
 npx supabase link --project-ref <ref>   # once per environment, per machine

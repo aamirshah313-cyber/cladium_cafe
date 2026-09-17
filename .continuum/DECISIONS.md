@@ -2,6 +2,81 @@
 
 Newest decisions go first. Each entry stays short and points to authoritative evidence.
 
+## D-094 — An e2e wait that resolves on a promise waits for nothing
+
+- Decision: `setThemeViaToggle` waits until no `CSSTransition` is running
+  before returning, so accessibility scans never sample a mid-fade colour.
+- Why: `body`, `a` and `button` fade colours over 180ms. The helper waited
+  only for `data-theme` to flip, so axe could scan a half-faded grey-on-grey
+  and report `color-contrast`. `matrix — en × night` flaked on `/en/book`
+  and `/en/event` — including on a docs-only merge — and passed on retry.
+  The retry would equally pass a real intermittent contrast regression.
+- What nearly shipped: the first fix returned a `Promise` from the
+  `waitForFunction` predicate. Playwright does not await it; the promise
+  object is truthy. Measured: a predicate resolving `false` "succeeded" in
+  98ms, and the helper returned in 435ms with 15s of transition left. It would
+  likely have turned CI green while waiting for nothing. Predicates must be
+  synchronous; `document.getAnimations()` flushes style, so none is needed.
+- Evidence: a temporary probe pinned colours at mid-fade (30s transition,
+  -15s delay) — old sequence failed contrast deterministically, fixed helper
+  waited ~15s and scanned clean. Matrix 84/84 locally with retries off; CI
+  258/258, 0 flaky (PR #13).
+
+## D-093 — Durable rate limiting, and how hosted migrations are applied
+
+- Decision: every rate limiter (guest routes + staff sign-in, concierge,
+  voice token) uses a shared Postgres store (`rate_limit_windows`,
+  `rate_limit_consume`, `rate_limit_prune`) via
+  `lib/security/durable-rate-limiter.ts`. Rules unchanged.
+- Why: the in-memory limiter held per-instance counters. On Vercel a burst
+  over N warm instances got about N times the limit, and a cold start reset
+  it — including the staff sign-in limit, the one credential-guessing
+  surface.
+- Properties: atomic upsert; keys stored only as SHA-256 of
+  namespace + NUL + key; same window semantics as the in-memory adapter; fails
+  closed on store errors and, via D-089's policy, on missing credentials;
+  constructed lazily so `next build` needs no secrets.
+- Falsified, not assumed: with the function swapped for read-then-write, the
+  60-vs-20 concurrency test admitted 60/60 and failed; restored from the
+  migration file. Bugs caught on the way: a sync throw breaking the
+  `RateLimiter` Promise contract; a raw NUL byte in source that made git treat
+  the file as binary; stale generated types (missing `staff_notifications`,
+  `takeaway_submit_request`).
+- **Hosted migration mechanism.** The hosted project's history no longer
+  matches repo file names: the first 13 went in via `db push`, everything
+  since 4 Sep via the Supabase connector, which records apply time as the
+  version. `db push` would try to re-run those 11. Procedure is now in
+  `docs/database-environments.md`; `docs/takeaway-release-plan.md` §2, which
+  named `db push`, is corrected.
+- Deploy order held: migration applied (`20260916211003`) and verified
+  (RLS, invoker rights, `search_path=""`, no PUBLIC/anon access, rolled-back
+  service_role call) **before** PR #12 merged, and #12 opened as a draft so
+  it could not be merged first. Live: two malformed requests on one session
+  → both 400, exactly one row at count 2, reset +60s. CI on merge commit
+  `ead9d74`: 1244/1244, 258/258.
+- Rollback: revert the deploy; the table and functions are unused by prior
+  code and can stay.
+
+## D-092 — A photograph behind text is a contrast change, so measure it
+
+- Decision: home-page section bands put a blurred photograph under a veil of
+  the current theme's own `--surface-canvas` at 92%, and override
+  `--text-muted` within those bands to `--text-muted-scene` (muted pulled
+  30% toward `--text-primary`).
+- Why both halves are needed: the veil alone was assumed sufficient and was
+  not. Measured, a blurred photo under an 88% veil dropped Day's muted body
+  copy from 4.88:1 to **3.70:1** — below AA. Day's `--text-muted` starts at
+  4.88:1, so it has essentially no margin to give up; `--text-primary` was
+  never at risk (12.43:1 → 10.43:1). Measured worst case across three
+  photographs and six themes is now 5.35:1 (Peach).
+- Consequence to respect: the photographs are deliberately subtle. Making
+  them more present spends the margin again. Re-measure before changing the
+  veil opacity or the mix.
+- Also settled here: a retouched marketing render of a scene is not a
+  `venue` photograph, even when it is the business's own artwork. The
+  "Peace lives here!" poster was rejected because the unretouched original
+  of that same scene is already published as `garden-lit-path-dusk`.
+
 ## D-091 — Per-item menu photography, keyed by stable id
 
 - Decision: `MenuViewItem` carries `mediaKey` (`menu_items.stable_id`)
@@ -40,26 +115,6 @@ Newest decisions go first. Each entry stays short and points to authoritative ev
   all eight stable ids exist as rows, the anon/RLS read of the added column
   returns 200, and `/en/menu` served the item photograph with item alt text
   and no provenance caption.
-
-## D-092 — A photograph behind text is a contrast change, so measure it
-
-- Decision: home-page section bands put a blurred photograph under a veil of
-  the current theme's own `--surface-canvas` at 92%, and override
-  `--text-muted` within those bands to `--text-muted-scene` (muted pulled
-  30% toward `--text-primary`).
-- Why both halves are needed: the veil alone was assumed sufficient and was
-  not. Measured, a blurred photo under an 88% veil dropped Day's muted body
-  copy from 4.88:1 to **3.70:1** — below AA. Day's `--text-muted` starts at
-  4.88:1, so it has essentially no margin to give up; `--text-primary` was
-  never at risk (12.43:1 → 10.43:1). Measured worst case across three
-  photographs and six themes is now 5.35:1 (Peach).
-- Consequence to respect: the photographs are deliberately subtle. Making
-  them more present spends the margin again. Re-measure before changing the
-  veil opacity or the mix.
-- Also settled here: a retouched marketing render of a scene is not a
-  `venue` photograph, even when it is the business's own artwork. The
-  "Peace lives here!" poster was rejected because the unretouched original
-  of that same scene is already published as `garden-lit-path-dusk`.
 
 ## D-090 — A fixture that shares the code's assumption cannot test it
 
