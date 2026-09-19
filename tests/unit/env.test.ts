@@ -70,6 +70,7 @@ describe('parseFeatureFlags', () => {
       'FEATURE_WHATSAPP_CLOUD',
       'FEATURE_META_MARKETING',
       'FEATURE_ONLINE_PAYMENT',
+      'FEATURE_FIELD_TELEMETRY',
     ] as const) {
       expect(isFeatureEnabled(flag, launchFeatureFlags)).toBe(false);
     }

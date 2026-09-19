@@ -59,6 +59,14 @@ export const featureFlagSchema = z.object({
   FEATURE_WHATSAPP_CLOUD: booleanString,
   FEATURE_META_MARKETING: booleanString,
   FEATURE_ONLINE_PAYMENT: booleanString,
+  /**
+   * Anonymous Core Web Vitals field sampling (`/api/telemetry/vitals`).
+   * Off everywhere until the owner turns it on: the samples carry no
+   * session, IP, user agent, or URL (see migration `20260919120000`'s
+   * header), so this flag exists to make *when measurement runs* an owner
+   * decision, not to gate a privacy risk.
+   */
+  FEATURE_FIELD_TELEMETRY: booleanString,
 });
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;
