@@ -34,6 +34,8 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { negotiateRequestLocale } from './lib/i18n/request-locale';
 import { LOCALES } from './lib/i18n/locale';
+import { isFeatureEnabled } from './lib/env.server';
+import { TAKEAWAY_GUEST_JOURNEY_COMPLETE } from './modules/takeaway/guest-journey';
 
 /** Every real page directory under `src/app/[locale]/`, except the catch-all itself. Keep in sync — the test above enforces it. */
 export const KNOWN_LOCALE_PAGES: ReadonlySet<string> = new Set([
@@ -42,8 +44,28 @@ export const KNOWN_LOCALE_PAGES: ReadonlySet<string> = new Set([
   'event',
   'menu',
   'privacy',
+  'takeaway',
   'visit',
 ]);
+
+/**
+ * Pages whose directory exists but which are only *reachable* when a runtime
+ * gate is on. Keyed by the same segment name as `KNOWN_LOCALE_PAGES`, which
+ * stays the structural list so its drift test keeps doing its job.
+ *
+ * This exists because the streaming problem above is worse for a gated page,
+ * not better. `[locale]/loading.tsx` means a `notFound()` inside the page
+ * streams a `200` before the boundary resolves — so a switched-off journey
+ * would answer `200 OK` with not-found content, and a crawler would index a
+ * page that is deliberately unavailable. Deciding it here, before rendering
+ * starts, is the only place the status can still be set.
+ *
+ * The page keeps its own `notFound()` too. This layer gets the status right;
+ * that one stays correct if the route is ever reached without the proxy.
+ */
+const CONDITIONAL_LOCALE_PAGES: Readonly<Record<string, () => boolean>> = {
+  takeaway: () => isFeatureEnabled('FEATURE_TAKEAWAY_REQUESTS') && TAKEAWAY_GUEST_JOURNEY_COMPLETE,
+};
 
 const LOCALE_SUBPATH_PATTERN = new RegExp(`^/(${LOCALES.join('|')})/(.+)$`);
 
@@ -62,8 +84,13 @@ export function proxy(request: NextRequest): NextResponse {
   if (match) {
     const rest = match[2] ?? '';
     const [firstSegment, ...remainingSegments] = rest.split('/');
+    const segment = firstSegment ?? '';
     const isKnownPage =
-      remainingSegments.length === 0 && KNOWN_LOCALE_PAGES.has(firstSegment ?? '');
+      remainingSegments.length === 0 &&
+      KNOWN_LOCALE_PAGES.has(segment) &&
+      // A gated page is only "known" while its gate is on. Everything else
+      // has no entry here and is unconditionally known.
+      (CONDITIONAL_LOCALE_PAGES[segment]?.() ?? true);
     if (!isKnownPage) {
       // Self-rewrite: same URL, same rendering (the catch-all's own
       // notFound() content is already correct — Step 39 verified that),

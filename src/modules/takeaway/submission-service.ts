@@ -12,7 +12,7 @@
  */
 
 import { err, ok, type Result } from '../../lib/result';
-import { featureDisabled, type AppError } from '../../lib/errors';
+import { featureDisabled, validationFailed, type AppError } from '../../lib/errors';
 import { assertServerOnly } from '../../lib/server-only';
 import type { SourceChannel } from '../../lib/schemas/common';
 import type { Actor } from '../../lib/domain/actor';
@@ -86,6 +86,35 @@ export interface PrepareTakeawayRequestResult {
   readonly confirmationToken: string;
 }
 
+/**
+ * Everything one submission writes, as a single unit.
+ *
+ * The five rows below are not independently useful. A request without its
+ * outbox event is an order nobody is told about; a request without its
+ * snapshots has no lines; a request without its status event is invisible to
+ * the history the staff view reads. They are one fact about the world, so
+ * they need one commit.
+ */
+export interface TakeawaySubmissionWrite {
+  readonly request: TakeawayRequestRecord;
+  readonly items: readonly TakeawayItemSnapshot[];
+  readonly statusEvent: StatusEvent;
+  readonly auditEvent: AuditEvent;
+  readonly outboxEvent: OutboxEvent;
+}
+
+/**
+ * Persists a whole submission atomically.
+ *
+ * Supplied by the Postgres deps as a single transactional call; when it is
+ * absent the service falls back to writing through the individual stores in
+ * sequence, which is correct for the in-memory implementations used by tests
+ * and local development, where a partial write is not a reachable state.
+ */
+export interface TakeawaySubmissionPersistence {
+  persist(write: TakeawaySubmissionWrite): Promise<void>;
+}
+
 export interface TakeawayServiceDeps {
   readonly getMenuView: () => Promise<PublishedMenuView>;
   readonly confirmationTokens: ConfirmationTokenStore;
@@ -95,6 +124,12 @@ export interface TakeawayServiceDeps {
   readonly statusEvents: AppendOnlySink<StatusEvent>;
   readonly auditEvents: AppendOnlySink<AuditEvent>;
   readonly outbox: AppendOnlySink<OutboxEvent>;
+  /**
+   * When present, the one call that writes a submission. Durable deps must
+   * supply this — see `createPostgresTakeawayDeps`. Its absence means the
+   * sequential fallback, which only the in-memory stores may rely on.
+   */
+  readonly persistSubmission?: TakeawaySubmissionPersistence;
   readonly generateId: () => string;
   readonly now?: () => Date;
 }
@@ -162,6 +197,21 @@ export async function submitTakeawayRequest(
       now,
     },
     async (): Promise<Result<SubmitTakeawayRequestResult, AppError>> => {
+      /*
+       * An empty cart cannot become a request. The guard lives *inside* the
+       * idempotent function on purpose: `runIdempotent` returns a completed
+       * key's stored result without running this at all, so a genuine replay
+       * — where the cart has already been cleared by the first success — is
+       * unaffected, while a real submit with nothing in it is still refused.
+       *
+       * `buildReview` does not reject an empty cart (the review route guards
+       * that separately), so without this an empty cart would produce a
+       * request with no lines.
+       */
+      if (input.cart.lines.length === 0) {
+        return err(validationFailed([{ path: 'cart', code: 'empty_cart' }], input.correlationId));
+      }
+
       const menuView = await deps.getMenuView();
       if (menuView.status !== 'PUBLISHED') return err(featureDisabled(input.correlationId));
 
@@ -197,23 +247,20 @@ export async function submitTakeawayRequest(
         assignedStaffId: null,
         createdAt: now().toISOString(),
       };
-      await deps.requestStore.create(record);
-
-      for (const line of totals.lines) {
-        await deps.itemSnapshots.append({
+      const write: TakeawaySubmissionWrite = {
+        request: record,
+        items: totals.lines.map((line) => ({
           id: deps.generateId(),
           takeawayRequestId: requestId,
           menuItemId: line.menuItemId,
+          variantId: line.variantId,
           name: line.name,
           variantLabel: line.variantLabel,
           unitPricePkr: line.unitPricePkr,
           quantity: line.quantity,
           lineTotalPkr: line.lineTotalPkr,
-        });
-      }
-
-      await deps.statusEvents.append(
-        buildStatusEvent({
+        })),
+        statusEvent: buildStatusEvent({
           entityType: 'TAKEAWAY_REQUEST',
           entityId: requestId,
           previousState: null,
@@ -223,9 +270,7 @@ export async function submitTakeawayRequest(
           correlationId: input.correlationId,
           now,
         }),
-      );
-      await deps.auditEvents.append(
-        buildAuditEvent({
+        auditEvent: buildAuditEvent({
           category: 'ADMIN',
           action: 'takeaway_request.submitted',
           actor,
@@ -234,9 +279,7 @@ export async function submitTakeawayRequest(
           correlationId: input.correlationId,
           now,
         }),
-      );
-      await deps.outbox.append(
-        buildOutboxEvent({
+        outboxEvent: buildOutboxEvent({
           eventType: 'takeaway_request.requested',
           entityType: 'TAKEAWAY_REQUEST',
           entityId: requestId,
@@ -245,7 +288,32 @@ export async function submitTakeawayRequest(
           generateId: deps.generateId,
           now,
         }),
-      );
+      };
+
+      /*
+       * One commit when the deps can give us one.
+       *
+       * The sequential branch below is five independent writes. Against
+       * in-memory `Map`s that is fine — there is no failure mode between
+       * them. Against Postgres over PostgREST it is five HTTP round-trips
+       * with no transaction, where a failure after the first leaves a
+       * request that has no lines, no history, or — worst — no outbox event,
+       * meaning an order exists that staff are never notified about.
+       *
+       * So durable deps supply `persistSubmission` and this whole block
+       * becomes a single `takeaway_submit_request` call. Anything thrown
+       * propagates out of `runIdempotent`, which marks the key FAILED, so a
+       * later retry is a clean attempt rather than a replay of a half-write.
+       */
+      if (deps.persistSubmission) {
+        await deps.persistSubmission.persist(write);
+      } else {
+        await deps.requestStore.create(write.request);
+        for (const item of write.items) await deps.itemSnapshots.append(item);
+        await deps.statusEvents.append(write.statusEvent);
+        await deps.auditEvents.append(write.auditEvent);
+        await deps.outbox.append(write.outboxEvent);
+      }
 
       return ok({ requestId, state: 'REQUESTED' });
     },

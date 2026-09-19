@@ -173,16 +173,47 @@ export interface SubmitTakeawayHttpInput extends ReviewTakeawayHttpInput {
   readonly correlationId: string;
 }
 
-/** Clears the cart only after a successful submission — a failed attempt (e.g. `STALE_REVIEW`) leaves it intact so the guest can review again. */
+/**
+ * Clears the cart only after a successful submission — a failed attempt (e.g.
+ * `STALE_REVIEW`) leaves it intact so the guest can review again.
+ *
+ * ## Why a missing cart is not an early failure
+ *
+ * This used to `return` as soon as `loadExistingCart` failed. That looked
+ * right and was actively harmful, because success *destroys the cart*: a
+ * guest whose response was lost to a dropped connection, retrying with the
+ * same idempotency key, found no cart and got `NOT_FOUND` — told their
+ * request had failed when it had in fact been created. The obvious next move
+ * for them is to order again.
+ *
+ * `submitTakeawayRequest` wraps everything in `runIdempotent`, which returns
+ * the stored result for a completed key *without running the inner function
+ * at all* — so on a genuine replay the cart is never consulted and does not
+ * need to exist. The early return was short-circuiting the exact mechanism
+ * that makes a retry safe.
+ *
+ * Passing an empty cart when none is stored lets that replay resolve. When it
+ * is *not* a replay, the inner function still refuses: `buildReview` rejects
+ * an empty cart, so a submit with no cart fails validation as `empty_cart`
+ * rather than `NOT_FOUND`. That is the more accurate answer of the two —
+ * there is nothing to submit — and no request can be created from it.
+ */
 export async function submitTakeaway(
   deps: TakeawayHttpDeps,
   sessionId: string,
   input: SubmitTakeawayHttpInput,
 ): Promise<Result<SubmitTakeawayRequestResult, AppError>> {
-  const cartResult = await loadExistingCart(deps, sessionId);
-  if (!cartResult.ok) return cartResult;
+  const stored = await deps.cartStore.get(sessionId);
+  const menuView = await deps.getMenuView();
+  const cart =
+    stored ??
+    emptyCart(
+      deps.generateId(),
+      sessionId,
+      menuView.status === 'PUBLISHED' ? menuView.versionNumber : 0,
+    );
 
-  const result = await submitTakeawayRequest(deps, { sessionId, cart: cartResult.value, ...input });
+  const result = await submitTakeawayRequest(deps, { sessionId, cart, ...input });
   if (result.ok) await deps.cartStore.clear(sessionId);
   return result;
 }

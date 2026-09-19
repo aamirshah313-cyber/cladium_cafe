@@ -19,6 +19,7 @@ const MENU: PublishedMenuView = {
       items: [
         {
           id: 'steaks.ribeye',
+          mediaKey: 'steaks.ribeye',
           name: 'Ribeye Steak',
           groupLabel: null,
           availability: 'AVAILABLE',
@@ -30,6 +31,7 @@ const MENU: PublishedMenuView = {
         },
         {
           id: 'steaks.sirloin',
+          mediaKey: 'steaks.sirloin',
           name: 'Sirloin Steak',
           groupLabel: 'Beef',
           availability: 'UNKNOWN',
@@ -44,6 +46,7 @@ const MENU: PublishedMenuView = {
         },
         {
           id: 'steaks.tbone',
+          mediaKey: 'steaks.tbone',
           name: 'T-Bone Steak',
           groupLabel: null,
           availability: 'UNAVAILABLE',

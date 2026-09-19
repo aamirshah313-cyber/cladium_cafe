@@ -11,11 +11,12 @@
  * against `release-gates-v2.md` Gate 8's "rate limits and bot/spam controls
  * are verified."
  *
- * One process-lifetime `RateLimiter` (in-memory, dev-only — same D-023
- * caveat as every other in-memory adapter in this codebase; a durable
- * production `RateLimitStoreAdapter` is a later, separately approved
- * integration) is shared by every route below. Sharing one instance is
- * safe: each rule's `consume` key is namespaced by an explicit `keyPrefix`
+ * One `RateLimiter` is shared by every route below. It is durable — backed
+ * by the `rate_limit_windows` table through `lib/security/durable-rate-limiter.ts`
+ * — so a limit holds across Vercel function instances and cold starts. Until
+ * September 2026 it was an in-memory `Map`, which on serverless meant each
+ * instance kept its own counters and the effective limit scaled with the
+ * number of warm instances. Sharing one instance is safe: each rule's `consume` key is namespaced by an explicit `keyPrefix`
  * (e.g. `cart-item:<sessionId>`, `req-submit:<sessionId>`), so one guest's
  * window on one route never counts against a different route's window,
  * even though the underlying store is the same object.
@@ -31,11 +32,11 @@
  * voice-call credential versus a chat turn.
  */
 
-import { createInMemoryRateLimiter } from '../security/rate-limit';
+import { createDurableRateLimiter } from '../security/durable-rate-limiter';
 import type { RateLimiter, RateLimitRule } from '../security/rate-limit';
 
 /** Shared by every rule below — see the module doc comment for why one instance is safe. */
-export const guestRouteRateLimiter: RateLimiter = createInMemoryRateLimiter();
+export const guestRouteRateLimiter: RateLimiter = createDurableRateLimiter('guest-routes');
 
 /** `POST /api/takeaway/cart/items`, `PATCH`/`DELETE /api/takeaway/cart/items/[cartLineId]` — routine browsing-session editing. */
 export const CART_MUTATION_RATE_LIMIT_RULE: RateLimitRule = { windowMs: 60_000, max: 30 };
@@ -65,6 +66,11 @@ export const META_TRACK_RATE_LIMIT_RULE: RateLimitRule = { windowMs: 60_000, max
  *
  * Exhausting it costs telemetry samples, never guest functionality. It is a
  * database-protection ceiling, not a security boundary.
+ *
+ * Note that since the limiter became durable, each `consume` is itself a
+ * `rate_limit_windows` write — so a beacon costs two writes, not one. At this
+ * ceiling that is bounded and fine, but it is the reason the limit is a
+ * ceiling rather than something tighter that would be consulted more often.
  */
 export const VITALS_REPORT_RATE_LIMIT_RULE: RateLimitRule = { windowMs: 60_000, max: 600 };
 

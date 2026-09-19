@@ -12,7 +12,15 @@ import { z } from 'zod';
 export const localeSchema = z.enum(['en', 'ur']);
 export type Locale = z.infer<typeof localeSchema>;
 
-export const themeSchema = z.enum(['day', 'night']);
+/**
+ * `THEMES` and the theme switcher both derive from this list, so a theme
+ * added here appears in the UI automatically. Two things do *not* follow
+ * automatically and must be updated alongside it: the semantic token block
+ * in `app/globals.css`, and the `customer_sessions_theme_allowed` check
+ * constraint in Postgres, which rejects any value it has not been widened
+ * to accept.
+ */
+export const themeSchema = z.enum(['day', 'night', 'peach', 'golden', 'terracotta', 'ember']);
 export type Theme = z.infer<typeof themeSchema>;
 
 /**

@@ -1171,6 +1171,63 @@ export type Database = {
           },
         ]
       }
+      rate_limit_windows: {
+        Row: {
+          hit_count: number
+          key_hash: string
+          reset_at: string
+        }
+        Insert: {
+          hit_count: number
+          key_hash: string
+          reset_at: string
+        }
+        Update: {
+          hit_count?: number
+          key_hash?: string
+          reset_at?: string
+        }
+        Relationships: []
+      }
+      staff_notifications: {
+        Row: {
+          created_at: string
+          delivered_at: string
+          entity_id: string
+          entity_type: Database["public"]["Enums"]["entity_type"]
+          event_type: string
+          id: string
+          payload: Json
+          read_at: string | null
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          delivered_at?: string
+          entity_id: string
+          entity_type: Database["public"]["Enums"]["entity_type"]
+          event_type: string
+          id: string
+          payload?: Json
+          read_at?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          delivered_at?: string
+          entity_id?: string
+          entity_type?: Database["public"]["Enums"]["entity_type"]
+          event_type?: string
+          id?: string
+          payload?: Json
+          read_at?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Relationships: []
+      }
       staff_profiles: {
         Row: {
           created_at: string
@@ -1742,10 +1799,22 @@ export type Database = {
         Args: { retention_days: number }
         Returns: number
       }
+      rate_limit_consume: {
+        Args: { p_key_hash: string; p_now: string; p_window_ms: number }
+        Returns: {
+          out_hit_count: number
+          out_reset_at: string
+        }[]
+      }
+      rate_limit_prune: {
+        Args: { p_limit: number; p_now: string }
+        Returns: number
+      }
       staff_has_role: {
         Args: { required: Database["public"]["Enums"]["staff_role"][] }
         Returns: boolean
       }
+      takeaway_submit_request: { Args: { p_payload: Json }; Returns: string }
     }
     Enums: {
       actor_type: "GUEST" | "STAFF" | "SYSTEM"

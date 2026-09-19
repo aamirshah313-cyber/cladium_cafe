@@ -16,9 +16,60 @@
 - [x] P2 — **Resolved for events (D-081)**: `createPostgresEventDeps()` built (mirrored bookings' pattern exactly) and wired into `eventDeps`, pushed (`4a460f1`), confirmed live with a genuine HTTP event submission against `https://cladium-cafe.vercel.app`, checked directly against Supabase (`event_requests`/`customer_sessions`/`status_events` all landed correctly) — see Completed below. Takeaway still needs two adapters that don't exist at all yet before its own cutover can even be attempted: a Postgres cart store (`carts`/`cart_items`, remember to call `ensureCustomerSessionRow` from `postgres-customer-session.ts` before its own insert, same as D-079's other four adapters — `carts.session_id` is `NOT NULL`) and a takeaway-line-snapshot sink (`takeaway_items`) — both were blocked on real `menu_items` rows existing, which D-075 resolved, but neither has been written.
 - [x] P1 — **Resolved for bookings (D-080)**: `bookingDeps` re-enabled to prefer real Postgres, pushed (`9354626`), and confirmed live with a genuine HTTP booking submission against `https://cladium-cafe.vercel.app`, checked directly against Supabase (`booking_requests`/`customer_sessions`/`status_events` all landed correctly) — see Completed below. Takeaway still has no Postgres cutover wired at all (no adapters yet) — this item stays open for that domain.
 - [x] P3 — **Resolved during the redesign (Checkpoint D)**: the permanently-disabled "Review request" button was not a Playwright quirk — the forms genuinely gated their submit button on `!csrfToken`, so whenever the mount-time `GET /api/session/csrf` fetch did not resolve, the guest was left with a control that could never be pressed and no way to retry. The token is now fetched on demand at submit time (`ensureCsrfToken`), the button is disabled only while a request is in flight, and a failure surfaces retryable text. Applied to the booking form, the event form and the concierge composer. `booking-flow.spec.ts` went 3/12 → 12/12; the one remaining failure after that was a real WCAG AA contrast violation (gold #b38d4d nav/price text at 3.0:1), also fixed.
-- [ ] P1 — **Blocks the takeaway guest journey (D-083)**: build the takeaway cart/review UI pages. The API, cart store, state machine, staff queue and submission endpoints are all complete and `FEATURE_TAKEAWAY_REQUESTS` is switched on in the deployed environment — what is missing is the one screen a guest needs after adding an item (lines, deterministic total, confirm control). Until it exists, `modules/takeaway/guest-journey.ts`'s `TAKEAWAY_GUEST_JOURNEY_COMPLETE` keeps the guest-facing add affordance hidden so nobody can add items with nowhere to submit them. To activate: build the page, then flip that one constant.
-- [x] P2 — Real staff authentication (Supabase Auth + owner/manager MFA linked to `staff_profiles`, Gate 3) built (D-050) — `modules/staff/dev-credentials.ts` is superseded, not removed: `createCompositeStaffDirectory` offers both, and no caller of `StaffDirectory` changed, exactly as this item originally specified. Real *accounts* still need provisioning — see the two items below.
-- [ ] P2 — A real Vercel Cron schedule for `/api/cron/outbox-dispatch` is a deployment-step (Step 46) concern, not built in Step 25 — the authenticated endpoint exists but nothing invokes it outside tests yet.
+- [x] **The takeaway cart and review journey is built and verified (D-091)** — and stays switched off, because verification found two independent reasons it cannot be turned on yet.
+
+  The screen that was missing now exists: `[locale]/takeaway/` with a cart (quantity, removal, server-recomputed subtotal), a details form, a server-echoed review, and a received state that says plainly it is not a confirmed order. Every figure comes from `CartTotals`; the component performs no arithmetic of its own, and quantity edits round-trip rather than optimistically re-rendering a number nobody authorised. The subtotal is labelled a subtotal and carries a note that staff confirm the final amount, because no tax or service-charge rate is configured and inventing one is forbidden.
+
+  **Verified against real published menu data, not fixtures:** CSRF rejected with a bad token (403); an injected `unitPricePkr` rejected by the strict schema; quantity 1→2→3 producing exactly 1399/2798/4197; quantity 0 rejected; a variant line added and removed with the subtotal exact at every step; review; concurrent duplicate submit creating exactly one request (the second 409s); a consumed confirmation token rejected on replay; the cart cleared after success; and a submit with no session rejected. The full UI journey then ran headless end to end with zero page errors.
+
+  **Two defects found and fixed on the way.**
+
+  1. **A retry after a lost response reported failure for a request that had succeeded.** `submitTakeaway` returned early when no cart was stored — but success *clears the cart*, so a guest retrying with the same idempotency key got `NOT_FOUND` and would reasonably order again. The early return was short-circuiting `runIdempotent`, which returns a completed key's stored result without needing the cart at all. The cart check now happens inside the idempotent function; the retry returns the original `requestId`. Confirmed live: `200` with an identical id, where it previously returned `404`. Worth noting the service's own idempotent-replay test passed throughout — the bug lived in the layer above it, and only driving the real HTTP routes exposed it.
+  2. **A new locale page is invisible until `proxy.ts` knows about it.** `KNOWN_LOCALE_PAGES` 404s any unlisted path before rendering (D-058). A gated page needs more than an entry there: because `loading.tsx` streams a `200` before a page's `notFound()` resolves, a switched-off journey would answer `200 OK` with not-found content and be indexable. `CONDITIONAL_LOCALE_PAGES` now gates `takeaway` on the same two switches the page checks, so the status is decided before rendering starts.
+
+- [ ] **P0 — One blocker left before `TAKEAWAY_GUEST_JOURNEY_COMPLETE` may be flipped to `true`.** It was two.
+
+  1. **Production notification delivery remains unproven.** No evidence exists that any staff notification has ever been delivered, and there is positive evidence against it over a bounded window — but "never, all-time" overstates what the data supports, and an earlier version of this entry made that claim. Corrected 11 Sep 2026.
+
+     What is actually established:
+
+     - `staff_notifications` has `n_tup_ins = 0` and zero rows. The insert counter survives `delete`, so this is not "the rows were cleaned up" — but it does **not** survive a statistics reset, which is why the bounded window below matters.
+     - **The window is bounded.** `pg_stat_database.stats_reset` for this database is **2026-08-25 20:41:21Z**, so those counters describe activity since that timestamp only — statistics can be reset, and a claim about the project's lifetime cannot rest on them. The window does still contain all six known production submissions (3 bookings, 3 events, 5–6 Sep), which produced 3 `outbox_events` rows, none delivered.
+     - **No `rpc/outbox_claim_batch` call has been observed in the retained edge logs** — none in the 24h to 10 Sep 19:46Z, and none in any window checked since, where a 5-minute schedule implies ~288/day. `runDispatchCycle` calls `claimBatch()` unconditionally, so an empty outbox is not an explanation. Retention is finite, so this is an absence of observation over the retained window, not a statement about all time.
+
+     The two defensible statements are: **no claim calls have been observed in the retained logs**, and **no notification delivery has been demonstrated.** Both are enough to keep the journey switched off. Neither establishes that nothing ever ran, and neither disproves that a scheduler exists — an existing job could be paused, disabled after repeated failures, pointed at the wrong URL, or firing into a `401`. See `docs/outbox-scheduler-setup.md`, which stops trying to settle that from here and plans a reviewable job instead.
+
+     **Closing this requires a controlled test of the whole chain, not one link:** scheduler invocation → authenticated dispatcher → Postgres claim (`rpc/outbox_claim_batch` visible in `edge_logs`) → notification row created → visible to staff in the UI. **An HTTP `200` from the dispatch route proves a cycle ran, not that anything was delivered.** See `docs/takeaway-release-plan.md` §5.
+
+     On a `401`: do **not** rotate `CRON_SECRET` as a first move. Establish first whether the scheduler is sending an `Authorization: Bearer …` header at all, and which side holds the wrong value — rotating blind destroys the evidence that would identify the misconfiguration, and re-breaks the pipeline if the scheduler is the side that is wrong.
+  2. ~~`modules/takeaway/deps.ts` is entirely in-memory.~~ **Resolved 10 Sep 2026 (D-090).** `createPostgresTakeawayDeps` now wires `requestStore`, `confirmationTokens`, `idempotency`, `cartStore`, the item-snapshot sink and the status/audit sinks to Postgres, plus a `persistSubmission` that writes the request, its line snapshots, the status event, the audit event and the outbox row in **one transaction** (`takeaway_submit_request`, a plpgsql function — PostgREST cannot span five calls transactionally). Two new adapters written: `postgres-cart-store.ts` and `postgres-takeaway-submission.ts`.
+
+     Verified against real local Postgres, each through separately constructed application instances: a cart written by one instance readable by another; review on one instance and submit on another; all five tables committed together; a failure inside the transaction leaving no request and no notification; two concurrent duplicate submissions creating exactly one request; a retry after a lost response returning the original id; and empty carts, stale reviews and foreign tokens all rejected. State survives an application restart (proved across two OS processes). 124 integration tests pass from a bare `supabase db reset`.
+
+  Turning the journey on before (1) is fixed would let guests submit orders that staff are never notified of.
+
+- [x] **Merged and deployed 11 Sep 2026 (D-090/D-091).** PR #1 (`9558e36`, merge `3d9d983`) and PR #2 (`b4b1552`, merge `13cb83e`) are on `master` and live. Both production migrations were applied **before** the code that calls them, and each was verified after applying — see `PROJECT_STATE.md` for the evidence, including the `edge_logs` correlation (`GET /rest/v1/carts → 200`) that establishes the takeaway path really runs on Postgres rather than inferring it from a healthy response. `TAKEAWAY_GUEST_JOURNEY_COMPLETE` stays `false`.
+
+- [ ] **P0 — VERIFIED BROKEN 9 Sep 2026: nothing is draining the production outbox.** Supersedes the Step-25-era note that "nothing invokes it outside tests yet" (true then, stale since the owner reported configuring an external scheduler) and corrects D-087's assertion that the cause is specifically authentication — that was never established.
+
+  **Evidence, from the live project (`vxvpxywszskxcugwpsch`), not from documentation.** `runDispatchCycle` calls `store.claimBatch()` unconditionally as its first action, and the Postgres store implements that as a PostgREST `rpc/outbox_claim_batch` call. So *every* successful authenticated invocation must leave exactly one `/rest/v1/rpc/outbox_claim_batch` line in Supabase `edge_logs`, whether or not the outbox has rows. Over the last 24 hours there are **zero**. The query shape is known-good: the same query surfaces `/rest/v1/rpc/menu_import_draft` and the whole staff-dashboard session from 11:12–11:13 that day. Edge traffic simply stops at 11:13 and never resumes, where a five-minute schedule would have produced ~288 calls/day.
+
+  **Three causes remain consistent with that evidence, and Supabase logs cannot separate them:**
+  1. the scheduler is not firing at all;
+  2. it fires but Vercel rejects it `401` before the route runs (`CRON_SECRET` absent or mismatched);
+  3. it fires and authenticates, but `resolveOutboxStore` silently fell back to `createInMemoryOutboxStore()` — in which case the endpoint returns a healthy `200` while draining a per-instance `Map`.
+
+     **Correction (11 Sep 2026).** An earlier note here claimed this cause was "eliminated" by D-089. That was wrong twice over: D-089 is an **unpushed local change**, so it has altered nothing in production; and elimination by code change is not evidence about a running system. What *is* now known comes from production data:
+
+     `pg_stat_user_tables` shows `outbox_events` with **3 rows ever inserted** (all since deleted). So the Postgres outbox store did resolve correctly in the request instances that wrote them, which makes a blanket in-memory fallback an unlikely explanation — though it does not formally exclude a cron instance resolving differently. Cause (3) is therefore **downgraded, not closed**, and will only be genuinely impossible on the revision that ships D-089.
+
+  **Controlled test needed (not yet run, needs owner action).** Nothing here can be settled from Supabase logs alone, and no further production data need be created: ask the owner to trigger the scheduler once, on demand, and note the timestamp. Then correlate three sources over that minute — the scheduler's own run history (did it fire, what status did it get), Vercel's function logs for the dispatch route (did the request arrive, was it `401` or `200`), and Supabase `edge_logs` for `rpc/outbox_claim_batch` (did it reach the database). A request absent from Vercel means (1); present and `401` means (2); present and `200` with a matching `outbox_claim_batch` line means the pipeline is healthy and the earlier 24-hour gap was a scheduling lapse. No secret needs to be shared or displayed to do this.
+
+  Cause 3 is the one worth naming explicitly, because it is invisible from the outside: the cron looks like it is working. Separating them needs the scheduler's own execution log (status codes) or Vercel function logs — neither is reachable from here.
+
+  **Impact:** every guest request already writes a durable `outbox_events` row and every staff notification is durable (D-085/D-087), so nothing is lost — but nothing is delivered either. Staff are not notified of anything.
+
+  **This blocks turning on the takeaway guest journey.** A cart that lets guests submit orders nobody is notified of is worse than no cart.
 - [x] P3 — **Resolved**: Step 18 (menu carousel) is built for real — see Completed below. Both remaining preconditions (an actual published menu, owner sign-off on using the category photos publicly) were met this session (D-075, and the owner's own explicit go-ahead).
 - [ ] P3 — Local dev secrets (`SESSION_SECRET`, `NEXT_PUBLIC_APP_URL`, `CRON_SECRET`, `ANTHROPIC_API_KEY`) cannot be set in this sandbox (all `.env*` writes are denied by permission settings); a live happy-path check of the cart/CSRF/booking/event/staff/dispatch/concierge flow needs an environment without that restriction, or the user setting them directly.
 - [x] P2 — Found during Step 24: `FEATURE_TAKEAWAY_REQUESTS`/`FEATURE_BOOKING_REQUESTS`/`FEATURE_EVENT_REQUESTS` (`lib/env.server.ts`, added Step 6/12) are declared in the env schema but never read by `app/api/{takeaway,bookings,events}/*` routes (Steps 20–23) — wired (D-051): all 8 mutating routes plus `GET /api/takeaway/cart` now fail closed to `404 FEATURE_DISABLED` when their entity's flag is off.
@@ -79,7 +130,63 @@
 - [ ] Privacy, retention/deletion, consent, and legal wording.
 - [ ] English/Urdu Vapi real-speaker bake-off (Step 34, D-038) — test plan/protocol fully prepared and ready (`cladium-research/operations/voice-bake-off-plan.md`), execution blocked on a live Vapi credential/deployed assistants plus recruited, consented real Pakistani English/Urdu speakers.
 
+## Completed — menu and venue photography (15 Sep 2026)
+
+- [x] **Per-item menu photography works, and nine dishes have one (D-091).**
+  `menuItemMedia` was empty *and* keyed by `MenuViewItem.id` — a row uuid
+  regenerated on every menu import — so populating it would have changed
+  nothing. `MenuViewItem` now carries `mediaKey` (`menu_items.stable_id`) and
+  the carousel resolves item → group → category through it. Verified against
+  local Supabase and the real published 118-item menu, then live on
+  production. PR #9 (`c46efb4`) and PR #10 (`ffe3bd0`), CI green on both
+  merge commits (verify 1240/1240, e2e 258/258).
+
+- [x] **Three photographic bands on the home page (D-092).** Contrast was
+  measured, not assumed, and the first attempt failed AA: an 88% veil put
+  Day's `--text-muted` at 3.70:1. A 92% veil plus `--text-muted-scene` brings
+  the measured worst case to 5.35:1 across three photographs and six themes.
+  The photographs are subtle as a direct consequence — **re-measure before
+  making them more present.**
+
+- [ ] **P3 — Photograph coverage, not capability: 109 of 118 items still have
+  none** and fall back to group/category imagery, which is honest but
+  generic. This needs the owner, not engineering: supply a file named after
+  the dish, or a frame with the dish name captioned into it. Two things to
+  reuse rather than rediscover — a filename is a claim and must be checked
+  against the image (two of the first batch failed: `Mint Sauce.jpeg` shows a
+  sesame sauce, `Cladium Special Sandwich.jpeg` is a multi-dish promo), and
+  a caption naming a dish the menu does not have is marketing, not
+  identification (one frame says "Club Sandwiches"; no such item exists).
+
+- [ ] **P3 — Alt text is English-only site-wide, and is not locale-aware at
+  all.** `SiteMediaAsset.alt` / `MenuCategoryMedia.alt` are plain strings and
+  `SitePhoto` renders `asset.alt` directly, so an Urdu visitor gets English
+  descriptions for every photograph. This predates the September photography
+  — the 12 category images already had it — but that work widened the
+  surface from 12 strings to roughly 40. Fixing it needs both a type change
+  (alt becomes a `ChromeCopy`-shaped pair, or goes through
+  `resolveLocalizedText`) **and** owner-reviewed Urdu; per CLAUDE.md the
+  strings must not be machine-translated, the same constraint as the menu
+  content itself (D-075). Scope it as one pass rather than translating the
+  new entries alone, which would leave the set half-done.
+
 ## Completed
+
+- [x] **The `e2e` CI gate was inert for about a week, and is repaired (13 Sep 2026, PR #5, merged `f4b844c`).** Recorded because nothing here said so: Step 39's entry below still reads "240/240 E2E tests passing" and "New `e2e` CI job", which was true when written and had stopped being true.
+
+  Every run from at least 8 Sep was **killed at its 20-minute limit** — byte-identical 20m16–19s across four runs, including a documentation-only PR. A killed job prints no summary, so there was never a pass/fail count to notice; `verify` carried CI alone and stayed green throughout. The gate that produces Phase 8's hardening evidence was not producing any.
+
+  Four causes, none of them the timeout:
+  1. `clientEnvSchema` requires `NEXT_PUBLIC_SUPABASE_URL`/`_ANON_KEY`; nothing supplied them, so `parseSupabasePublicCredentials()` threw a `ZodError` **in the browser** — `NEXT_PUBLIC_*` values are inlined into the client bundle.
+  2. `setThemeViaToggle` clicked a button; the theme control is a `<select>`, and has been since before the helper was last touched. Every call waited the full 30s action timeout — that is what consumed the budget.
+  3. `keyboard-and-landmarks` and `reduced-motion` encoded the same stale button group (one also asserted exactly 2 themes, where there are now 6).
+  4. `keyboard-and-landmarks` asserted the inline nav is visible on mobile, where it is correctly collapsed into the drawer.
+
+  Three real accessibility defects were hidden behind the outage, two of them introduced by this project's own recent work: the staff sign-in link at **3.31:1** on the footer's dark ground (on every page), an `<li>` between `role="listbox"` and `role="option"` breaking `aria-required-children`/`aria-required-parent`, and a **2px horizontal overflow at 320px** (WCAG 1.4.10 Reflow) caused partly by the theme `<select>` growing to fit "Terracotta".
+
+  **Method note worth keeping.** The overflow was first "fixed" by capping the select's width. The element then measured as fitting — `clientWidth === scrollWidth` — while actually rendering "Terrac" and "Englis": a native select clips its closed value inside its own chrome without producing scroll overflow. Only a screenshot showed it. Measurement alone is not evidence for anything a control paints itself.
+
+  Result at `65240ff`: **258/258 passed in 10m41s**, zero failed, flaky, skipped or retried, inside the **unchanged** 20-minute limit. No assertion was weakened; the theme test now covers six themes, keyboard operability and actual application where it previously counted two buttons.
 
 - [x] Research assets and verified operating knowledge collected.
 - [x] Menu transcribed and structurally validated.

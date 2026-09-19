@@ -20,7 +20,7 @@ import { useSyncExternalStore } from 'react';
 import { chromeText } from '../../lib/i18n/chrome';
 import type { Locale } from '../../lib/i18n/locale';
 import { serializeThemeCookie } from '../../lib/theme/preference-cookie';
-import { THEMES, type Theme } from '../../lib/theme/theme';
+import { isSupportedTheme, THEMES, type Theme } from '../../lib/theme/theme';
 
 function subscribeTheme(listener: () => void) {
   const observer = new MutationObserver(listener);
@@ -33,10 +33,39 @@ function subscribeTheme(listener: () => void) {
   };
 }
 function currentTheme(): Theme {
+  // Validated against the schema rather than a hand-written list of names:
+  // the previous `=== 'day' || === 'night'` silently reported any newly
+  // added theme as the system default, so the switcher would have shown
+  // the wrong option selected while the page rendered correctly.
   const explicit = document.documentElement.dataset.theme;
-  if (explicit === 'day' || explicit === 'night') return explicit;
+  if (isSupportedTheme(explicit)) return explicit;
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'night' : 'day';
 }
+
+/**
+ * One label key per theme, typed as a total map so adding a theme to
+ * `themeSchema` without naming it here is a compile error rather than a
+ * blank entry in the switcher. The ternary this replaces would have
+ * labelled every new theme "Dark".
+ */
+const THEME_NAME_KEYS: Readonly<
+  Record<
+    Theme,
+    | 'dayThemeName'
+    | 'nightThemeName'
+    | 'peachThemeName'
+    | 'goldenThemeName'
+    | 'terracottaThemeName'
+    | 'emberThemeName'
+  >
+> = {
+  day: 'dayThemeName',
+  night: 'nightThemeName',
+  peach: 'peachThemeName',
+  golden: 'goldenThemeName',
+  terracotta: 'terracottaThemeName',
+  ember: 'emberThemeName',
+};
 
 interface ThemeToggleProps {
   readonly locale: Locale;
@@ -63,14 +92,11 @@ export function ThemeToggle({ locale, initialTheme }: ThemeToggleProps) {
           });
         }}
       >
-        {THEMES.map((theme) => {
-          const nameKey = theme === 'day' ? 'dayThemeName' : 'nightThemeName';
-          return (
-            <option key={theme} value={theme}>
-              {chromeText(nameKey, locale)}
-            </option>
-          );
-        })}
+        {THEMES.map((theme) => (
+          <option key={theme} value={theme}>
+            {chromeText(THEME_NAME_KEYS[theme], locale)}
+          </option>
+        ))}
       </select>
     </label>
   );

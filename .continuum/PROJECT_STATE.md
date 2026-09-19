@@ -2,9 +2,194 @@
 
 Updated: 2026-09-19
 Architecture: Version 2  
-Phase: Runbook Phases 0–2 complete (Steps 1–12); Phase 3 done for now (Steps 13–17 complete, Step 18 explicitly deferred — D-022); Phase 4 complete (Steps 19–25); Phase 5 (text concierge) complete (Steps 26–29); Phase 6 (Vapi bilingual browser voice) done for now (Steps 30–33 complete, Step 34 explicitly deferred — D-038); Phase 7 (WhatsApp and Meta) complete (Steps 35–38); Phase 8 (full hardening) complete (Steps 39–42); Phase 9 (staging, UAT, production) underway — Steps 43–45 complete, Step 45's decision was **NO-GO** (D-049); Step 46 (the *formal, GO-gated* controlled production deployment) still not run, but the application is in fact live and stable in Vercel production (D-084, commit `848e800`, smoke-tested) — a real governance inconsistency to resolve by re-running Step 45's evaluation, not by back-dating a GO. Of D-049's eight engineering punch-list items, 1–5 are closed (D-050/D-051/D-055/D-054/D-062); 6–8 re-verified open on 2026-09-19 — see Production blockers
+Phase: Runbook Phases 0–2 complete (Steps 1–12); Phase 3 complete (Steps 13–18 — Step 18 built for real once the menu was published; D-022's deferral resolved, not overridden); Phase 4 complete (Steps 19–25); Phase 5 (text concierge) complete (Steps 26–29); Phase 6 (Vapi bilingual browser voice) done for now (Steps 30–33 complete, Step 34 explicitly deferred — D-038); Phase 7 (WhatsApp and Meta) complete (Steps 35–38); Phase 8 (full hardening) complete (Steps 39–42); Phase 9 (staging, UAT, production) underway — Steps 43–45 complete, Step 45's decision was **NO-GO** (D-049); Step 46 (the *formal, GO-gated* controlled production deployment) still not run, but the application is in fact live and stable in Vercel production (D-084, commit `848e800`, smoke-tested) — a real governance inconsistency to resolve by re-running Step 45's evaluation, not by back-dating a GO. Of D-049's eight engineering punch-list items, 1–5 are closed (D-050/D-051/D-055/D-054/D-062); 6–8 re-verified open on 2026-09-19, with item 6's mechanism since built — see Production blockers
 Application code: scaffolded (Next.js App Router, TypeScript strict) with CI gates, shared platform primitives, locale routing, Day/Night theming, a public site shell, a Visit page, a menu-browsing UI (honestly unpublished live), a full provider-neutral domain/repository layer for takeaway/booking/event requests (D-023) — now proven race-free under genuine concurrency, not just sequential calls (D-025), a CSRF/session-guarded takeaway cart/review/submit API (D-024, no UI yet — nothing published to add to a cart), a complete booking/treehouse request flow with both API and a live `/book` UI page (D-026), a complete event/birthday enquiry flow with both API and a live `/event` UI page surfacing the approved décor/cake/outside-food wording (D-027), a protected staff workspace (`/staff`) with role-scoped queues/detail/transition/assignment for all three request types, backed by a dev-only sign-in seam pending real Supabase Auth (D-028), a concurrency-safe outbox dispatcher with retry/backoff/terminal-failure handling draining a single shared outbox into a pollable staff-notification store, with Supabase Realtime itself deferred (D-029), a compact cached concierge system policy plus four strict read tools (menu/venue-info/cart/request-status) reusing existing domain services exactly (D-030), a real, typechecked Anthropic Messages API orchestrator (`POST /api/concierge/chat`) — provider-neutral adapter, bounded tool/token/time loop, safe fallback — installed and wired but never live-called (no `ANTHROPIC_API_KEY` in this sandbox — D-031), a real concierge chat UI (`/concierge`) with two prepare-only draft tools (booking/event) — no submit tool is ever registered, so the model is structurally unable to write; a guest confirms through the exact same `/api/{bookings,events}/submit` endpoints the manual forms use (D-032), a versioned agent evaluation suite (`modules/evals/`) splitting deterministic orchestrator/policy guarantees (run and CI-gated now, 15 cases) from genuine model-judgment cases (fully specified, visibly skipped without a live API key, 12 cases) across all 11 runbook-named categories (D-033), controlled Vapi assistant configuration templates (`modules/voice/profiles/`) — a six-cell (environment × locale) matrix with no assistant id/credential field at all (structural, same pattern as Step 28's absent submit tool), a voice system prompt that wraps `CONCIERGE_SYSTEM_POLICY` verbatim rather than duplicating it, drift-detected fingerprint versions tying it to the text concierge's policy/tool schema, and provider/voice/transcriber selection deliberately left `PENDING_BAKEOFF` until Step 34 (D-034), a real, typechecked `POST /api/vapi/token` short-lived browser token service — a hand-rolled RFC 7519 HS256 JWT signer (`lib/security/jwt.ts`) plus a provider-neutral Vapi token issuer (`modules/integrations/vapi-client.ts`), gated by feature-flag/session/CSRF/origin/rate-limit checks (the first route in this codebase to actually read `FEATURE_VOICE_EN`/`FEATURE_VOICE_UR`), never live-called in this sandbox — no `VAPI_PRIVATE_KEY` (D-035), authenticated Vapi tool/webhook routes (`POST /api/vapi/tools`, `POST /api/vapi/webhook`) reusing Step 12's HMAC-SHA256/timestamp/replay verification unchanged, `toolCallId`-idempotent (Step 19's `runIdempotent`, a new scope), bounded (call-count cap + per-call timeout race), and dispatching through the exact same `modules/concierge/tool-registry.ts` text chat uses — never a second tool implementation (D-036), a real voice web experience (`/concierge`'s Type/Talk toggle, flag-gated server-side) built on the real `@vapi-ai/web` SDK — a pure, fully-tested call-state reducer/error-classifier (`voice-call-state.ts`) driven by real, SDK-type-verified event names, a server-side pending-confirmation bridge (`GET /api/vapi/pending-confirmation`) so a live call's server-executed draft becomes visible to the browser, and a review card shared byte-for-byte with text chat (`pending-confirmation.tsx`, extracted from Step 28's `concierge-chat.tsx`) — voice never submits anything itself (D-037), a hardened click-to-WhatsApp handoff (`lib/business/whatsapp-link.ts#buildWhatsAppUrl`) whose signature takes only a `Locale` — never guest data — so its minimal, reviewed, bilingual prefilled `?text=` message is structurally incapable of leaking PII, plus a visible external-navigation notice on every WhatsApp link and bilingual staff-escalation copy in the concierge's own safe fallback (D-039), and real consent and privacy controls (`modules/consent/`) — an append-only `ConsentEvent` ledger (`lib/domain/consent-event.ts`) mirroring `status_events`/`audit_events` exactly, four distinct grant/revoke categories (`ESSENTIAL_PREFERENCES` default-granted so locale/theme keep working with zero guest action, `META_MARKETING`/`MICROPHONE`/`RECORDING` all fail-closed by default), a versioned-policy staleness check, a real deletion/retention job backed by a new migration that gives `consent_events` its one narrow, auditable exception to an otherwise-unconditional append-only trigger, a working `/privacy` settings page (honest "not published yet" notice, never an invented legal page, alongside fully-functional consent controls), genuine server-side enforcement — `POST /api/vapi/token` now rejects with `CONSENT_REQUIRED` when MICROPHONE consent isn't granted, not just a client-side hidden button (D-040), and consent-gated Meta event tracking (`modules/integrations/meta-events.ts#trackMetaEvent`) — a closed, custom seven-event catalog matching `production-architecture-v2.md` §11 verbatim (never Meta's own `Purchase`/`Schedule` standard events), one shared flag-then-consent decision point reused by every trigger, a bounded-timeout best-effort CAPI adapter that can never block the guest-facing request that triggered it, wired into `add_to_cart`/`submit_order_request`/`submit_booking_request`/`submit_event_request`/`view_menu` with real trigger points, `contact`/`lead` fully built but deliberately not yet wired into the existing WhatsApp links, and the actual browser Pixel `<script>`/CSP change deliberately left as a scoped follow-up (D-041), and WhatsApp Cloud readiness (`cladium-research/operations/whatsapp-cloud-readiness.md`) — a real (never-called) outbound adapter matching Meta's documented template-message contract, a real signature/handshake verifier confirmed against Meta's actual two-secret webhook scheme (`X-Hub-Signature-256` plus a separate verify-token handshake), and one webhook route that checks `FEATURE_WHATSAPP_CLOUD` before anything else — off means `404`, the step's own evidence bullet, with a small local fix so an unrelated missing flag elsewhere can never turn that into a `500` (D-042). **Phase 7 (WhatsApp and Meta) is complete.**
-Baseline commit: `8732db0` "chore: establish Cladium pre-build baseline" (local only, not pushed). Steps 8–10 committed at `150db60` (local only, not pushed). Steps 11–13 committed at `ec45245` (local only, not pushed). Step 14 committed at `84e37db` (local only, not pushed). Step 15 committed at `443cd0e` (local only, not pushed). Step 16 committed at `d6eceb9` (local only, not pushed). Step 17 committed at `3b5a58c` (local only, not pushed). Step 18 deferral documented at `3976cf6` (local only, not pushed). Step 19 committed at `93f4e33` (local only, not pushed). Step 20 committed at `78dbfcf` "feat: takeaway draft and review API (Step 20)" (local only, not pushed). Step 21 committed at `c123ce1` "fix: real concurrency race in idempotency/confirmation-token stores (Step 21)" (local only, not pushed). Step 22 committed at `e655b26` "feat: booking and treehouse request flow (Step 22)" (local only, not pushed). Step 23 committed at `198dcc0` "feat: birthday and event enquiry flow (Step 23)" (local only, not pushed). Step 24 committed at `8ffc860` "feat: protected staff workspace (Step 24)" (local only, not pushed). Step 25 committed at `0b83c8a` "feat: outbox dispatcher and staff notifications (Step 25)" (local only, not pushed). Step 26 committed at `90b8a4e` "feat: concierge policy and read tools (Step 26)" (local only, not pushed). Step 27 committed at `86a09fa` "feat: server-side chat orchestration (Step 27)" (local only, not pushed). Step 28 committed at `9ca7cc4` "feat: concierge draft actions and confirmation (Step 28)" (local only, not pushed). Step 29 committed at `9d31861` "feat: agent evaluation harness (Step 29)" (local only, not pushed). Step 30 committed at `67b38c9` "feat: Vapi configuration as controlled artifacts (Step 30)" (local only, not pushed). Step 31 committed at `7a2b087` "feat: short-lived Vapi browser token service (Step 31)" (local only, not pushed). Step 32 committed at `d9a5976` "feat: authenticated Vapi tools and webhooks (Step 32)" (local only, not pushed). Step 33 committed at `8446564` "feat: voice web experience (Step 33)" (local only, not pushed). Step 34 deferral committed at `5abc346` "docs: voice quality bake-off plan, explicitly deferred (Step 34)" (local only, not pushed). Step 35 committed at `1a7b9dc` "feat: click-to-WhatsApp handoff hardening (Step 35)" (local only, not pushed). Step 36 committed at `76b1f14` "feat: consent and privacy controls (Step 36)" (local only, not pushed). Step 37 committed at `5a1ae15` "feat: Meta measurement behind a flag (Step 37)" (local only, not pushed). Step 38 committed at `3fcc277` "feat: WhatsApp Cloud readiness (Step 38)" (local only, not pushed). Step 39 committed at `2c5be22` "test: cross-product E2E and accessibility (Step 39)" (local only, not pushed). Step 40 committed at `2cc0cb8` "fix: security and abuse verification — rate limiting and security headers (Step 40)" (local only, not pushed). Step 41 committed at `08ce57b` "test: performance and resilience load testing (Step 41)" (local only, not pushed). Step 42 committed at `5a30ba8` "fix: backup, restore, and rollback drill (Step 42)" (local only, not pushed). Steps up to and including Step 42 (`428f105`) pushed to GitHub (`aamirshah313-cyber/cladium_cafe`) and deployed live to a real Vercel staging environment (`https://cladium-cafe.vercel.app`) for Step 43. Step 43 committed at `c6e1ea1` "docs: staging release (Step 43)" (no application source changed — report and `.continuum/` only). Step 43's staging test-data check committed at `3c7be44` "chore: confirm Step 43 staging test data already cleared" (no application source changed). Step 44 committed at `ce91b3e` "docs: owner and staff UAT (Step 44)" (no application source changed — report and `.continuum/` only). Step 44's commit-hash reference committed at `7c31fce` (no application source changed). Step 45 committed at `4e7f0d8` "docs: production readiness decision - NO-GO (Step 45)" (no application source changed — report and `.continuum/` only). Real staff auth (D-050) committed at `43e10cc` "feat: real staff authentication with enforced owner/manager MFA (D-050)". Feature-flag wiring (D-051) committed at `cb28775` "fix: wire the three unenforced request-type feature flags (D-051)". Build-time-freeze fix (D-052) committed at `579aabb` "fix: force-dynamic on GET /api/takeaway/cart (D-052)". D-053 correction committed at `6e5629a`. `npm audit` automation (D-054) committed at `1463f56` "ci: automate npm audit into verify/CI (D-054)". Live-model eval results (D-055) committed at `d6ae183`. Meta contact-event wiring (D-056) committed at `d489402` "feat: wire Meta contact event into WhatsApp links (D-056)". Consent-retention live verification (D-057) committed at `b994eb9` "docs: verify consent-retention function live (D-057)". Proxy 404 fix (D-058) committed at `8569c6b` "fix: 404 status for unmatched locale-prefixed paths (D-058)". Real staff accounts provisioned in staging (owner action, no commit). Password-recovery landing page (D-059) committed at `ee8e02a` "feat: password-recovery landing page (D-059)".
+Baseline commit: `8732db0` "chore: establish Cladium pre-build baseline" (local only, not pushed). Steps 8–10 committed at `150db60` (local only, not pushed). Steps 11–13 committed at `ec45245` (local only, not pushed). Step 14 committed at `84e37db` (local only, not pushed). Step 15 committed at `443cd0e` (local only, not pushed). Step 16 committed at `d6eceb9` (local only, not pushed). Step 17 committed at `3b5a58c` (local only, not pushed). Step 18 deferral documented at `3976cf6` (local only, not pushed). Step 19 committed at `93f4e33` (local only, not pushed). Step 20 committed at `78dbfcf` "feat: takeaway draft and review API (Step 20)" (local only, not pushed). Step 21 committed at `c123ce1` "fix: real concurrency race in idempotency/confirmation-token stores (Step 21)" (local only, not pushed). Step 22 committed at `e655b26` "feat: booking and treehouse request flow (Step 22)" (local only, not pushed). Step 23 committed at `198dcc0` "feat: birthday and event enquiry flow (Step 23)" (local only, not pushed). Step 24 committed at `8ffc860` "feat: protected staff workspace (Step 24)" (local only, not pushed). Step 25 committed at `0b83c8a` "feat: outbox dispatcher and staff notifications (Step 25)" (local only, not pushed). Step 26 committed at `90b8a4e` "feat: concierge policy and read tools (Step 26)" (local only, not pushed). Step 27 committed at `86a09fa` "feat: server-side chat orchestration (Step 27)" (local only, not pushed). Step 28 committed at `9ca7cc4` "feat: concierge draft actions and confirmation (Step 28)" (local only, not pushed). Step 29 committed at `9d31861` "feat: agent evaluation harness (Step 29)" (local only, not pushed). Step 30 committed at `67b38c9` "feat: Vapi configuration as controlled artifacts (Step 30)" (local only, not pushed). Step 31 committed at `7a2b087` "feat: short-lived Vapi browser token service (Step 31)" (local only, not pushed). Step 32 committed at `d9a5976` "feat: authenticated Vapi tools and webhooks (Step 32)" (local only, not pushed). Step 33 committed at `8446564` "feat: voice web experience (Step 33)" (local only, not pushed). Step 34 deferral committed at `5abc346` "docs: voice quality bake-off plan, explicitly deferred (Step 34)" (local only, not pushed). Step 35 committed at `1a7b9dc` "feat: click-to-WhatsApp handoff hardening (Step 35)" (local only, not pushed). Step 36 committed at `76b1f14` "feat: consent and privacy controls (Step 36)" (local only, not pushed). Step 37 committed at `5a1ae15` "feat: Meta measurement behind a flag (Step 37)" (local only, not pushed). Step 38 committed at `3fcc277` "feat: WhatsApp Cloud readiness (Step 38)" (local only, not pushed). Step 39 committed at `2c5be22` "test: cross-product E2E and accessibility (Step 39)" (local only, not pushed). Step 40 committed at `2cc0cb8` "fix: security and abuse verification — rate limiting and security headers (Step 40)" (local only, not pushed). Step 41 committed at `08ce57b` "test: performance and resilience load testing (Step 41)" (local only, not pushed). Step 42 committed at `5a30ba8` "fix: backup, restore, and rollback drill (Step 42)" (local only, not pushed). Steps up to and including Step 42 (`428f105`) pushed to GitHub (`aamirshah313-cyber/cladium_cafe`) and deployed live to a real Vercel staging environment (`https://cladium-cafe.vercel.app`) for Step 43. Step 43 committed at `c6e1ea1` "docs: staging release (Step 43)" (no application source changed — report and `.continuum/` only). Step 43's staging test-data check committed at `3c7be44` "chore: confirm Step 43 staging test data already cleared" (no application source changed). Step 44 committed at `ce91b3e` "docs: owner and staff UAT (Step 44)" (no application source changed — report and `.continuum/` only). Step 44's commit-hash reference committed at `7c31fce` (no application source changed). Step 45 committed at `4e7f0d8` "docs: production readiness decision - NO-GO (Step 45)" (no application source changed — report and `.continuum/` only). Real staff auth (D-050) committed at `43e10cc` "feat: real staff authentication with enforced owner/manager MFA (D-050)". Feature-flag wiring (D-051) committed at `cb28775` "fix: wire the three unenforced request-type feature flags (D-051)". Build-time-freeze fix (D-052) committed at `579aabb` "fix: force-dynamic on GET /api/takeaway/cart (D-052)". D-053 correction committed at `6e5629a`. `npm audit` automation (D-054) committed at `1463f56` "ci: automate npm audit into verify/CI (D-054)". Live-model eval results (D-055) committed at `d6ae183`. Meta contact-event wiring (D-056) committed at `d489402` "feat: wire Meta contact event into WhatsApp links (D-056)". Consent-retention live verification (D-057) committed at `b994eb9` "docs: verify consent-retention function live (D-057)". Proxy 404 fix (D-058) committed at `8569c6b` "fix: 404 status for unmatched locale-prefixed paths (D-058)". Real staff accounts provisioned in staging (owner action, no commit). Password-recovery landing page (D-059) committed at `ee8e02a` "feat: password-recovery landing page (D-059)". Owner photography mapped to menu items and three home-page photographic bands added (D-091/D-092) — PR #9, `1ea5929`, merged as `c46efb4`; the Tawa Beef item photograph (caption-identified) PR #10, `2788d53`, merged as `ffe3bd0`. **Master is `ffe3bd0`**, CI green on both merge commits (verify 1240/1240; e2e 258/258), deployed to `https://cladium-cafe.vercel.app` and verified live.
+
+## Owner photography mapped into the product (15 Sep 2026)
+
+21 owner-supplied images (`Assets/mappings`, BBQ subfolder excluded — that
+batch landed earlier as `menuGroupMedia`). Preserved untouched at
+`cladium-research/assets/provided/mappings`; every one was opened and
+checked against its own filename before use.
+
+**The per-item tier finally works.** `menuItemMedia` had been empty *and*
+keyed by `MenuViewItem.id` — a row UUID regenerated on every menu import —
+so it could never have matched even once populated. `MenuViewItem` now
+carries `mediaKey` (`menu_items.stable_id`), mirroring
+`MenuViewCategory.mediaKey`, and the carousel resolves item → group →
+category through it. Nine dishes have their own photograph — eight named by
+filename, plus Tawa Beef, identified by a caption the owner burned into the
+frame over their own handle (same kind of statement, written on the image
+rather than beside it; the caption band was cropped away and the original
+kept intact).
+
+Verified end-to-end against real data, not only unit tests: local Supabase,
+the real published 118-item menu, every mapped `stable_id` present as a row,
+anon/RLS read of the new column returns `200`, and `/en/menu` served the
+karahi photograph at 201x310 from a 900x1428 source with its item alt text
+and no provenance caption (correct — captions mark the *weaker* group and
+category claims).
+
+**Shipped and confirmed live.** PR #9 (`1ea5929`) merged as `c46efb4`;
+PR #10 (`2788d53`, Tawa Beef) merged as `ffe3bd0`. Master is `ffe3bd0`.
+CI green on both merge commits, not only on the PR heads — verify
+1240/1240 unit tests (101 files) and e2e **258/258 in 9.8m**, inside the
+unchanged 20-minute limit, on each. On production
+(`https://cladium-cafe.vercel.app`): all derivatives serve as `image/webp`,
+the three home bands render with `--text-muted` resolving to the measured
+`color-mix(in srgb, #557064 70%, #183228)`, zero horizontal overflow at
+320px, and the carousel served Tawa Beef at 346x301 from 961x811 with item
+alt text and no caption.
+
+Note on process, not correctness: PR #10 was merged 23 seconds after it was
+opened, while `e2e` still had ~10 minutes to run. It passed, so nothing came
+of it — but that is the window in which a broken e2e reaches master
+unnoticed, and this is the gate that sat inert for about a week before it
+was repaired.
+
+**Three photographic section bands** on the home page below the hero
+(experiences, visit, closing) via `SceneBackdrop`. Contrast was measured,
+and the first attempt failed: a blurred photo under an 88% veil dropped Day
+`--text-muted` from 4.88:1 to **3.70:1**, under AA. Day's muted token has
+almost no margin to spend. Fixed by a 92% veil plus `--text-muted-scene`
+(muted pulled 30% toward `--text-primary`, inside these bands only);
+measured worst case is now 5.35:1 (Peach). **Do not make the photographs
+more present without re-measuring** — that is what breaks it.
+
+**Not used, deliberately:**
+
+- `Mint Sauce.jpeg` — shows a dark brown sesame sauce, not mint sauce. The
+  filename is a claim; it did not survive checking.
+- `Cladium Special Sandwich.jpeg` — a multi-dish promotional frame, not the
+  sandwich. `special sandwich.jpeg` is used for that item instead.
+- `10.40.24 PM (3)` ("Peace lives here!") — the same scene as the already
+  published `garden-lit-path-dusk`, but retouched and captioned. `venue`
+  provenance means a real photograph of the place, and the unretouched
+  original of that exact scene is already live.
+- `cladium special pasta.jpeg` — superseded by the cleaner `(2)` frame.
+
+A second, previously unexamined batch sits in the `Assets` **root** (19
+files, outside `mappings`). Only one was usable as a named dish: Tawa Beef,
+above. From the rest, two findings worth keeping so nobody re-litigates them:
+
+- Two uncaptioned frames plainly show the same dish as the Tawa Beef frame.
+  Neither is mapped. "It looks like the same food" is the inference
+  `menuItemMedia` exists to refuse; one ships as
+  `diningMedia.sizzlingBeefPlatter`, claiming nothing beyond what is visible.
+- One frame is captioned "Club Sandwiches", but **no Club Sandwich exists on
+  the menu** (Sandwiches holds Cladium Special, Chicken Cheese, Grilled
+  Chicken). A caption naming a dish the menu does not have is marketing, not
+  identification.
+
+**109 of 118 items still have no photograph of their own** and correctly
+fall back to group or category imagery. The seam is built and cheap to
+extend: supply a file named after the dish, or a frame captioned with it.
+
+Two birthday-décor photographs are on `/event` **after** the policy list, so
+"from PKR 8,000, staff-confirmed" is read first, and are kept out of
+`galleryMedia` (test-enforced) so décor never reads as included with a visit.
+
+## The e2e CI gate, repaired 13–14 Sep 2026
+
+The `e2e` job had been killed at its 20-minute limit on every run since at
+least 8 Sep — byte-identical 20m16–19s across four runs, including a
+documentation-only PR. A killed job prints no summary, so no pass/fail count
+ever appeared and `verify` carried CI alone, green throughout. The gate that
+produces Phase 8's hardening evidence was producing none.
+
+Four causes, none of them the timeout: missing `NEXT_PUBLIC_SUPABASE_*` (a
+`ZodError` in the browser, since those are inlined into the client bundle); a
+theme helper clicking a button when the control is a `<select>`, costing the
+full 30s action timeout on every call; two specs encoding the same stale
+button group; and two asserting the mobile nav is visible when it is
+correctly collapsed into the drawer.
+
+Three real accessibility defects were hidden behind the outage, two of them
+introduced by this project's own recent work: the staff sign-in link at
+3.31:1 on the footer's dark ground (present on every page), an `<li>` between
+`role="listbox"` and `role="option"` breaking `aria-required-children` and
+`aria-required-parent`, and a 2px horizontal overflow at 320px — WCAG 1.4.10
+Reflow — caused partly by the theme `<select>` growing to fit "Terracotta".
+
+Merged as PR #5 (`f4b844c`) and #6 (`09f9a80`). Result: **258/258 passing in
+8m50s–10m47s**, inside the **unchanged** 20-minute limit, across three
+consecutive CI runs. No assertion was weakened; the theme test now covers six
+themes, keyboard operability and actual application where it previously
+counted two buttons.
+
+One method note worth carrying: the overflow was first "fixed" by capping the
+select's width, which made the element *measure* as fitting
+(`clientWidth === scrollWidth`) while *rendering* "Terrac" and "Englis". A
+native select clips its closed value inside its own chrome without producing
+scroll overflow. Only a screenshot showed it.
+
+## Notification delivery: scheduler deferred, nothing activated (14 Sep 2026)
+
+The takeaway launch blocker is unchanged and now has a reviewable plan rather
+than an open question: `docs/outbox-scheduler-setup.md` (PR #7, `e3a260f`).
+
+**Nothing has been activated.** No Cloud Scheduler job exists — the registry
+table at the end of that document is empty, and that emptiness is the
+authority on the question. No secret has been entered, the synthetic outbox
+row has not been run, production configuration is unchanged, and
+`TAKEAWAY_GUEST_JOURNEY_COMPLETE` remains `false`.
+
+Bounded evidence, restated because both earlier forms overreached: **no
+`rpc/outbox_claim_batch` call has been observed in the retained edge logs**,
+and **no notification delivery has been demonstrated**. Neither reaches back
+indefinitely — log retention is finite and `n_tup_ins` does not survive a
+statistics reset (`pg_stat_database.stats_reset` here is 2026-08-25
+20:41:21Z). Neither disproves that a scheduler exists somewhere unnamed.
+
+Google Cloud Scheduler is selected on the certificate question:
+cron-job.org's own FAQ states it does not check certificates, which removes
+the only protection the bearer token has in transit. Two things stay
+unverified and must not harden into fact — Cloud Scheduler's certificate
+validation is **inferred from the absence of any opt-out**, not confirmed;
+and the deployed function's duration limit has **never been measured**.
+
+## Merged to master and deployed, 11 Sep 2026
+
+Two PRs merged into `master` and live on `https://cladium-cafe.vercel.app`. Both
+migrations were applied to production **before** the code that needs them, per
+`docs/takeaway-release-plan.md` §2.
+
+| | |
+| --- | --- |
+| PR #1 | `9558e36` — takeaway Postgres cutover, atomic submission, fail-closed durable storage, gated cart page. Merge commit `3d9d983`. |
+| PR #2 | `b4b1552` — four venue themes, BBQ group photography, contrast test. Merge commit `13cb83e`. |
+| `master` | `13cb83e` |
+
+Production migrations, each verified after applying:
+
+- `takeaway_submit_atomic` — `takeaway_submit_request(jsonb)` exists with
+  `prosecdef = false` (invoker rights, D-073), `search_path=""` pinned, and
+  EXECUTE revoked from PUBLIC / granted to `service_role` only (D-065).
+- `customer_sessions_warm_themes` — theme check constraint widened to six
+  values, `convalidated = true`, zero existing rows affected. Additive only.
+
+Deployment evidence (live, not inferred from the build succeeding):
+
+- `/en` and `/en/menu` return `200`; `/en/takeaway` returns **`404`**, so the
+  journey gate holds in production.
+- All six themes present in the switcher; all four new token blocks and their
+  exact wall colours present in the shipped CSS; the `:root:not([data-theme])`
+  guard fix is live.
+- BBQ Beef → `bbq.beef.jpg` and Chicken → `bbq.chicken.jpg`, both captioned
+  "Photograph of this section"; Turkish correctly falls back to `bbq.jpg`.
+  Driven through the real controls on the live site.
+- `GET /api/takeaway/cart` returns `200` with a real cart, so the durable
+  stores construct — `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`
+  are present and valid, and the fail-closed policy is not tripping.
+- **Correlated, not assumed:** Supabase `edge_logs` records
+  `GET /rest/v1/carts → 200` at 18:34:46Z matching that request. `carts` had
+  never been queried in production before this deploy. That is what establishes
+  the cutover is really on Postgres; the `200` alone would not.
+- `GET /api/cron/outbox-dispatch` unauthenticated returns `401`, as designed.
+
+Unchanged by this deploy: zero `rpc/outbox_claim_batch` calls, and
+`TAKEAWAY_GUEST_JOURNEY_COMPLETE` is still `false`.
 
 ## Progress (step-completion metrics, not effort estimates)
 
@@ -68,7 +253,7 @@ Build a luxury, mobile-first Cladium Café & Resort web application on Next.js/V
 
 - Runbook Step 17 accessible menu browsing: `modules/menu/menu-view.ts` defines the guest-facing `PublishedMenuView` shape (categories → items → variants, tri-state availability, integer PKR) and `getPublishedMenuView()`, which always returns `UNPUBLISHED` today — deliberately, per D-021 (user-confirmed): the owner sign-off gates (release-gates-v2.md Gate 0/Gate 2, D-005) aren't satisfied yet, so the live `/menu` route shows an honest "not available online yet" state with WhatsApp/Visit fallbacks rather than the real, unapproved 118 items. The full search/category-filter/availability/PKR-formatting rendering UI (`menu/page.tsx`) is completely built — a plain `<form method="GET">` reading `searchParams` server-side, so it works with no JavaScript at all — and was verified live against a temporary fixture (reverted before commit) covering both locales, all three availability states, no-results, and no-JS query-param filtering. `formatPkr` (`lib/business/money.ts`) matches the "PKR 8,000" style already used in approved copy. Menu now appears in primary nav (a real, working route, just without content yet). Evidence: 12 new focused tests (`filterMenuCategories` logic, `formatPkr`, a tripwire asserting `getPublishedMenuView()` stays `UNPUBLISHED`); full `npm run verify` passes; live browser check as described above, plus no horizontal overflow at 360px.
 
-- Runbook Step 18 menu carousel: explicitly deferred, not built (D-022, user-confirmed). Both of the step's own stated preconditions are unmet — the menu is `UNPUBLISHED` (Step 17/D-021) and zero approved photos exist — so this is a documented, deliberate skip, not an oversight. Revisit once the menu is actually published and a photo/media mapping is owner-approved.
+- Runbook Step 18 menu carousel: **no longer deferred — resolved.** It was skipped deliberately (D-022, user-confirmed) because both of the step's own preconditions were unmet: the menu was `UNPUBLISHED` (Step 17/D-021) and zero approved photos existed. Both were later met — the owner published a real 118-item menu (D-075) and supplied photography (D-091) — and the carousel was built for real, so Step 18 counts toward the step total. Kept here for traceability of the original decision, not as current state.
 
 - Runbook Step 19 domain repositories and state machines (D-023): `lib/domain/` — provider-neutral, dependency-injected primitives shared across all three entities: `actor.ts` (Actor/StaffRole/`hasAnyRole`), `state-machine.ts` (generic `canTransition`/`isTerminal`), `staff-transition.ts` (the one `performStaffTransition` orchestrator implementing data-model-v2.md §7's staff-transition contract exactly — authorize, lock+version-check, validate transition, update, append status+audit events, optional outbox notification), `idempotency.ts` (`runIdempotent` — same key+fingerprint replays without re-running; different fingerprint or an in-flight duplicate is rejected), `confirmation-token.ts` (single-use, only a SHA-256 hash stored, a review-hash mismatch is `STALE_REVIEW`), `review-hash.ts`, `status-event.ts`/`audit-event.ts`/`outbox.ts` (append-only builders), `versioned-store.ts` and `sink.ts` (in-memory reference stores — no live Postgres adapter yet, see D-023 for why). `modules/{takeaway,bookings,events}/state-machine.ts` encode data-model-v2.md §5/tool-contracts.md's three diagrams exactly, including which actor type may perform each transition (AUDITOR excluded everywhere; event's `QUOTED → CUSTOMER_ACCEPTED` is guest-performed, uniquely, but has no service yet — no tool contract requests it). `modules/takeaway/cart.ts` (add/modify/remove/recompute against a `PublishedMenuView`, blocking only confirmed-`UNAVAILABLE` items) and `modules/{takeaway,bookings,events}/submission-service.ts` (`prepare*`/`submit*`, implementing the full §7 submission transaction contract step-by-step) are the concrete per-entity services. Evidence: 292 new focused tests — every state×state pair for all three machines asserted against an independently-written expectation table; idempotency replay/conflict/concurrent-duplicate/retry-after-failure; confirmation-token issue/single-use/session-and-action-mismatch/expiry/stale-review; optimistic-lock races; full submission-service happy paths, idempotent replay, and stale-review for takeaway/booking/event. Full `npm run verify` passes (526 tests total, production build unaffected — nothing here is wired to a route yet).
 
@@ -141,7 +326,7 @@ Build a luxury, mobile-first Cladium Café & Resort web application on Next.js/V
 1. Review this state and `.continuum/TASKS.md`.
 2. **Phase 9 ("staging, UAT, and production") is underway — Steps 43–45 complete, 3/5. Step 45's decision was NO-GO (D-049).** Runbook Step 46 (controlled production deployment) explicitly requires an approved GO first, per its own instruction — it cannot start yet. Active work is resolving `production-readiness-decision.md`'s punch list (owner/business items the build process cannot supply, and engineering items it can do once scheduled — see items 32–36 below), then re-running Step 45's evaluation for a fresh go/no-go. The one hard technical blocker (item 32) is now built (D-050) — what remains there is the owner provisioning real accounts.
 3. Note for later: full-stack local work (Studio/Storage/Realtime/Edge Functions) needs Docker raised to ~7 GB; the migration workflow itself does not.
-4. Note for later: revisit Step 18 (menu carousel) once the menu is published and photos are approved.
+4. **Resolved (D-091, 15 Sep 2026)**: the standing "revisit Step 18 once the menu is published and photos are approved" note is retired. Step 18 was already built and counted; D-091 then gave it a working per-item photography tier. What remains is coverage, not capability — 109 of 118 items have no photograph of their own and fall back to group/category imagery. Extending it needs owner-supplied files named after the dish (or frames captioned with it), not further engineering.
 5. Note for later: a real Postgres/Supabase adapter for `lib/domain/`'s repository interfaces is still needed before Steps 19–25 can persist for real (D-023) — build it once a live database connection is available (see D-017). It must implement `findOrBegin`/`claimIfUnused`/`claimBatch` as single conditional writes (D-025/D-029), not a read-then-write.
 6. Note for later: build the takeaway cart/review UI pages once the menu is actually published (D-024) — the API is ready and waiting.
 7. Note for later: real staff authentication (Supabase Auth + owner/manager MFA linked to `staff_profiles`) is needed before Step 24's workspace is production-ready (D-028) — replaces `modules/staff/dev-credentials.ts` without any route changing, once a live Supabase project exists (D-017).

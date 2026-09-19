@@ -21,11 +21,18 @@
  * (confirmed by cross-referencing every category, not assumed) — the same
  * id `MenuViewCategory.id` (`menu-view.ts`) carries at runtime.
  *
- * Every photo here is category-level, not per-dish — the source pages
- * never had individual photography for each of the 118 items, only one
- * (occasionally two) representative photos per category/sub-group. Alt
- * text describes the category's food style honestly; it never claims to
- * depict one specific dish.
+ * Every photo *from those pages* is category-level, not per-dish — the
+ * source pages never had individual photography for each of the 118 items,
+ * only one (occasionally two) representative photos per category/sub-group.
+ * Their alt text describes the category's food style honestly; it never
+ * claims to depict one specific dish.
+ *
+ * Three tiers now exist, most specific first: `menuItemMedia` (one named
+ * dish, from owner-supplied photography — see its own comment for how that
+ * identification was established), `menuGroupMedia` (a sub-group such as
+ * BBQ's Beef), and `menuCategoryMedia` (the print-page crops below). The
+ * carousel resolves in that order, and each step down is a weaker claim,
+ * never a false one.
  *
  * ## Intrinsic dimensions are recorded, and they are small
  *
@@ -131,28 +138,201 @@ export function resolveCategoryMedia(categoryId: string): MenuCategoryMedia | nu
 }
 
 /**
- * Per-item photography — deliberately empty.
+ * Group-level photography — one step finer than a category, one step
+ * coarser than a dish.
  *
- * The printed source pages carried one representative photograph per
- * category, never one per dish, so there is no approved image that can
- * honestly be labelled as a specific menu item. The September 2026 venue
- * shoot (`modules/brand/media-manifest.ts`) does contain real plates, but
- * nobody has confirmed which menu row any of them depicts, and choosing
- * one by eye would invent a fact about published food.
+ * BBQ is the case that forced this. Its 12 items split into real
+ * sub-groups in `menu.json` — Beef, Chicken, Turkish — and a single
+ * category photo cannot represent all three honestly: a plate of beef
+ * skewers shown against "Chicken Malai Boti" is a false statement about
+ * the food, which is exactly what the per-item map below refuses to make.
  *
- * This map is the single seam where approved per-item photography lands.
- * Until it has entries, `resolveItemThumb` returns `null` and the item rail
- * shows a lettered medallion instead — which says nothing false — rather
- * than repeating one category photo behind several different dish names.
+ * A group photo can be honest without identifying a dish. "Beef skewers
+ * grilling over charcoal" is true of every item in the Beef group, and
+ * claims nothing about which one is pictured. That is the whole reason
+ * this layer exists rather than keying per item.
+ *
+ * Keyed by `<category stable id>.<group slug>`, using the same `slugify`
+ * the adapter applies when it builds item stable ids
+ * (`adapter.ts` — `bbq.beef.beef-seekh-kabab`), so the key here is the
+ * prefix of the ids of exactly the items it describes.
+ *
+ * Provenance: supplied by the owner in September 2026 as frames from
+ * grill footage. Each was cropped to remove the source app's interface —
+ * like/comment/share counts and a creator handle were burned into the
+ * originals — and then re-checked visually, not assumed clean. Alt text
+ * describes the group, never a named dish.
  */
-export const menuItemMedia: Readonly<Record<string, MenuCategoryMedia>> = {};
+export const menuGroupMedia: Readonly<Record<string, MenuCategoryMedia>> = {
+  'bbq.beef': {
+    assetPath: '/menu/bbq.beef.jpg',
+    alt: 'Skewers of marinated beef grilling over glowing charcoal',
+    width: 940,
+    height: 820,
+  },
+  'bbq.chicken': {
+    assetPath: '/menu/bbq.chicken.jpg',
+    alt: 'Grilled chicken pieces served on a wooden platter with onion and carrot',
+    width: 940,
+    height: 490,
+  },
+};
+
+/**
+ * The group photo covering one item, or `null` when the item's group has
+ * none — in which case the caller falls back to the category photo, which
+ * is still a true statement about the category.
+ */
+export function resolveGroupMedia(
+  categoryStableId: string,
+  groupLabel: string | null,
+): MenuCategoryMedia | null {
+  if (!groupLabel) return null;
+  const slug = groupLabel
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return menuGroupMedia[`${categoryStableId}.${slug}`] ?? null;
+}
+
+export interface MenuItemMedia extends MenuCategoryMedia {
+  /** Square derivative for the circular rail selector, which renders at 3.5rem. */
+  readonly thumbPath: string;
+}
+
+/**
+ * Per-item photography — populated September 2026.
+ *
+ * This map was empty for a real reason, and that reason has now been met
+ * rather than waived. The printed source pages carried one representative
+ * photograph per category, never one per dish, and the September venue
+ * shoot contained plates nobody had identified — so every earlier
+ * candidate would have been a guess about which menu row it showed.
+ *
+ * These are different: the owner supplied them **named after the dish**
+ * (`Assets/mappings`, preserved at
+ * `cladium-research/assets/provided/mappings`). The name is the owner's own
+ * identification of their own food, which is the confirmation that was
+ * missing before — not an inference drawn from looking at a picture.
+ *
+ * Each one was still opened and checked against its name before being
+ * listed here, because a filename is a claim and not a verification. Two
+ * supplied files failed that check and are deliberately absent:
+ *
+ * - `Mint Sauce.jpeg` shows a dark brown sesame-flecked sauce, not a mint
+ *   sauce. Whatever it is, it is not what it is named, so it maps to
+ *   nothing.
+ * - `Cladium Special Sandwich.jpeg` is a multi-dish promotional frame
+ *   (a steak, a pasta and a sandwich under a caption), not a photograph of
+ *   the sandwich. `special sandwich.jpeg` — a clean single-plate shot of
+ *   the club sandwich — is used for that item instead.
+ *
+ * Keyed by `menu_items.stable_id`, which `MenuViewItem.mediaKey` carries.
+ * It is emphatically **not** keyed by `MenuViewItem.id`: that is the row
+ * UUID, regenerated by every menu import, so the map would go silently
+ * dark on the next publish. A unit test asserts every key here still
+ * resolves to a real item in `menu.json`, so a renamed dish fails the
+ * suite rather than quietly losing its photograph.
+ *
+ * Provenance: the owner's own social frames. Each was cropped to remove the
+ * source app's interface — like/comment/share counts and a creator handle
+ * were burned into the originals — and, for the smoothie, a baked-in
+ * "CLADIUM CAFE&RESORT" title band. Cropping a band away is not the same
+ * as erasing it: no pixel is painted over or reconstructed, and every
+ * original is preserved untouched. Dimensions below are the crop's real
+ * size; nothing is upscaled.
+ */
+export const menuItemMedia: Readonly<Record<string, MenuItemMedia>> = {
+  'bar-menu.special-hot-beverages.cappuccino': {
+    assetPath: '/menu/items/bar-menu.special-hot-beverages.cappuccino.webp',
+    thumbPath: '/menu/items/bar-menu.special-hot-beverages.cappuccino-thumb.webp',
+    alt: 'Two cappuccinos, one finished with leaf latte art and one with a chocolate swirl',
+    width: 900,
+    height: 1416,
+  },
+  'desi-cuisine.chicken-biryani': {
+    assetPath: '/menu/items/desi-cuisine.chicken-biryani.webp',
+    thumbPath: '/menu/items/desi-cuisine.chicken-biryani-thumb.webp',
+    alt: 'A platter of chicken biryani topped with tomato and cucumber, served with kebabs alongside',
+    width: 646,
+    height: 388,
+  },
+  'desi-cuisine.chicken-peshawari-karahi': {
+    assetPath: '/menu/items/desi-cuisine.chicken-peshawari-karahi.webp',
+    thumbPath: '/menu/items/desi-cuisine.chicken-peshawari-karahi-thumb.webp',
+    alt: 'Chicken Peshawari karahi in a black wok with green chillies, ginger and coriander',
+    width: 900,
+    height: 1428,
+  },
+  'desi-cuisine.chicken-handi': {
+    assetPath: '/menu/items/desi-cuisine.chicken-handi.webp',
+    thumbPath: '/menu/items/desi-cuisine.chicken-handi-thumb.webp',
+    alt: 'A creamy chicken handi finished with cream and coriander, served with naan and salad',
+    width: 900,
+    height: 757,
+  },
+  'italian.cladium-special-pasta': {
+    assetPath: '/menu/items/italian.cladium-special-pasta.webp',
+    thumbPath: '/menu/items/italian.cladium-special-pasta-thumb.webp',
+    alt: 'Fettuccine in a white sauce topped with sliced grilled chicken',
+    width: 900,
+    height: 704,
+  },
+  'bar-menu.cladium-fruit-chillers.mint-margarita': {
+    assetPath: '/menu/items/bar-menu.cladium-fruit-chillers.mint-margarita.webp',
+    thumbPath: '/menu/items/bar-menu.cladium-fruit-chillers.mint-margarita-thumb.webp',
+    alt: 'Two glasses of chilled mint margarita with straws',
+    width: 444,
+    height: 413,
+  },
+  'bar-menu.cladium-special-smoothies.strawberry-smoothie': {
+    assetPath: '/menu/items/bar-menu.cladium-special-smoothies.strawberry-smoothie.webp',
+    thumbPath: '/menu/items/bar-menu.cladium-special-smoothies.strawberry-smoothie-thumb.webp',
+    alt: 'A tall glass of pink strawberry smoothie on a garden table',
+    width: 900,
+    height: 965,
+  },
+  /*
+   * The one entry identified by a caption rather than a filename — the
+   * owner burned "Tawa Beef" into the frame itself, over their own
+   * `cladium.cafe` handle. That is the same kind of statement a filename
+   * is (the owner naming their own food), from the same batch, so it meets
+   * the same bar; it simply arrived written on the image instead of beside
+   * it. The caption band was then cropped away like the smoothie's title:
+   * a crop, never an erasure, and the original is preserved with the
+   * caption intact.
+   *
+   * Two nearby frames show what is plainly the same dish, uncaptioned. They
+   * are deliberately *not* used here — "it looks like the same food" is the
+   * inference this map exists to refuse. One of them ships as
+   * `diningMedia.sizzlingBeefPlatter`, where it claims nothing beyond what
+   * is visible.
+   */
+  'exclusive-beef-entree.tawa-beef': {
+    assetPath: '/menu/items/exclusive-beef-entree.tawa-beef.webp',
+    thumbPath: '/menu/items/exclusive-beef-entree.tawa-beef-thumb.webp',
+    alt: 'Tawa beef strips scattered with sesame and green chilli on a cast-iron platter',
+    width: 961,
+    height: 811,
+  },
+  'sandwiches.cladium-special-sandwich': {
+    assetPath: '/menu/items/sandwiches.cladium-special-sandwich.webp',
+    thumbPath: '/menu/items/sandwiches.cladium-special-sandwich-thumb.webp',
+    alt: 'A club sandwich cut into quarters on a slate board with fries',
+    width: 898,
+    height: 1057,
+  },
+};
 
 /**
  * Square thumbnail for one menu item, or `null` when none is approved.
  * Callers must render a non-photographic fallback for `null`; they must
  * never substitute the category photo, which would present one picture as
  * several different dishes.
+ *
+ * Takes `MenuViewItem.mediaKey` (the stable id), never `.id`.
  */
-export function resolveItemThumb(itemId: string): string | null {
-  return menuItemMedia[itemId]?.assetPath ?? null;
+export function resolveItemThumb(itemMediaKey: string): string | null {
+  return menuItemMedia[itemMediaKey]?.thumbPath ?? null;
 }

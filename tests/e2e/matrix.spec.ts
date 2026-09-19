@@ -39,7 +39,7 @@ for (const { locale, theme } of LOCALE_THEME_COMBOS) {
         await page.goto(`/${locale}${path}`);
         await expect(mainLandmark(page)).toBeVisible();
 
-        await setThemeViaToggle(page, theme, locale);
+        await setThemeViaToggle(page, theme);
         await expectNoHorizontalOverflow(page);
         await expectNoSeriousA11yViolations(page, `/${locale}${path} (${theme})`);
       });

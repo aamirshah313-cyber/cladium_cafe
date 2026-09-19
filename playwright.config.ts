@@ -31,9 +31,26 @@ const BASE_URL = `http://localhost:${PORT}`;
 
 const TEST_ENV: Record<string, string> = {
   NEXT_PUBLIC_APP_URL: BASE_URL,
+  /*
+   * `clientEnvSchema` requires these two. They are `NEXT_PUBLIC_*`, so an
+   * absent value is a `ZodError` in the browser, not a server warning.
+   *
+   * Synthetic and unreachable by construction: `.invalid` is reserved by
+   * RFC 2606 and never resolves, so no code path can reach a real project.
+   * Neither value is a credential. Server storage is separately isolated by
+   * `ALLOW_IN_MEMORY_STORES` below, so this suite touches no database.
+   */
+  NEXT_PUBLIC_SUPABASE_URL: 'https://e2e-synthetic-project.invalid',
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: 'e2e-synthetic-anon-key-not-a-real-credential',
   // 32+ chars, arbitrary — not a real secret, never used outside this run.
   SESSION_SECRET: 'playwright-e2e-local-only-session-secret-not-real',
   CRON_SECRET: 'playwright-e2e-local-only-cron-secret-not-real',
+  // This suite deliberately runs with no Supabase credentials, so the
+  // durable stores cannot be constructed. Saying so explicitly is now
+  // required: `lib/db/durable-storage-policy.ts` fails closed rather than
+  // silently degrading to memory, so an unset variable means "stop", and
+  // only a test or a local dev environment may opt back in.
+  ALLOW_IN_MEMORY_STORES: 'true',
   FEATURE_PUBLIC_SITE: 'true',
   FEATURE_TAKEAWAY_REQUESTS: 'true',
   FEATURE_BOOKING_REQUESTS: 'true',

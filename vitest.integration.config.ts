@@ -40,5 +40,16 @@ export default defineConfig({
     // the real, typed replacement for pinning execution to one worker.
     maxWorkers: 1,
     testTimeout: 20_000,
+    /*
+     * These tests hand each adapter an explicitly constructed client built
+     * from `SUPABASE_TEST_URL`/`SUPABASE_TEST_SERVICE_ROLE_KEY`, so the
+     * ambient `createSupabaseAdminClient()` credentials the shared
+     * singletons read are deliberately absent. That is exactly the
+     * condition `lib/db/durable-storage-policy.ts` now refuses to guess
+     * about, so the opt-in has to be stated. It weakens nothing here: any
+     * test whose point is durability constructs its Postgres deps directly
+     * and would notice a `Map` immediately.
+     */
+    env: { ALLOW_IN_MEMORY_STORES: 'true' },
   },
 });

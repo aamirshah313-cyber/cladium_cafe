@@ -25,8 +25,20 @@
   --border-subtle: #c9d4c8;
 }
 
+/*
+ * `:not([data-theme])`, not `:not([data-theme='day'])`.
+ *
+ * The original guard meant "system dark applies unless Day was chosen",
+ * which was correct while Day and Night were the only options. With a
+ * third theme it silently became "system dark also applies to Peach": the
+ * selectors tie on specificity, so Peach only won by being declared later
+ * in the file — one reorder away from a guest on a dark-preferring device
+ * picking Peach and getting the Night palette. Keying on the *presence* of
+ * an explicit choice says what was always meant, and holds for any theme
+ * added later.
+ */
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme='day']) {
+  :root:not([data-theme]) {
     color-scheme: dark;
     --surface-canvas: #0b1a15;
     --surface-raised: #183228;
@@ -51,6 +63,106 @@
   --action-on-primary: #0b1a15;
   --accent-gold: #e7d5ab;
   --border-subtle: #365246;
+}
+
+/*
+ * Peach and Golden — two warm light themes.
+ *
+ * Both carry the same ten semantic tokens as Day and Night, so every
+ * component inherits them without knowing they exist; nothing in the app
+ * branches on a theme name.
+ *
+ * Peach is drawn from the venue's own signage wall: the terracotta plaster
+ * in shadow (#b4653b), the warm orange mid-wall (#de8a4e), and the golden
+ * light washing the top of it (#f2b544). Those are the anchors, not the
+ * token values — a wall photographed under warm light is far too saturated
+ * to sit behind body text, so the surfaces are that same hue family opened
+ * right up, and the saturated end of the wall is kept for the deep browns
+ * that carry the type.
+ *
+ * Golden is the lighter, yellower sibling: cream-gold surfaces with amber
+ * type, for the same room in daylight rather than under the evening lamps.
+ *
+ * Every foreground/background pair a component can actually produce was
+ * measured against WCAG AA rather than judged by eye, because warm
+ * mid-tones on cream are exactly where a palette looks inviting and reads
+ * badly. Tightest text pair is 4.98:1 (Peach) and 5.05:1 (Golden);
+ * `tests/unit/theme-tokens.test.ts` holds every pair to the line. Re-measure
+ * before changing any value here — nudging toward a prettier peach is
+ * precisely what drops a pair below it.
+ *
+ * `color-scheme: light` on both, so form controls, scrollbars and the
+ * browser's own UI stay light. These are light themes wearing warm colours,
+ * not dark ones.
+ */
+/*
+ * Peach — the warm orange band across the middle of the wall (#de8a4e).
+ *
+ * Carried at close to full strength rather than opened up into a tint. An
+ * earlier pass lightened all of these to near-cream, which met contrast
+ * easily and lost the point: the wall's colour has to actually be on screen
+ * for the theme to be from the wall at all. Dark brown type on saturated
+ * orange is what the signage itself does.
+ */
+:root[data-theme='peach'] {
+  color-scheme: light;
+  --surface-canvas: #de8a4e;
+  --surface-raised: #eda87a;
+  --surface-atmosphere: #d07b3a;
+  --text-primary: #2a1303;
+  --text-muted: #351704;
+  --action-primary: #6d3208;
+  --action-on-primary: #fdefe0;
+  --accent-gold: #351704;
+  --border-subtle: #bd6a2c;
+}
+
+/* Golden — the lamplit top of the wall (#f2b544), likewise at full strength. */
+:root[data-theme='golden'] {
+  color-scheme: light;
+  --surface-canvas: #f2b544;
+  --surface-raised: #f8cd74;
+  --surface-atmosphere: #db9c22;
+  --text-primary: #2b1a02;
+  --text-muted: #4a2f05;
+  --action-primary: #6b4405;
+  --action-on-primary: #fff6de;
+  --accent-gold: #4a2f05;
+  --border-subtle: #c98f1e;
+}
+
+/* The plaster below the sign, where the lamp no longer reaches it. */
+:root[data-theme='terracotta'] {
+  color-scheme: light;
+  --surface-canvas: #f7e2d1;
+  --surface-raised: #fdf1e7;
+  --surface-atmosphere: #e8b892;
+  --text-primary: #3b1d0d;
+  --text-muted: #6a3a1e;
+  --action-primary: #9c4a24;
+  --action-on-primary: #fdf1e7;
+  --accent-gold: #7e5210;
+  --border-subtle: #dcb693;
+}
+
+/*
+ * The sign plate itself: near-black lacquer with the logo's gold linework.
+ *
+ * The one dark theme here, and deliberately distinct from Night — Night is
+ * the brand's deep green, this is the warm brown-black of the board with
+ * amber lamplight on it, so the two do not read as the same theme twice.
+ */
+:root[data-theme='ember'] {
+  color-scheme: dark;
+  --surface-canvas: #1a120d;
+  --surface-raised: #2a1d14;
+  --surface-atmosphere: #3d2a1b;
+  --text-primary: #fbeeda;
+  --text-muted: #e0c49b;
+  --action-primary: #f2b544;
+  --action-on-primary: #1a120d;
+  --accent-gold: #f5c96a;
+  --border-subtle: #5a3f28;
 }
 
 /*
@@ -1132,10 +1244,14 @@ button[aria-pressed='true'] {
   object-fit: cover;
 }
 
+/* The second place `--text-muted` met `--surface-atmosphere` (the medallion's
+ * own background) — 4.37:1 under Day. Same reasoning as `.map-placeholder
+ * .field-hint` above: change the pairing, not the palette. At 20px this is
+ * not WCAG "large text", so the 4.5:1 threshold applies in full. */
 .menu-carousel-thumb-initial {
   font-family: var(--font-serif), Georgia, 'Times New Roman', serif;
   font-size: 1.25rem;
-  color: var(--text-muted);
+  color: var(--text-primary);
 }
 
 .menu-carousel-thumb-name {
@@ -1306,12 +1422,66 @@ button[aria-pressed='true'] {
   border-radius: 0.35rem;
 }
 @media (max-width: 420px) {
+  /*
+   * At 320px the header row could not fit its own contents. Measured: a
+   * 272px content box against 298.2px of children, pushing
+   * `.site-header-drawer-trigger` to 322.2px — 2.2px past the viewport — and
+   * scrolling the page horizontally (WCAG 1.4.10 Reflow, and the zoom spec's
+   * 200% case, where the 375px project halves to 320px).
+   *
+   * Deliberately not `overflow-x: hidden`: that hides the symptom, leaves the
+   * trigger partly off-screen, and silences the assertion that found it.
+   *
+   * The room comes from the two preference labels. `.site-header-utilities`
+   * measured 178.2px of the 272px available, most of it the words
+   * "Languages" and "Themes" sitting beside controls that already say what
+   * they are. They are hidden visually only — the text stays in the
+   * accessibility tree, so each select keeps its accessible name, and the
+   * control still shows words rather than an icon, which
+   * `design/theme-mode.md` requires.
+   */
   .site-header-utilities {
     gap: 0.5rem;
   }
+
+  .site-preference > span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
   .site-preference select {
     padding-inline-end: 0.4rem;
     max-width: 6rem;
+  }
+}
+
+/*
+ * A `<select>` is sized by its widest option, so the theme control grew when
+ * the four venue themes were added — "Terracotta" alone took it to 92.6px.
+ * Below 360px that is the last thing pushing the drawer trigger off-screen.
+ *
+ * Capping the select's width was tried first and rejected: a native select
+ * clips its closed value without reporting any overflow, so the box measured
+ * as fitting (`clientWidth === scrollWidth`) while actually rendering
+ * "Terrac" and "Englis". Only a screenshot showed it. The space is therefore
+ * taken from the header's own padding and the control's type size, both of
+ * which shrink honestly, rather than from the label the guest has to read.
+ *
+ * Not from the 48px drawer trigger either — WCAG 2.5.5 target size.
+ */
+@media (max-width: 360px) {
+  .site-header-inner {
+    padding-inline: 0.75rem;
+  }
+
+  .site-preference select {
+    font-size: 0.72rem;
   }
 }
 
@@ -1749,8 +1919,11 @@ button[aria-pressed='true'] {
   font-size: var(--step-small);
 }
 
+/* The footer paints its own dark ground and has its own ink tokens, which the
+ * other de-emphasised rules here already use. `--text-muted` follows the page
+ * theme instead: under Day that is 3.31:1 against the footer's near-black. */
 .site-footer-staff a {
-  color: var(--text-muted);
+  color: var(--footer-ink-muted);
 }
 
 .site-footer-bottom {
@@ -2473,6 +2646,113 @@ button[aria-pressed='true'] {
   font-size: var(--step-small);
 }
 
+/* ------------------------------------------------------- takeaway cart */
+
+/*
+ * Visually hidden but still announced — the standard accessible "sr-only"
+ * pattern. The quantity input needs a real label that the layout has no room
+ * to show, and a `title` or `aria-label` alone is weaker: a label element is
+ * what makes the control clickable by its name and reliably announced.
+ */
+.u-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.takeaway-lines {
+  list-style: none;
+  margin: 0 0 1.25rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/*
+ * A row per line. On the review stage it is name / quantity / total; on the
+ * editable stage a unit price, a quantity field and a remove control sit
+ * between them. Both use a grid rather than a table because there is no
+ * header row to associate with and each row is an independent group of
+ * controls, not tabular data to compare down a column.
+ */
+.takeaway-line {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  padding-block: 0.6rem;
+  border-block-end: 1px solid var(--border-subtle);
+}
+
+.takeaway-line:last-child {
+  border-block-end: 0;
+}
+
+.takeaway-line--editable {
+  grid-template-columns: 1fr auto;
+}
+
+@media (min-width: 640px) {
+  .takeaway-line--editable {
+    grid-template-columns: minmax(0, 1fr) auto 5rem auto auto;
+  }
+}
+
+.takeaway-line-name {
+  min-width: 0;
+}
+
+.takeaway-line-unit,
+.takeaway-line-qty {
+  font-variant-numeric: tabular-nums;
+  font-size: var(--step-small);
+}
+
+/* Amounts line up down the column as quantities change. */
+.takeaway-line-total {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  text-align: end;
+}
+
+.takeaway-line-qty-field input {
+  width: 4.5rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.takeaway-line-remove {
+  padding-block: 0.35rem;
+  font-size: var(--step-small);
+}
+
+/*
+ * The subtotal reads as a figure, not a heading, and the note beneath it
+ * does the load-bearing work of saying it is not the final amount. Both are
+ * always rendered together — the number must never appear on its own.
+ */
+.takeaway-subtotal {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  margin: 0;
+  padding-block-start: 0.75rem;
+  border-block-start: 1px solid var(--border-subtle);
+  font-size: 1.05rem;
+}
+
+.takeaway-subtotal strong {
+  font-variant-numeric: tabular-nums;
+  font-size: 1.25rem;
+}
+
 /* The post-submission state. Deliberately styled as a receipt of a
    *request*, never as a confirmed reservation. */
 .receipt {
@@ -2972,8 +3252,16 @@ button[aria-pressed='true'] {
   font-size: var(--step-small);
 }
 
+/*
+ * `--text-muted` on `--surface-atmosphere` is 4.37:1 under Day — just under
+ * AA, and axe flags it as serious. The pairing is the problem, not either
+ * token alone (muted is 7.74:1 on canvas). The two places that render that
+ * pair use the primary ink instead; `tests/unit/theme-tokens.test.ts` still
+ * records the pair as a known shortfall.
+ */
 .map-placeholder .field-hint {
   margin: 0;
+  color: var(--text-primary);
 }
 
 .map-frame {
@@ -3031,4 +3319,176 @@ button[aria-pressed='true'] {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+}
+
+/* ============================== home page photographic section bands */
+
+/*
+ * Derived once, on the element every theme sets its tokens on, so a theme
+ * never has to know this exists. See `.home-scene` for why muted text needs
+ * a different value over a photograph and for the measurements behind 70%.
+ */
+:root {
+  --text-muted-scene: color-mix(in srgb, var(--text-muted) 70%, var(--text-primary));
+}
+
+/*
+ * Atmosphere behind a section that keeps its own theme colours, as opposed
+ * to the hero, where the copy sits on the photograph in fixed ivory.
+ *
+ * The contrast rule this has to satisfy: body copy in these sections is
+ * `--text-primary` on `--surface-canvas`, a pairing already checked for
+ * WCAG AA in every theme. Rather than re-checking it against six themes
+ * times three photographs, the backdrop is built so the effective text
+ * background *stays* `--surface-canvas`: the veil is that token's own
+ * colour at high opacity, and the photograph beneath it is blurred so it
+ * contributes an even wash instead of local bright and dark patches.
+ * Changing theme therefore recolours the wash automatically and cannot
+ * silently break a contrast ratio.
+ */
+.home-scene {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+
+  /*
+   * `--text-muted` does not survive a photograph behind it, and measuring
+   * that was the whole point of checking rather than assuming.
+   *
+   * Under Day, muted body copy is 4.88:1 on the plain canvas — over AA, but
+   * only just. Compositing the blurred photograph at 8% drops it to 4.09:1,
+   * which fails. The margin was never there to spend. (`--text-primary` is
+   * unaffected: 12.43:1 falls to 10.43:1, still far clear.)
+   *
+   * So muted text is pulled 30% of the way toward `--text-primary` inside
+   * these bands only. It stays visibly secondary — the hierarchy the token
+   * exists for is preserved — while clearing AA against the worst pixel in
+   * all three photographs in all six themes. Measured worst case is 5.35:1
+   * (Peach); Day is 5.44:1. Both the veil opacity above and this 70% mix
+   * were chosen from that measurement, not by eye, so neither should be
+   * adjusted without re-measuring: raising the photograph's presence again
+   * puts Day's muted text back under 4.5:1.
+   *
+   * It is derived through `--text-muted-scene` rather than written as
+   * `--text-muted: color-mix(… var(--text-muted) …)`, which looks simpler
+   * and does not work: a custom property whose own value references itself
+   * is a cycle, and the whole declaration computes to guaranteed-invalid.
+   * The indirection is what makes it resolve at all — and it keeps the
+   * derivation on `:root`, so every theme recomputes it automatically
+   * instead of needing its own scene override.
+   */
+  --text-muted: var(--text-muted-scene);
+}
+
+.home-scene-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  /*
+   * Two stacked layers, and deliberately no background on this element
+   * itself. An earlier version also painted the photograph here as a
+   * "fallback" beneath the blurred copy; it was dead weight — a second
+   * decode of the same file, entirely covered by `::before` — so the
+   * element is now just the positioned box the two layers live in.
+   *
+   * `overflow: hidden` clips the overscaled blur layer below, which would
+   * otherwise extend past the band and paint over the neighbouring section.
+   */
+  overflow: hidden;
+}
+
+/*
+ * Blur belongs on the photograph, not on the veil — so it is applied to a
+ * child layer rather than the element carrying both. `scale` overfills the
+ * box first: a blur samples past its own edges and would otherwise leave a
+ * soft transparent border all the way round the band.
+ */
+.home-scene-backdrop::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image: var(--scene-image);
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: var(--scene-position, center);
+  filter: blur(6px) saturate(0.85);
+  /*
+   * Overfills the box so the blur has real pixels to sample at every edge;
+   * without it the band gets a soft, lighter border all the way round.
+   * `inset` negatives rather than `transform: scale()` — an element that
+   * already carries a `filter` is its own containing block, and the scale
+   * was silently not applying.
+   */
+  inset: -6%;
+}
+
+/*
+ * The veil: the current theme's own canvas colour at the measured opacity,
+ * laid flat over the blurred photograph. A flat fill rather than a blend
+ * mode on purpose — a blend would let the photograph's luminance back into
+ * the text background and undo the predictability the contrast measurement
+ * depends on.
+ */
+.home-scene-backdrop::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--surface-canvas) 92%, transparent);
+}
+
+/*
+ * Three bands in a row would otherwise run together, because
+ * `.u-section + .u-section` removes the leading padding. These need their
+ * own full block padding to read as distinct panels rather than one
+ * continuous wash.
+ */
+.u-section.home-scene + .u-section,
+.u-section + .u-section.home-scene {
+  padding-block-start: var(--section-gap);
+}
+
+/*
+ * Reduced transparency is a stated preference for exactly this kind of
+ * layered decoration. Honour it by dropping the photograph entirely and
+ * leaving the section on its plain canvas — the content is unchanged, so
+ * nothing is lost.
+ */
+@media (prefers-reduced-transparency: reduce) {
+  .home-scene-backdrop,
+  .home-scene-backdrop::before,
+  .home-scene-backdrop::after {
+    background-image: none;
+    filter: none;
+  }
+}
+
+/* ------------------------------------------- event page: past décor setups */
+
+/*
+ * Two photographs side by side, stacking below 30rem. A `<ul>` because they
+ * are siblings with no ordering claim — the same reasoning as the homepage
+ * gallery grid.
+ */
+.event-decor-gallery {
+  list-style: none;
+  margin: 1.25rem 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr));
+  gap: 0.75rem;
+}
+
+/*
+ * Capped at the source's real width like every other photograph on the
+ * site (`--intrinsic-w`, published by `SitePhoto`), so a wide panel cannot
+ * enlarge these past 1x.
+ */
+.event-decor-photo {
+  width: 100%;
+  max-width: min(100%, var(--intrinsic-w, 100%));
+  height: clamp(9rem, 22vw, 13rem);
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  display: block;
 }
