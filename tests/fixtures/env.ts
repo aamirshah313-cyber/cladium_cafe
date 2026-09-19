@@ -36,4 +36,5 @@ export const launchFeatureFlags = {
   FEATURE_WHATSAPP_CLOUD: 'false',
   FEATURE_META_MARKETING: 'false',
   FEATURE_ONLINE_PAYMENT: 'false',
+  FEATURE_FIELD_TELEMETRY: 'false',
 } as const;

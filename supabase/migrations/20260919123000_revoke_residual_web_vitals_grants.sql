@@ -1,0 +1,37 @@
+-- Strip residual platform-default grants from `web_vitals_samples`.
+--
+-- `20260906130500_revoke_residual_staff_notification_grants.sql` predicted
+-- this exactly: "every future [table] inherits the same three until the
+-- default privileges themselves are widened". `web_vitals_samples`
+-- (`20260919120000`) is the first new table since, and verifying it against
+-- the live database immediately after applying it — rather than trusting the
+-- apply's own success flag — found precisely the predicted state:
+--
+--   anon           REFERENCES, TRIGGER, TRUNCATE
+--   authenticated  REFERENCES, TRIGGER, TRUNCATE
+--   service_role   SELECT, INSERT, DELETE (+ the same three)
+--
+-- `anon` is the role a guest's browser holds, and `TRUNCATE` is a
+-- table-level privilege **RLS cannot restrict** — a row-level policy has
+-- nothing to say about an operation that removes every row at once. The new
+-- table has no select or insert policy at all, so for TRUNCATE specifically
+-- the grant was the only layer, and it was open to any guest holding the
+-- anon key. Nothing could read or insert, but anything could wipe it.
+--
+-- Root cause is unchanged and still not this file's to fix: the
+-- `ALTER DEFAULT PRIVILEGES ... REVOKE` list in `20260830044140_fix_default_
+-- table_privileges.sql` names only SELECT/INSERT/UPDATE/DELETE, so every
+-- table created after it inherits REFERENCES/TRIGGER/TRUNCATE. Widening
+-- database-wide defaults is a broader change than one table's correction —
+-- the same reasoning `20260906130500` gave for deferring it. It is now two
+-- tables in a row, so it is tracked in `.continuum/TASKS.md` as a real
+-- recurring foot-gun rather than a one-off.
+--
+-- Additive-safe: this only removes privileges. Unlike `staff_notifications`
+-- there is nothing to re-grant afterwards — `web_vitals_samples` is read
+-- only through the `web_vitals_p75*` functions and written only by the
+-- collection route, both acting as `service_role`, whose grants are
+-- untouched. Neither `anon` nor `authenticated` is meant to hold anything
+-- on this table.
+
+revoke all on web_vitals_samples from anon, authenticated;

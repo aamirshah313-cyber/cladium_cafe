@@ -54,6 +54,27 @@ export const CONSENT_RATE_LIMIT_RULE: RateLimitRule = { windowMs: 60_000, max: 2
 export const META_TRACK_RATE_LIMIT_RULE: RateLimitRule = { windowMs: 60_000, max: 60 };
 
 /**
+ * `POST /api/telemetry/vitals` — anonymous Core Web Vitals samples.
+ *
+ * The one rule here that is NOT keyed by session id, because that route
+ * deliberately has no session to key on (see its own doc comment: minting a
+ * cookie for every visitor purely to report a page timing would collect more
+ * than the telemetry does). It is therefore one shared global bucket, and the
+ * limit is sized accordingly — a single page load reports up to five metrics,
+ * so this is roughly 120 concurrent page loads per minute, well above any
+ * traffic this café's site has seen, while still capping an insert flood.
+ *
+ * Exhausting it costs telemetry samples, never guest functionality. It is a
+ * database-protection ceiling, not a security boundary.
+ *
+ * Note that since the limiter became durable, each `consume` is itself a
+ * `rate_limit_windows` write — so a beacon costs two writes, not one. At this
+ * ceiling that is bounded and fine, but it is the reason the limit is a
+ * ceiling rather than something tighter that would be consulted more often.
+ */
+export const VITALS_REPORT_RATE_LIMIT_RULE: RateLimitRule = { windowMs: 60_000, max: 600 };
+
+/**
  * `POST /api/staff/session` sign-in attempts only — the one credential-
  * guessing surface in this codebase. Deliberately keyed by the *attempted*
  * `staffId` from the request body, not by client IP: this sandbox has no

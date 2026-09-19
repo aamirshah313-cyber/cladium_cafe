@@ -19,6 +19,13 @@
  * `SiteHeader`/`SiteFooter` are the mobile-first site shell (Step 15);
  * `#main-content` is the skip link's target.
  *
+ * `WebVitalsReporter` renders only when `FEATURE_FIELD_TELEMETRY` is on, so
+ * a deployment with measurement off ships no reporter at all rather than one
+ * that beacons into a disabled route. The flag is read here, server-side —
+ * it never becomes a `NEXT_PUBLIC_*` value, because whether the site is
+ * being measured is an operational fact, not something the browser needs to
+ * be told independently of being handed the reporter.
+ *
  * `resolvePageMetaPixelId` decides whether `MetaPixelBootstrap` renders at
  * all — Step 37 follow-up. Reads the guest's session cookie read-only
  * (`readVerifiedSessionId`, never mints one — a Server Component cannot
@@ -53,6 +60,7 @@ import { fontUrdu, latinFontVariables } from '../fonts';
 import { MetaPixelBootstrap } from './meta-pixel-bootstrap';
 import { SiteFooter } from './site-footer';
 import { SiteHeader } from './site-header';
+import { WebVitalsReporter } from './web-vitals-reporter';
 
 async function resolvePageMetaPixelId(cookieStore: {
   get: (name: string) => { readonly value: string } | undefined;
@@ -142,6 +150,7 @@ export default async function LocaleLayout({
   const rawTheme = cookieStore.get(THEME_COOKIE_NAME)?.value;
   const theme: Theme | null = isSupportedTheme(rawTheme) ? rawTheme : null;
   const metaPixelId = await resolvePageMetaPixelId(cookieStore);
+  const fieldTelemetryEnabled = isFeatureEnabled('FEATURE_FIELD_TELEMETRY');
 
   // The Nastaliq face is attached only on Urdu pages — see `app/fonts.ts`
   // for why an English page must not carry it.
@@ -157,6 +166,7 @@ export default async function LocaleLayout({
     >
       <body>
         {metaPixelId ? <MetaPixelBootstrap pixelId={metaPixelId} /> : null}
+        {fieldTelemetryEnabled ? <WebVitalsReporter /> : null}
         <SiteHeader locale={locale} initialTheme={theme} />
         <main id="main-content" className="site-main">
           {children}
