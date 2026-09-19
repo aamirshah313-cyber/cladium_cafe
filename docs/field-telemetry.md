@@ -13,6 +13,19 @@ quoting.
 
 ## Status
 
+**Schema applied** to the `cladium_cafe` Supabase project (`vxvpxywszskxcugwpsch`)
+on 2026-09-19, and verified against the live database rather than trusted from
+the apply's success flag: 9 columns, RLS on, 0 policies (intended), 7 check
+constraints, 2 indexes. All eight malformed-insert cases are rejected by the
+constraints; `web_vitals_p75` returned 3250 for the population
+1000/2000/3000/4000, matching the in-memory implementation's unit test exactly.
+Verifying also caught a residual-grant leak — see "A note on grants" below.
+
+Note there is currently only **one** Cladium Supabase project: it serves as both
+staging and production, so this schema is live in production. The
+dev/staging/production split `database-environments.md` describes does not exist
+yet (a real, separate Gate 9 item).
+
 Collection is **off**. `FEATURE_FIELD_TELEMETRY` defaults to `false` and is
 set to `false` in `.env.example`; nothing is collected in any environment
 until the owner sets it to `true` on that environment. Shipping this code
@@ -131,6 +144,25 @@ still accumulating.
 Good-threshold reference values, for interpreting a `rating` distribution:
 LCP ≤ 2.5s, INP ≤ 200ms, CLS ≤ 0.1 (the standard Core Web Vitals "good"
 bounds, which is what `next/web-vitals` itself uses to assign `rating`).
+
+## A note on grants
+
+`20260919123000_revoke_residual_web_vitals_grants.sql` exists because the new
+table inherited `REFERENCES, TRIGGER, TRUNCATE` for `anon` and `authenticated`
+from the platform default. `TRUNCATE` is a table-level privilege **RLS cannot
+restrict**, so any holder of the anon key could have wiped the table (never read
+or written it — those were correctly closed). This is the second table in a row
+to hit it; `20260906130500` predicted exactly that, and the root cause is still
+the narrow `ALTER DEFAULT PRIVILEGES ... REVOKE` list in `20260830044140`, which
+names only SELECT/INSERT/UPDATE/DELETE. Verified end state: `anon` and
+`authenticated` hold nothing at all on this table, and `service_role` has
+insert/select/delete but **not update**, so immutability is enforced by the
+grant rather than only by convention.
+
+Supabase's security advisor reports only `rls_enabled_no_policy` (INFO) for this
+table, which is intentional and matches `idempotency_keys`,
+`confirmation_tokens`, and `rate_limit_windows`. Neither aggregate function
+appears in the SECURITY DEFINER lints, because both are `security invoker`.
 
 ## Retention
 
