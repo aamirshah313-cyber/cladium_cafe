@@ -94,6 +94,8 @@ import { parseAtBoundary } from '../../../../lib/schemas/parse';
 import { recordVitalsSample } from '../../../../modules/telemetry/record-vitals-sample';
 import { reportVitalsBodySchema } from '../../../../modules/telemetry/schemas';
 import { webVitalsSampleStore } from '../../../../modules/telemetry/deps';
+import { recordOperationalOccurrenceAsync } from '../../../../modules/alerting/record-operational-occurrence';
+import { alertStore } from '../../../../modules/alerting/deps';
 
 /** One shared bucket for the whole route — see the doc comment on why there is no per-visitor key. */
 const RATE_LIMIT_KEY = 'telemetry-vitals:all';
@@ -136,6 +138,15 @@ export async function POST(request: NextRequest) {
   const decision = await guestRouteRateLimiter.consume(
     RATE_LIMIT_KEY,
     VITALS_REPORT_RATE_LIMIT_RULE,
+  );
+  // This route does not go through `parseMutatingRequest` (see above), so
+  // it records its own rate-limit outcome rather than inheriting that
+  // helper's instrumentation.
+  recordOperationalOccurrenceAsync(
+    { store: alertStore, logger: createLogger({ correlationId }) },
+    'rate_limit',
+    'telemetry-vitals',
+    decision.allowed ? 'ok' : 'rejected',
   );
   if (!decision.allowed) return reject(rateLimited(correlationId));
 

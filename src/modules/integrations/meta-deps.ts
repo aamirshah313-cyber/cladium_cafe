@@ -14,10 +14,24 @@ import { hasConsent } from '../consent/consent-service';
 import { consentDeps } from '../consent/deps';
 import { createMetaEventClient } from './meta-client';
 import type { TrackMetaEventDeps } from './meta-events';
+import { recordOperationalOccurrenceAsync } from '../alerting/record-operational-occurrence';
+import { alertStore } from '../alerting/deps';
 
 export const metaEventsDeps: TrackMetaEventDeps = {
   client: createMetaEventClient(),
   isFeatureEnabled: () => isFeatureEnabled('FEATURE_META_MARKETING'),
   hasConsent: (sessionId) => hasConsent(consentDeps, sessionId, 'META_MARKETING'),
   logger: createLogger(),
+  /**
+   * Operational counters for the alert thresholds (item 8 of D-049's punch
+   * list). Fire-and-forget: `recordOperationalOccurrenceAsync` swallows
+   * every failure, so a counter outage can never surface here.
+   */
+  recordOccurrence: (kind, label, outcome) =>
+    recordOperationalOccurrenceAsync(
+      { store: alertStore, logger: createLogger() },
+      kind,
+      label,
+      outcome,
+    ),
 };

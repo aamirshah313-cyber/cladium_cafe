@@ -20,6 +20,8 @@ import { createLogger } from '../../lib/logging';
 import type { RequestStatusDeps } from './tools/get-request-status';
 import { createInMemoryConversationStore } from './conversation-store';
 import type { OrchestratorDeps } from './orchestrator';
+import { recordOperationalOccurrenceAsync } from '../alerting/record-operational-occurrence';
+import { alertStore } from '../alerting/deps';
 
 /**
  * Getters, not values — the three `*Deps` objects are lazy `Proxy`s that
@@ -53,4 +55,16 @@ export const orchestratorDeps: OrchestratorDeps = {
   conversationStore: createInMemoryConversationStore(),
   rateLimiter: createDurableRateLimiter('concierge'),
   logger: createLogger(),
+  /**
+   * Operational counters for the alert thresholds (item 8 of D-049's punch
+   * list). Fire-and-forget: `recordOperationalOccurrenceAsync` swallows
+   * every failure, so a counter outage can never surface here.
+   */
+  recordOccurrence: (kind, label, outcome) =>
+    recordOperationalOccurrenceAsync(
+      { store: alertStore, logger: createLogger() },
+      kind,
+      label,
+      outcome,
+    ),
 };
