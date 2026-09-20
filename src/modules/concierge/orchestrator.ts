@@ -89,6 +89,20 @@ export interface OrchestratorDeps {
   readonly conversationStore: ConversationStore;
   readonly rateLimiter: RateLimiter;
   readonly logger: Logger;
+  /**
+   * Operational counters feeding the alert thresholds (item 8 of D-049's
+   * punch list): the `concierge-chat` rate-limit outcome and whether the
+   * turn hit `TURN_TIMEOUT_MS`. Injected and optional rather than imported,
+   * so this module stays free of a store dependency and every existing test
+   * keeps working untouched. Defaults to a no-op — a caller that does not
+   * wire it simply is not measured, which is honest, unlike a silent zero
+   * that would read as "no timeouts".
+   */
+  readonly recordOccurrence?: (
+    kind: 'rate_limit' | 'concierge_turn',
+    label: string,
+    outcome: 'ok' | 'rejected' | 'timeout',
+  ) => void;
   readonly now?: () => Date;
 }
 
@@ -131,6 +145,7 @@ export async function orchestrateTurn(
     RATE_LIMIT_RULE,
     now(),
   );
+  deps.recordOccurrence?.('rate_limit', 'concierge-chat', rateDecision.allowed ? 'ok' : 'rejected');
   if (!rateDecision.allowed) return err(rateLimited(input.correlationId));
 
   const existing = await deps.conversationStore.get(input.sessionId, now());
@@ -145,6 +160,10 @@ export async function orchestrateTurn(
   let totalTokens = 0;
   let reply = fallbackReply(input.locale);
   let escalate = false;
+  // Distinct from `escalate`, which is also set by the token ceiling. The
+  // threshold is specifically about turns hitting the 20s deadline, so
+  // conflating the two would inflate it with a different failure mode.
+  let deadlineHit = false;
   let pendingConfirmation: PendingConfirmation | undefined;
 
   try {
@@ -152,6 +171,7 @@ export async function orchestrateTurn(
       if (now().getTime() > deadlineMs) {
         reply = escalationReply(input.locale);
         escalate = true;
+        deadlineHit = true;
         break;
       }
       if (totalTokens > MAX_TOTAL_TOKENS_PER_TURN) {
@@ -239,6 +259,10 @@ export async function orchestrateTurn(
     toolCalls: toolCallCount,
     escalate,
   });
+
+  // Recorded once per completed turn, after the reply is settled, so the
+  // denominator is "turns that ran" rather than "turns that started".
+  deps.recordOccurrence?.('concierge_turn', 'chat', deadlineHit ? 'timeout' : 'ok');
 
   return ok({ reply, escalate, pendingConfirmation });
 }

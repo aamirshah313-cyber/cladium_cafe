@@ -28,6 +28,9 @@ import { checkBodySize, checkContentType } from '../security/request-limits';
 import { isFeatureEnabled, type FeatureFlagEnv } from '../env.server';
 import type { RateLimiter, RateLimitRule } from '../security/rate-limit';
 import { guardStateChangingRequest, resolveSessionContext } from './session-route';
+import { recordOperationalOccurrenceAsync } from '../../modules/alerting/record-operational-occurrence';
+import { alertStore } from '../../modules/alerting/deps';
+import { createLogger } from '../logging';
 
 export interface ParsedMutatingRequest<T> {
   readonly sessionId: string;
@@ -91,6 +94,17 @@ export async function parseMutatingRequest<T extends { csrfToken: string }>(
   if (options?.rateLimit) {
     const { limiter, rule, keyPrefix } = options.rateLimit;
     const decision = await limiter.consume(`${keyPrefix}:${sessionId}`, rule);
+    // Both outcomes are counted, not just the rejection: a rejection count
+    // alone cannot tell "abuse" from "twice as many guests", and the
+    // threshold this feeds is a rate (Step 41, item 8 of D-049's punch
+    // list). Fire-and-forget — a counter must never delay or fail a guest
+    // request.
+    recordOperationalOccurrenceAsync(
+      { store: alertStore, logger: createLogger({ correlationId }) },
+      'rate_limit',
+      keyPrefix,
+      decision.allowed ? 'ok' : 'rejected',
+    );
     if (!decision.allowed) return fail(rateLimited(correlationId), setCookieHeader);
   }
 

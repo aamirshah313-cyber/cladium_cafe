@@ -47,6 +47,12 @@ export interface TrackMetaEventDeps {
   /** Bound to `'META_MARKETING'` at the call site — never a raw category param here. */
   readonly hasConsent: (sessionId: string) => Promise<boolean>;
   readonly logger: Logger;
+  /** Optional operational counter hook — see `OrchestratorDeps.recordOccurrence` for why this is injected, not imported. */
+  readonly recordOccurrence?: (
+    kind: 'provider_call',
+    label: string,
+    outcome: 'ok' | 'timeout',
+  ) => void;
   readonly generateEventId?: () => string;
   readonly now?: () => Date;
 }
@@ -65,9 +71,23 @@ export interface TrackMetaEventResult {
   readonly eventId: string | null;
 }
 
+/**
+ * Marker for "the deadline won the race", as opposed to the provider
+ * rejecting. The alert threshold is specifically a *timeout* rate (Step 41,
+ * item 8 of D-049's punch list), so matching on a class rather than on an
+ * error message keeps a provider 500 from being counted as provider
+ * slowness — two different problems with two different responses.
+ */
+export class MetaEventTimeoutError extends Error {
+  constructor() {
+    super('meta event send timed out');
+    this.name = 'MetaEventTimeoutError';
+  }
+}
+
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error('meta event send timed out')), timeoutMs);
+    const timer = setTimeout(() => reject(new MetaEventTimeoutError()), timeoutMs);
     promise.then(
       (value) => {
         clearTimeout(timer);
@@ -103,6 +123,7 @@ export async function trackMetaEvent(
       }),
       META_EVENT_TIMEOUT_MS,
     );
+    deps.recordOccurrence?.('provider_call', 'meta_event', 'ok');
   } catch (error) {
     // Best-effort: a failed/slow Meta call never fails the guest-facing
     // action that triggered it. Never log the raw error — same "type
@@ -113,6 +134,12 @@ export async function trackMetaEvent(
       eventName: input.eventName,
       errorType: error instanceof Error ? error.constructor.name : typeof error,
     });
+    // Only a genuine deadline counts against the timeout threshold; any
+    // other rejection is still a failure but a different one, and is left
+    // out of the denominator rather than miscounted into the numerator.
+    if (error instanceof MetaEventTimeoutError) {
+      deps.recordOccurrence?.('provider_call', 'meta_event', 'timeout');
+    }
   }
 
   return { sent: true, eventId };

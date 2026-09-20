@@ -60,6 +60,12 @@ export interface ExecuteVapiToolCallsDeps {
    * tool being artificially slow.
    */
   readonly dispatch?: typeof dispatchToolCall;
+  /** Optional operational counter hook — see `OrchestratorDeps.recordOccurrence` for why this is injected, not imported. */
+  readonly recordOccurrence?: (
+    kind: 'provider_call',
+    label: string,
+    outcome: 'ok' | 'timeout',
+  ) => void;
   /** Optional — when supplied, a successful prepare-tool result is recorded here for `voice-panel.tsx` to poll. */
   readonly pendingConfirmationStore?: PendingConfirmationStore;
 }
@@ -95,10 +101,19 @@ async function executeOne(
   const args = parseToolArguments(toolCall.function.arguments);
   const fingerprint = fingerprintOf(toolCall.function.name, args);
 
+  // Which side of the race won is tracked explicitly rather than inferred
+  // from the resulting AppError: `timeoutResult` produces a generic
+  // `internalError`, indistinguishable from a genuine dispatch failure, and
+  // the threshold this feeds is specifically a *timeout* rate (item 8 of
+  // D-049's punch list).
+  let timedOut = false;
   const raced = (): Promise<Result<unknown, AppError>> =>
     Promise.race([
       dispatch(toolCall.function.name, args, context),
-      timeoutResult(TOOL_CALL_TIMEOUT_MS),
+      timeoutResult(TOOL_CALL_TIMEOUT_MS).then((result) => {
+        timedOut = true;
+        return result;
+      }),
     ]);
 
   const result = await runIdempotent(
@@ -112,6 +127,8 @@ async function executeOne(
     },
     raced,
   );
+
+  deps.recordOccurrence?.('provider_call', 'vapi_tool', timedOut ? 'timeout' : 'ok');
 
   const kind = PREPARE_TOOL_KIND[toolCall.function.name];
   if (kind && result.ok && deps.pendingConfirmationStore) {

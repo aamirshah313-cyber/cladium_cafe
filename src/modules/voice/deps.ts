@@ -19,6 +19,8 @@ import { consentDeps } from '../consent/deps';
 import { createInMemoryPendingConfirmationStore } from './pending-confirmation-store';
 import type { IssueVapiTokenDeps } from './token/issue-vapi-token';
 import type { ExecuteVapiToolCallsDeps } from './tools/execute-vapi-tool-calls';
+import { recordOperationalOccurrenceAsync } from '../alerting/record-operational-occurrence';
+import { alertStore } from '../alerting/deps';
 
 export const voiceTokenDeps: IssueVapiTokenDeps = {
   issuer: createVapiTokenIssuer(),
@@ -36,6 +38,22 @@ export const pendingConfirmationStore = createInMemoryPendingConfirmationStore()
 export const executeVapiToolCallsDeps: ExecuteVapiToolCallsDeps = {
   idempotencyStore: createInMemoryIdempotencyStore(),
   pendingConfirmationStore,
+  /**
+   * Operational counters for the provider-timeout threshold (item 8 of
+   * D-049's punch list). Wired here rather than on `voiceTokenDeps` because
+   * this is where a provider call can actually time out — token issuance
+   * does not call Vapi at all, it signs a JWT locally.
+   *
+   * Fire-and-forget: `recordOperationalOccurrenceAsync` swallows every
+   * failure, so a counter outage can never surface to a caller.
+   */
+  recordOccurrence: (kind, label, outcome) =>
+    recordOperationalOccurrenceAsync(
+      { store: alertStore, logger: createLogger() },
+      kind,
+      label,
+      outcome,
+    ),
 };
 
 export const voiceLogger = createLogger();

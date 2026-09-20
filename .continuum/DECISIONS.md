@@ -2,6 +2,30 @@
 
 Newest decisions go first. Each entry stays short and points to authoritative evidence.
 
+## D-094 — Alerting: three of four thresholds had no signal, and a test caught the one-incident-three-notifications bug
+
+Closes the build half of item 8 of Step 45's punch list (D-049): "Build and wire real alerting against Step 41's proposed thresholds."
+
+**The thresholds were the easy part; the signals did not exist.** Only `outbox_terminal_failure_rate` was derivable from what the database already held. `rate_limit_windows` keeps just the *current* window keyed by a SHA-256 hash, so neither rejections nor the route they belonged to were recoverable; provider timeouts and concierge deadline hits were logged and forgotten. So item 8 was mostly instrumentation, not threshold arithmetic — worth recording, because the punch list's one-line wording hid that.
+
+**Counters, not event rows.** Every threshold is a rate over a window, which needs a denominator, which means recording the *good* outcomes too — a rejection count alone cannot distinguish abuse from twice as many guests. One row per occurrence would then mean a row for every guest mutation on a free-tier database. `operational_counters` is minute-bucketed instead: one atomic upsert per occurrence, size bounded by (kinds × labels × outcomes × minutes) rather than by traffic, and a rolling window is a sum over buckets — exactly the shape the thresholds are written in. Verified live: 205 increments collapsed into 3 rows.
+
+**`label` is an allowlist for a non-obvious reason.** Bounding cardinality is the obvious one. The load-bearing one is that a label *is a rate denominator's identity*: if one call site writes `req-submit` and another `request-submit`, they silently become two populations and each rate is computed against half the traffic — an alert firing on arithmetic rather than reality. A closed set makes that a compile error. Rows are otherwise anonymous, same posture as `web_vitals_samples`.
+
+**A denominator floor, which the report did not specify.** One rejection out of two is a 50% rate, and at 3am two requests is a normal five minutes for a café. Without a floor the first alert this system ever sent would almost certainly have been spurious, and the second would have been ignored. Added per threshold and documented as not-from-the-report.
+
+**The report's fifth proposal is deliberately absent.** It said staff-transition version conflicts should be tracked "for visibility only, do not alert — a normal, expected outcome of legitimate concurrent staff activity". Nothing counts them. An alert that fires on healthy behaviour trains people to ignore alerts.
+
+**A unit test caught a real bug in this session's own code.** Cooldown was consulted once per threshold at the start of a run, so three guest routes breaching simultaneously produced three firings and three staff notifications for one incident — the exact noise the cooldown existed to prevent. Fixed by collapsing to one notification per threshold per run, describing the *worst* breach (an operator should be told about the 90% route, not the 6% one) and logging the count of the others. The comment claiming "one incident, one notification" was written before the behaviour was true; the test is what made it true.
+
+**Delivery reuses the outbox rather than adding a channel.** A firing is enqueued as an ordinary event with destination `staff_notification`, inheriting durability, retry, terminal-failure handling and one staff-facing surface. `entity_type` gained `OPERATIONAL_ALERT` (its own migration, since a new enum value cannot be used in the transaction that adds it) rather than mislabelling an infrastructure alert as a `BOOKING_REQUEST`.
+
+**Two things this is not, stated plainly rather than implied.** It does not page anyone — a fired alert is a dashboard someone must open. And nothing alerts on `alerting.store.postgres_unavailable_using_in_memory`, the one warning meaning alerting has degraded to per-instance counters, where an incident spread across instances sits under the threshold everywhere and alerts nowhere: a monitoring system reporting healthy while the thing it monitors is broken. Both are in `docs/alerting.md` and `TASKS.md`; an owner-supplied webhook endpoint or a real vendor is what closes them, and inventing either would be the unapproved integration CLAUDE.md gates.
+
+**Alerting is built but not running.** `/api/cron/alerts` needs an external scheduler at a few minutes' cadence; Vercel Hobby's cron minimum is once daily and the shortest window is 5 minutes, so a daily run would miss rate-limit incidents entirely. Same constraint, same workaround as the outbox dispatcher (D-085).
+
+Evidence: full `npm run verify` green (104 files / 1294 tests, both cron routes in the build). Migrations applied and verified against the live catalogs — RLS on, no policies (intended), `anon`/`authenticated` hold nothing (the residual-grant revoke was done up front this time rather than discovered afterwards as in D-093), `service_role` cannot UPDATE either table, `search_path` pinned; every malformed increment and every out-of-range firing rejected by constraint, valid ones accepted; security advisor clean beyond the intended `rls_enabled_no_policy` INFO, and neither new function appears in the SECURITY DEFINER lints.
+
 ## D-093 — Field telemetry exists, and verifying the apply caught a TRUNCATE hole RLS could not have covered
 
 Closes the mechanism half of item 6 of Step 45's punch list (D-049). Anonymous Core Web Vitals sampling, end to end: `next/web-vitals` (built in — no `web-vitals` package, no `@vercel/speed-insights`, which is paid on this plan and would tie measurement to one host), flag-gated `POST /api/telemetry/vitals`, `web_vitals_samples` with `percentile_cont(0.75)` functions, `GET /api/staff/telemetry/vitals`, and a retention cron. Off everywhere (`FEATURE_FIELD_TELEMETRY=false`), so shipping it collects nothing.
